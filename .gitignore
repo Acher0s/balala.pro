@@ -24,3 +24,8 @@ yarn-error.log*
 .env*.local
 .vercel
 next-env.d.ts
+# local database (PGlite)
+/.data
+
+# env
+.env

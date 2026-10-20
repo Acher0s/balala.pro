@@ -1,0 +1,219 @@
+---
+title: Reserved Parking guide
+tags: [econ, jokers]
+---
+
+<Level of="beginner">
+
+## How to play
+
+1. Fill your hand with face cards using your discards
+2. Play as many high cards as you can (make sure you don’t get out to early)
+3. Get out of the blind with your final hand, leaving as many faces in your hand as possible
+
+### Common exceptions
+
+#### Lacking scoring jokers
+
+Sometimes you’ll have no scoring joker to beat the blind with in a single hand. In this case it's better to play a flush/straight/full house early, getting closer to the score requirement, so you can use the rest of your hands & discards to get parking value, and then get out on the last hand using a drawn full house of faces.
+
+Picking up a tarot that can help you get out in 1 on the last hand is always worth it to get more parking value (suit changer for flush house, <Tarot id="empress">empress</Tarot>, <Tarot id="hierophant">hiero</Tarot>, <Tarot id="strength">strength</Tarot>)
+
+#### Midas mask
+
+If you have <Joker id="midas_mask" />, you want to turn all your face cards into gold as soon as possible. It’s completely fine to miss out on reserved parking value to speed up this process, as it will earn you more money in the long run. Optimally, you strike a balance where you only play 5-6 face cards per blind to still get some parking value, while making solid progress on turning everything gold.
+
+</Level>
+
+<Level of="advanced">
+
+## Parking Mime bug
+
+Context:
+
+The way *retriggers* are coded makes <Joker id="reserved_parking">Reserved parking</Joker> behave a little strangely. The community often refers to this as the *Parking Mime Bug*, but beware that this ‘bug’ applies to both <Joker id="mime" /> AND <Seal id="red">Red Seals</Seal>.
+
+Bug explanation:
+
+Cards in your hand can get *triggered* by various effects while playing the blind:
+
+- <Enhancement id="steel">Steel</Enhancement>
+- <Joker id="shoot_the_moon" />
+- <Joker id="baron" />
+- <Joker id="raised_fist">Raised fist</Joker>
+- <Joker id="reserved_parking">Reserved parking</Joker>
+
+*Retriggers* from <Joker id="mime" /> or <Seal id="red">Red Seals</Seal> are coded in such a way that the additional *retrigger* only happens if there was a successful *trigger* before it.
+
+This means that when a card in your hand misses the ½ and fails to proc Reserved Parking, the game does not attempt to retrigger this card, regardless of how many retrigger effects (mime, red seal) you have.
+
+You don’t necessarily *need* <Joker id="oops_all_6s">Oops all 6’s</Joker> to mitigate this. If the face cards have a retrigger effect secondary to parking (STM, steel, baron…), parking will always get a chance to proc on retrigger.
+
+</Level>
+
+<Level of="intermediate">
+
+## Synergy (econ)
+
+### Oops all 6’s
+
+Double the money! And actually better than double the money if you have red seals or mime (because the ‘bug’ cannot happen if it hits 100% of the time).
+
+### Burglar
+
+More hands, more value? Kinda… You lose all your discards, so the first couple hands are usually spent on drawing the face cards you’d normally draw using your discards. <Joker id="burglar" /> becomes a lot better when you can copy the effect with a <Joker id="blueprint">BP</Joker>/<Joker id="brainstorm">BS</Joker>, or if you have other econ jokers that benefit from the extra hands (<Joker id="to_do_list">To-Do list</Joker>, Let’s go Gambling).
+
+### Mime
+
+More money! But not as much as you think. Beware of the parking mime bug and don’t expect your triple mime setup to print you lots of money here.
+
+### Juggler / Bean / Troubadour
+
+More handsize = more face cards in hand = more money.
+
+Be careful with <Joker id="troubadour" /> however, as going from 4 -> 3 hands will actually earn you less money per blind. Once you have 5 hands (down to 4 after troubadour) it’s usually worth it though… *unless* you have trouble drawing enough face cards using just your discards; the extra hand size only matters if you can fill it up with face cards.
+
+### Business card
+
+On paper, <Joker id="business_card" /> and Reserved Parking have anti-synergy, but usually it’s quite nice to have both in slot. More often than not, you are playing face cards on the last hand to beat the blind, where Business Card will earn you some extra money.
+
+As the game progresses, your deck will start containing more value, and holding on to the first face cards you find becomes less valuable than digging for value in your deck. Again, quite nice to have Business Card in this spot to get money when you dump face cards to dig.
+
+Playing a face card with Business Card is twice the money of holding it for that hand. Thus it’s optimal to play face cards on your second to last hand, allowing you to redraw into more face cards, and on the last hand.
+
+By holding both, you are also hedging for the better econ later in the game. If retriggers show up you play into Business Card, if Burglar / Mime / Baron show up you’ll probably get more money from parking.
+
+</Level>
+
+<Level of="intermediate">
+
+## Synergy (scoring)
+
+Some scoring setups are more compatible with reserved parking than others.
+
+### Face card builds
+
+- <Joker id="scary_face" />
+- <Joker id="smiley_face">Smiley</Joker>
+- <Joker id="photograph" />
+
+Holding your face cards till the last hand is very easy if you can use them to get out of the blind on the last hand.
+
+Conversely, if you’re playing a build that needs numbered cards to get out of the blind (<Joker id="odd_todd" />, <Joker id="even_steven" />, <Joker id="walkie_talkie">walkie talkie</Joker>), you will have a much harder time getting value.
+
+### Conditional Mult / Chips
+
+Chips & mult are great scoring, but be careful of having too much scoring, and not being able to play all your hands before beating the blind.
+
+The sweet spot is to have the scoring locked behind a condition, jokers like <Joker id="mad_joker" /> (two pair mult), <Joker id="wily_joker" /> (3oak chips) etc. usually feel great to play with Reserved Parking, as you can just avoid triggering these jokers until the last hand.
+
+While it may not seem like it, <Joker id="raised_fist" /> is also a conditional scoring joker. By holding a low numbered card in your hand, you can minimize your scoring until the last hand.
+
+### ! High card builds
+
+While high card builds are quite nice to play with Reserved Parking, you often have to do quite a lot of micro to make it work.
+
+Holding all your face cards and playing high cards will get you out of the blind wayyy too fast if you’re not careful. You can play pairs to score less, or play some steel/queens/kings to reduce scoring. Make sure you can still beat the blind after throwing away these cards!
+
+</Level>
+
+<Level of="intermediate">
+
+## When to pivot
+
+### Better econ options
+
+Parking is a mediocre econ joker when you only have 4 hands, and don’t get help from Mime/Dice. Usually you can get more money from other econ options if available.
+
+Since Reserved Parking requires you to forego digging in your deck, econ jokers like <Joker id="faceless_joker">Faceless</Joker>, <Joker id="mail_in_rebate">Rebate</Joker>, <Joker id="business_card">Business card</Joker> become a lot more favorable to play, since they allow you to dig 5 cards every hand/discard.
+
+### Anti-synergy
+
+If you’re playing a <Joker id="hack">hack</Joker> build, you’ll have a rough time getting value from parking. Replace it with a different econ joker ASAP.
+
+<Joker id="vagabond" /> also makes parking quite useless.
+
+</Level>
+
+<Level of="advanced">
+
+## Raw: Expected value & Optimal Copy Setup
+
+*Raw = no Dice, and no secondary retrigger effects (steel, STM, baron, fist).*
+
+Calculating the Expected Value for a face card in your hand can be done using the following formula:
+
+```text
+P = # copies of parking
+R = # number of triggers (=1 if no mime or red seal)
+
+q = 1 − 0.5^P (= the chance that a single trigger happens)
+
+EV = (P/2) × (1 + q + q² + … + q^(R−1)) = (P/2) × (1 − q^R) / (1 − q)
+   = P · 2^(P−1) · (1 − (1 − 0.5^P)^R)
+```
+
+If you have parking mime and 2 copy jokers, the optimal way to arrange the copies is to **copy parking twice**.
+
+Double copy parking gives <Value of="P * 2^(P-1) * (1 - (1 - 0.5^P)^R)" vars={{ P: 3, R: 2 }} format="money" /> EV per face card<br />
+1 copy each give slightly less: <Value of="P * 2^(P-1) * (1 - (1 - 0.5^P)^R)" vars={{ P: 2, R: 3 }} format="money" /> EV per face card
+
+If you have more than 2 copy jokers, you want to balance the copies, copying parking an extra time if you have an odd number of copy jokers.
+
+This table shows the expected value per face card per hand.
+
+<CalcTable
+  caption="Expected value (Raw)"
+  value="P * 2^(P-1) * (1 - (1 - 0.5^P)^R)"
+  rows={{ name: 'R', label: '# Triggers', from: 1, to: 7 }}
+  cols={{ name: 'P', label: '# Copies of Parking', from: 1, to: 7 }}
+/>
+
+</Level>
+
+<Level of="advanced">
+
+## Dice: Expected value & Optimal Copy Setup
+
+The expected value with <Joker id="oops_all_6s">Oops all 6’s</Joker> is very easy to calculate, it’s simply the number of times the face card triggers.
+
+Evidently the optimal copy setup is balancing the amount of triggers and on trigger effects.
+
+</Level>
+
+<Level of="advanced">
+
+## Force retrigger: Expected value & Optimal Copy Setup
+
+If the face card is forcefully retriggered due to steel, STM, Baron or Raised Fist, the expected value is $0.5 * #triggers
+
+Again the optimal copy setup is balancing the amount of triggers and on trigger effects.
+
+<Calc id="ev" title="Reserved Parking money calculator">
+  <Input
+    name="mode"
+    label="Setup"
+    default={0}
+    options={[
+      { label: 'Raw', value: 0 },
+      { label: 'Dice (Oops all 6’s)', value: 1 },
+      { label: 'Force retrigger', value: 2 },
+    ]}
+  />
+  <Input name="P" label="# copies of parking" default={1} min={1} max={10} />
+  <Input name="R" label="# number of triggers" default={1} min={1} max={10} />
+  <Input name="F" label="Face cards held" default={5} min={0} max={20} />
+  <Input name="H" label="Hands played while holding them" default={3} min={0} max={10} />
+  <Output
+    label="EV per face card, per hand"
+    value="if(mode = 1, P * R, if(mode = 2, 0.5 * P * R, P * 2^(P-1) * (1 - (1 - 0.5^P)^R)))"
+    format="money"
+  />
+  <Output
+    label="EV per blind"
+    value="F * H * if(mode = 1, P * R, if(mode = 2, 0.5 * P * R, P * 2^(P-1) * (1 - (1 - 0.5^P)^R)))"
+    format="money"
+  />
+</Calc>
+
+</Level>

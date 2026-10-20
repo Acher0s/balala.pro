@@ -1,11 +1,19 @@
-import { source } from '@/lib/source';
-import { DocsLayout } from 'fumadocs-ui/layouts/docs';
-import { baseOptions } from '@/lib/layout.shared';
+import { SiteLayout } from "@/components/site-layout";
 
-export default function Layout({ children }: LayoutProps<'/docs'>) {
+export const dynamic = "force-dynamic";
+
+export default function Layout({ children }: LayoutProps<"/docs">) {
   return (
-    <DocsLayout tree={source.getPageTree()} {...baseOptions()}>
+    <SiteLayout
+      tree={{
+        name: "Documentation",
+        children: [
+          { type: "page", name: "Guide markup reference", url: "/docs" },
+          { type: "page", name: "Writer studio", url: "/studio" },
+        ],
+      }}
+    >
       {children}
-    </DocsLayout>
+    </SiteLayout>
   );
 }

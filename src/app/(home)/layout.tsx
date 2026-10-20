@@ -1,6 +1,7 @@
-import { HomeLayout } from 'fumadocs-ui/layouts/home';
-import { baseOptions } from '@/lib/layout.shared';
+import { SiteLayout } from "@/components/site-layout";
 
-export default function Layout({ children }: LayoutProps<'/'>) {
-  return <HomeLayout {...baseOptions()}>{children}</HomeLayout>;
+export const dynamic = "force-dynamic";
+
+export default function Layout({ children }: LayoutProps<"/">) {
+  return <SiteLayout plain>{children}</SiteLayout>;
 }

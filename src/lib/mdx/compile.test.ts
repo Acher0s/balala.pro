@@ -1,0 +1,184 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { toolTemplate, tutorialGuide } from "@/lib/guide-template";
+import { compileGuide, GuideValidationError } from "./compile";
+
+const guide = (body: string) => `---\ntitle: Test\n---\n\n${body}\n`;
+
+async function problems(body: string): Promise<string[]> {
+  try {
+    await compileGuide(guide(body));
+    return [];
+  } catch (e) {
+    if (e instanceof GuideValidationError) return e.problems;
+    throw e;
+  }
+}
+
+describe("guide validation: no code can run", () => {
+  it.each([
+    ["an expression in text", "Hello {process.exit(1)}"],
+    ["an expression block", "{globalThis.fetch('https://evil.example')}"],
+    ["import", "import fs from 'node:fs'\n\nHi"],
+    ["export", "export const x = require('child_process')\n\nHi"],
+    [
+      "a call in a prop",
+      '<Joker id={require("fs").readFileSync("/etc/passwd")} />',
+    ],
+    ["a function in a prop", "<Calc>{() => 1}</Calc>"],
+    ["a spread prop", "<Joker {...props} />"],
+    ["a script tag", "<script>alert(1)</script>"],
+    ["an iframe", '<iframe src="https://evil.example" />'],
+    ["an event handler", '<span onClick="alert(1)">x</span>'],
+    [
+      "dangerouslySetInnerHTML",
+      "<div dangerouslySetInnerHTML={{ __html: '<img onerror=alert(1)>' }} />",
+    ],
+    ["a javascript: link", "[click](javascript:alert(1))"],
+    ["an obfuscated javascript: link", '<a href="java\tscript:alert(1)">x</a>'],
+    ["a data: image", "![x](data:text/html;base64,PHNjcmlwdD4=)"],
+    ["a template placeholder", "<Value of={`${process.env.SECRET}`} />"],
+    ["a member expression", "<Value of={process.env.SECRET} />"],
+    ["an unknown component", "<Evil />"],
+  ])("rejects %s", async (_label, body) => {
+    expect((await problems(body)).length).toBeGreaterThan(0);
+  });
+
+  it("allows plain values in props", async () => {
+    const body = `<Calc id="x" title="T">
+  <Input name="a" label="A" default={-1} options={[{ label: 'One', value: 1 }]} />
+  <Output label="Out" value="a * 2" format="money" />
+</Calc>`;
+    expect(await problems(body)).toEqual([]);
+  });
+});
+
+describe("guide validation: authoring mistakes", () => {
+  it("reports unknown card ids with the line number", async () => {
+    const p = await problems('Line one\n\n<Joker id="mimee" />');
+    expect(p).toEqual([expect.stringMatching(/line 7: unknown joker "mimee"/)]);
+  });
+
+  it("accepts names, game ids and multiplayer cards", async () => {
+    expect(
+      await problems(
+        '<Joker id="oops_all_6s" /> <Joker id="oops" /> <Joker id="mp_pizza" /> <Tarot id="hierophant" />',
+      ),
+    ).toEqual([]);
+  });
+
+  it("checks calculator formulas against their inputs", async () => {
+    const p = await problems(
+      '<Calc>\n  <Input name="a" label="A" default={1} />\n  <Output label="X" value="a * b" />\n</Calc>',
+    );
+    expect(p.join()).toMatch(/unknown variable\(s\) "b"/);
+  });
+
+  it("accepts skill levels and rejects unknown ones", async () => {
+    expect(
+      await problems('<Level of="beginner">\n\n## Basics\n\nText\n\n</Level>'),
+    ).toEqual([]);
+    expect(
+      (await problems('<Level of="expert">\n\nText\n\n</Level>')).join(),
+    ).toMatch(/must be one of/);
+  });
+
+  it("requires a title", async () => {
+    await expect(
+      compileGuide("---\ndescription: x\n---\n\nHi"),
+    ).rejects.toThrow(/title/);
+  });
+});
+
+describe("the real guide", () => {
+  it("compiles the Reserved Parking guide with a table of contents", async () => {
+    const source = readFileSync(
+      join(process.cwd(), "content/guides/reserved-parking.mdx"),
+      "utf8",
+    );
+    const compiled = await compileGuide(source);
+    expect(compiled.frontmatter.title).toBe("Reserved Parking guide");
+    expect(compiled.toc.map((t) => t.url)).toContain("#parking-mime-bug");
+  });
+});
+
+describe("the new-guide tutorial", () => {
+  it("has no problems, so new guides start valid", async () => {
+    const compiled = await compileGuide(
+      tutorialGuide({ title: "My guide", author: "Someone" }),
+    );
+    expect(compiled.frontmatter.title).toBe("My guide");
+    expect(compiled.toc.length).toBeGreaterThan(5);
+  });
+});
+
+describe("tools", () => {
+  const embed = guide('<Tool id="interest" />');
+
+  it("lets a guide embed a published tool", async () => {
+    await expect(
+      compileGuide(embed, { kind: "guide", knownTools: new Set(["interest"]) }),
+    ).resolves.toBeTruthy();
+  });
+
+  it("flags tools that don't exist or aren't published", async () => {
+    await expect(
+      compileGuide(embed, { kind: "guide", knownTools: new Set() }),
+    ).rejects.toThrow(/no published tool "interest"/);
+  });
+
+  it("doesn't let a tool embed another tool", async () => {
+    await expect(
+      compileGuide(embed, { kind: "tool", knownTools: new Set(["interest"]) }),
+    ).rejects.toThrow(/can't embed another tool/);
+  });
+
+  it("starts new tools without problems", async () => {
+    const compiled = await compileGuide(
+      toolTemplate({ title: "Interest", author: "Someone" }),
+      { kind: "tool" },
+    );
+    expect(compiled.frontmatter.title).toBe("Interest");
+  });
+});
+
+describe("tier list embeds", () => {
+  const embed = guide('<TierList id="AbC123xy" />');
+
+  it("accepts a published tier list", async () => {
+    await expect(
+      compileGuide(embed, { knownTierLists: new Set(["AbC123xy"]) }),
+    ).resolves.toBeTruthy();
+  });
+
+  it("flags tier lists that don't exist or are private", async () => {
+    await expect(
+      compileGuide(embed, { knownTierLists: new Set() }),
+    ).rejects.toThrow(/no published tier list/);
+  });
+});
+
+describe("images", () => {
+  it("allows uploaded and web images, but not javascript: or data: ones", async () => {
+    expect(
+      await problems(
+        "![gif](/media/abc123)\n\n![web](https://example.com/a.gif)",
+      ),
+    ).toEqual([]);
+    expect(
+      (await problems("![x](javascript:alert(1))")).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("the markup reference", () => {
+  it("has no problems, so every documented example really works", async () => {
+    const source = readFileSync(
+      join(process.cwd(), "content/docs/markup-reference.mdx"),
+      "utf8",
+    );
+    const compiled = await compileGuide(source);
+    expect(compiled.toc.length).toBeGreaterThan(15);
+  });
+});

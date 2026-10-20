@@ -1,0 +1,199 @@
+import "server-only";
+import { compile, run } from "@mdx-js/mdx";
+import { remarkGfm, remarkHeading } from "fumadocs-core/mdx-plugins";
+import type { TOCItemType } from "fumadocs-core/toc";
+import type { MDXContent } from "mdx/types";
+import * as runtime from "react/jsx-runtime";
+import { parse as parseYaml } from "yaml";
+import { z } from "zod";
+import {
+  GuideValidationError,
+  remarkValidateGuide,
+  type ValidateOptions,
+} from "./validate";
+
+export interface CompileOptions extends ValidateOptions {
+  /** Tag blocks with their source line (editor preview scroll sync). */
+  sourceLines?: boolean;
+}
+
+export { GuideValidationError };
+
+export const frontmatterSchema = z.object({
+  title: z.string().min(1, "title is required"),
+  description: z.string().optional(),
+  author: z.string().optional(),
+  /** BMP version the guide was last checked against, e.g. "0.5.5" */
+  patch: z.union([z.string(), z.number()]).transform(String).optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+export type Frontmatter = z.infer<typeof frontmatterSchema>;
+
+export interface CompiledGuide {
+  frontmatter: Frontmatter;
+  Body: MDXContent;
+  toc: TOCItemType[];
+}
+
+/** Splits "---\nyaml\n---\nbody" into its parts. */
+export function splitFrontmatter(source: string): {
+  yaml: string;
+  body: string;
+  bodyLine: number;
+} {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(source);
+  if (!m) return { yaml: "", body: source, bodyLine: 1 };
+  return {
+    yaml: m[1],
+    body: source.slice(m[0].length),
+    bodyLine: m[0].split("\n").length,
+  };
+}
+
+export function parseFrontmatter(source: string): Frontmatter {
+  const { yaml } = splitFrontmatter(source);
+  let data: unknown;
+  try {
+    data = parseYaml(yaml) ?? {};
+  } catch (e) {
+    throw new GuideValidationError([`frontmatter: ${(e as Error).message}`]);
+  }
+  const parsed = frontmatterSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new GuideValidationError(
+      parsed.error.issues.map(
+        (i) => `frontmatter: ${i.path.join(".") || "value"} ${i.message}`,
+      ),
+    );
+  }
+  return parsed.data;
+}
+
+/** Adds the frontmatter's length to line numbers so they match the editor. */
+function shiftLines(e: unknown, offset: number): never {
+  if (e instanceof GuideValidationError) {
+    throw new GuideValidationError(
+      e.problems.map((p) =>
+        p.replace(
+          /^line (\d+)/,
+          (_m, n: string) => `line ${Number(n) + offset}`,
+        ),
+      ),
+    );
+  }
+  const err = e as {
+    message?: string;
+    line?: number;
+    place?: { line?: number };
+  };
+  const ln = err.place?.line ?? err.line;
+  throw new GuideValidationError([
+    `${ln ? `line ${ln + offset}: ` : ""}${err.message ?? String(e)}`,
+  ]);
+}
+
+interface HastNode {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  position?: { start: { line: number } };
+  children?: HastNode[];
+}
+
+const BLOCK_TAGS = new Set([
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "li",
+  "pre",
+  "table",
+  "blockquote",
+  "hr",
+]);
+
+/**
+ * Preview only: tags each rendered block with the editor line it came from (data-line),
+ * so the preview can scroll along with the editor.
+ */
+function rehypeSourceLines(offset: number) {
+  return () => (tree: HastNode) => {
+    const visit = (node: HastNode) => {
+      if (
+        node.type === "element" &&
+        node.tagName &&
+        BLOCK_TAGS.has(node.tagName) &&
+        node.position
+      ) {
+        node.properties = {
+          ...node.properties,
+          dataLine: node.position.start.line + offset,
+        };
+      }
+      for (const child of node.children ?? []) visit(child);
+    };
+    visit(tree);
+  };
+}
+
+/**
+ * Validates and compiles a guide. Throws GuideValidationError with readable problems.
+ * Only validated MDX (plain values, allowed components) ever reaches `run`.
+ */
+export async function compileGuide(
+  source: string,
+  { sourceLines = false, ...validate }: CompileOptions = {},
+): Promise<CompiledGuide> {
+  const frontmatter = parseFrontmatter(source);
+  const { body, bodyLine } = splitFrontmatter(source);
+  const offset = bodyLine - 1;
+
+  let code: string;
+  let toc: TOCItemType[];
+  try {
+    const file = await compile(body, {
+      outputFormat: "function-body",
+      development: false,
+      remarkPlugins: [
+        [remarkValidateGuide, validate],
+        remarkGfm,
+        [remarkHeading, { generateToc: true }],
+      ],
+      rehypePlugins: sourceLines ? [rehypeSourceLines(offset)] : [],
+    });
+    code = String(file);
+    toc = (file.data.toc as TOCItemType[] | undefined) ?? [];
+  } catch (e) {
+    shiftLines(e, offset);
+  }
+
+  const { default: Body } = await run(code, {
+    ...runtime,
+    baseUrl: import.meta.url,
+  });
+  return { frontmatter, Body, toc };
+}
+
+const cache = new Map<string, Promise<CompiledGuide>>();
+
+/** Compiles once per distinct source (keyed by id + timestamp by the caller). */
+export function compileGuideCached(
+  key: string,
+  source: string,
+  options?: CompileOptions,
+) {
+  let hit = cache.get(key);
+  if (!hit) {
+    hit = compileGuide(source, options);
+    hit.catch(() => cache.delete(key));
+    if (cache.size > 200) cache.delete(cache.keys().next().value as string);
+    cache.set(key, hit);
+  }
+  return hit;
+}

@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bmp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: bmp_university
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bmp -d bmp_university"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://bmp:${POSTGRES_PASSWORD}@db:5432/bmp_university
+      SITE_URL: ${SITE_URL:?set SITE_URL in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+      ADMIN_DISCORD_IDS: ${ADMIN_DISCORD_IDS:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

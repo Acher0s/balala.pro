@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792506633463,
+      "tag": "0000_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792512047902,
+      "tag": "0001_page_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792518258882,
+      "tag": "0002_tier_lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792518573475,
+      "tag": "0003_media",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "guides" ADD COLUMN "kind" text DEFAULT 'guide' NOT NULL;

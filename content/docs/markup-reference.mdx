@@ -1,0 +1,437 @@
+---
+title: Guide markup reference
+description: Everything you can write in a guide or tool, with live examples. Copy any code block into the editor.
+---
+
+Guides and tools are written in **Markdown** with a few extra building blocks. Every example on this page is rendered live, right above the code that makes it.
+
+<Callout title="New here?">
+  Create a new guide in the studio: it starts with a hands-on tutorial. This page is the full reference to come back to.
+</Callout>
+
+## The details block
+
+Every guide starts with a block between two `---` lines. It isn't shown as text; it sets the page's details.
+
+```yaml
+---
+title: Reserved Parking guide
+description: One sentence shown under the title and on the home page.
+author: Your name
+patch: 0.5.6
+tags: [econ, jokers]
+---
+```
+
+| Field | Required | What it does |
+| --- | --- | --- |
+| `title` | yes | The page title |
+| `description` | no | One sentence under the title and on the overview pages |
+| `author` | no | Shown under the title |
+| `patch` | no | The Multiplayer mod version the guide was checked against |
+| `tags` | no | Keywords, written as `[econ, jokers]` |
+
+The web address, sidebar section and order are set in the editor's **Settings** tab.
+
+## Text
+
+### Paragraphs and line breaks
+
+Leave an empty line between paragraphs. A single line break is joined into the same paragraph. To force a line break without a new paragraph, write `<br />` at the end of the line.
+
+### Bold, italic, strikethrough and code
+
+**bold**, *italic*, ~~struck through~~, and `inline code`.
+
+```md
+**bold**, *italic*, ~~struck through~~, and `inline code`.
+```
+
+### Headings
+
+```md
+## Section heading
+### Smaller heading
+#### Even smaller
+```
+
+`##` headings appear in the "On this page" list on the right. Don't use a single `#`: the title already is one.
+
+### Links
+
+[A link to another site](https://balatromp.com) and [a link to another guide](/guides/reserved-parking).
+
+```md
+[A link to another site](https://balatromp.com)
+[a link to another guide](/guides/reserved-parking)
+```
+
+### Lists
+
+- Bullets start with `-`
+- Indent with two spaces to nest
+  - like this
+
+1. Numbered lists start with `1.`
+2. Then `2.`, and so on
+
+```md
+- Bullets start with -
+  - Indent to nest
+
+1. Numbered lists start with 1.
+2. Then 2.
+```
+
+### Quotes and dividers
+
+> A quote starts with `>`.
+
+---
+
+```md
+> A quote starts with >.
+
+---
+```
+
+### Tables
+
+| Joker | Rarity | Cost |
+| --- | :---: | ---: |
+| Mime | Uncommon | $5 |
+| Baron | Rare | $8 |
+
+```md
+| Joker | Rarity | Cost |
+| --- | :---: | ---: |
+| Mime | Uncommon | $5 |
+```
+
+The colons in the second row align a column: `:---:` centres it, `---:` aligns it right.
+
+### Code blocks
+
+Wrap code in three backticks. Anything inside is shown exactly as written.
+
+## Images and GIFs
+
+![The Blueprint joker](/game/joker/blueprint.webp)
+
+```md
+![Description of the image](https://example.com/picture.gif)
+```
+
+To use your own image or GIF, click **Blocks → Upload image** in the editor, or paste or drop the image straight into the text. It's uploaded and inserted for you as `![name](/media/…)`. GIF, PNG, JPG and WebP files up to 8 MB work.
+
+Always write a short description between the square brackets: it's read out by screen readers and shown if the image can't load.
+
+## Cards
+
+Mention a card and readers can hover it to see its picture and in-game effect. The **Cards** tab in the editor inserts these for you.
+
+<Joker id="mime" />, <Tarot id="hierophant" />, <Planet id="jupiter" />, <Spectral id="cryptid" />, <Voucher id="overstock" />, <Enhancement id="steel" />, <Seal id="red" /> and <Deck id="red_deck" />.
+
+```mdx
+<Joker id="mime" />, <Tarot id="hierophant" />, <Planet id="jupiter" />,
+<Spectral id="cryptid" />, <Voucher id="overstock" />, <Enhancement id="steel" />,
+<Seal id="red" /> and <Deck id="red_deck" />
+```
+
+| Option | Example | What it does |
+| --- | --- | --- |
+| `id` | `id="oops_all_6s"` | The card's name in lowercase with underscores, or its game id (`oops`) |
+| your own text | `<Tarot id="hierophant">hiero</Tarot>` | Shows your wording instead of the card's name |
+| `plural` | `<Joker id="mime" plural />` | Adds an "s": <Joker id="mime" plural /> |
+| `card` | `<Joker id="blueprint" card />` | Shows the full card picture instead of its name |
+
+Keeping your own wording: <Joker id="oops_all_6s">Oops all 6's</Joker> and <Tarot id="hierophant">hiero</Tarot>.
+
+```mdx
+<Joker id="oops_all_6s">Oops all 6's</Joker> and <Tarot id="hierophant">hiero</Tarot>
+```
+
+**Multiplayer mod cards** have ids starting with `mp_`: <Joker id="mp_pizza" />, <Joker id="mp_defensive_joker" />. Ruleset versions of vanilla cards are separate, for example <Joker id="mp_ticket" /> is the Standard ruleset's Golden Ticket.
+
+A misspelled id is listed as a problem and blocks publishing, so a broken card can never go live.
+
+### Card rows
+
+<CardRow title="S">
+  <Joker id="blueprint" card />
+  <Joker id="brainstorm" card />
+  <Joker id="mime" card />
+</CardRow>
+
+```mdx
+<CardRow title="S">
+  <Joker id="blueprint" card />
+  <Joker id="brainstorm" card />
+</CardRow>
+```
+
+`title` is optional. For full tier lists, use a [tier list](#tier-lists) instead.
+
+### Playing cards
+
+<PlayingCard card="KH" enhancement="steel" seal="red" /> <PlayingCard card="QS" /> <PlayingCard card="10D" enhancement="gold" seal="gold" />
+
+```mdx
+<PlayingCard card="KH" enhancement="steel" seal="red" />
+<PlayingCard card="QS" />
+<PlayingCard card="10D" enhancement="gold" seal="gold" />
+```
+
+| Option | Values |
+| --- | --- |
+| `card` | Rank then suit: `2`–`10`, `J`, `Q`, `K`, `A` and `H`, `D`, `C`, `S`. For example `KH`, `10S`, `AD` |
+| `enhancement` | `bonus`, `mult`, `wild`, `glass`, `steel`, `stone`, `gold`, `lucky` |
+| `seal` | `red`, `blue`, `gold`, `purple` |
+
+## Skill levels
+
+Mark part of a guide as `beginner`, `intermediate` or `advanced`. It gets a coloured badge so readers see at a glance what's aimed at them. Select the text and use **Blocks → Beginner / Intermediate / Advanced section**.
+
+<Level of="intermediate">
+
+### An intermediate section
+
+Keep the empty lines just inside the block, or the formatting inside it won't work.
+
+</Level>
+
+```mdx
+<Level of="intermediate">
+
+### An intermediate section
+
+Text for intermediate players.
+
+</Level>
+```
+
+## Callouts
+
+<Callout title="Info (the default)">
+  For tips and side notes.
+</Callout>
+
+<Callout type="warn" title="Warning">
+  For things readers shouldn't miss.
+</Callout>
+
+<Callout type="error" title="Error">
+  For common mistakes.
+</Callout>
+
+```mdx
+<Callout type="warn" title="Warning">
+  For things readers shouldn't miss.
+</Callout>
+```
+
+`type` can be `info`, `warn` or `error`; `title` is optional.
+
+## Tabs, steps and expandable sections
+
+<Tabs items={['Raw', 'Oops! All 6s']}>
+  <Tab value="Raw">Each face card has a 1 in 2 chance to give $1.</Tab>
+  <Tab value="Oops! All 6s">Every face card always gives $1.</Tab>
+</Tabs>
+
+```mdx
+<Tabs items={['Raw', 'Oops! All 6s']}>
+  <Tab value="Raw">Each face card has a 1 in 2 chance to give $1.</Tab>
+  <Tab value="Oops! All 6s">Every face card always gives $1.</Tab>
+</Tabs>
+```
+
+Each `Tab`'s `value` must match one of the `items`.
+
+<Steps>
+<Step>
+
+### Fill your hand with face cards
+
+</Step>
+<Step>
+
+### Play high cards
+
+</Step>
+<Step>
+
+### Get out on the last hand
+
+</Step>
+</Steps>
+
+```mdx
+<Steps>
+<Step>
+
+### Fill your hand with face cards
+
+</Step>
+<Step>
+
+### Play high cards
+
+</Step>
+</Steps>
+```
+
+<Accordions>
+  <Accordion title="Why does Mime not always retrigger?">
+    Retriggers only happen after a successful trigger. See the Parking Mime bug.
+  </Accordion>
+  <Accordion title="Does this work with Red Seals?">
+    Yes, the same rule applies.
+  </Accordion>
+</Accordions>
+
+```mdx
+<Accordions>
+  <Accordion title="Why does Mime not always retrigger?">
+    Retriggers only happen after a successful trigger.
+  </Accordion>
+</Accordions>
+```
+
+## Calculators
+
+Calculators let readers try their own numbers. A `Calc` block holds `Input`s (what readers change) and `Output`s (results from a formula).
+
+<Calc id="docs-interest" title="Interest calculator">
+  <Input name="money" label="Money at the end of the round" default={25} min={0} />
+  <Input name="cap" label="Interest cap" default={5} options={[{ label: 'Normal ($5)', value: 5 }, { label: 'Seed Money ($10)', value: 10 }, { label: 'Money Tree ($20)', value: 20 }]} />
+  <Output label="Interest earned" value="min(floor(money / 5), cap)" format="money" decimals={0} />
+  <Output label="Money next round (before payout)" value="money + min(floor(money / 5), cap)" format="money" decimals={0} />
+</Calc>
+
+```mdx
+<Calc id="docs-interest" title="Interest calculator">
+  <Input name="money" label="Money at the end of the round" default={25} min={0} />
+  <Input name="cap" label="Interest cap" default={5} options={[
+    { label: 'Normal ($5)', value: 5 },
+    { label: 'Seed Money ($10)', value: 10 },
+  ]} />
+  <Output label="Interest earned" value="min(floor(money / 5), cap)" format="money" decimals={0} />
+</Calc>
+```
+
+**`Calc`**
+
+| Option | What it does |
+| --- | --- |
+| `title` | Shown at the top of the calculator |
+| `id` | Optional. Adds a "Copy link" button that shares the reader's numbers. Use a different id for each calculator on the page |
+
+**`Input`**
+
+| Option | What it does |
+| --- | --- |
+| `name` | Short name used in formulas, like `money`. Letters, numbers and `_`, no spaces |
+| `label` | What readers see |
+| `default` | The starting number, written in curly brackets: `default={25}` |
+| `min`, `max`, `step` | Optional limits and step size |
+| `options` | Turns the input into a dropdown. Each option has a `label` and a number `value` |
+| `hint` | Optional small text under the input |
+
+**`Output`**
+
+| Option | What it does |
+| --- | --- |
+| `label` | What readers see |
+| `value` | The formula, in quotes |
+| `format` | `money` ($1.50), `percent` (50%) or left out for a plain number |
+| `decimals` | How many decimals to show (default 2) |
+| `hint` | Optional small text under the result |
+
+Readers can click **ƒx** on any result to see its formula. A formula that uses an input that doesn't exist is listed as a problem.
+
+### Formulas
+
+Formulas work like spreadsheet formulas.
+
+| Write | Means |
+| --- | --- |
+| `+ - * /` | Add, subtract, multiply, divide |
+| `^` | Power: `2^3` is 8 |
+| `( )` | Brackets |
+| `= <> < <= > >=` | Comparisons: give 1 (true) or 0 (false) |
+| `if(test, a, b)` | `a` if the test is true, otherwise `b` |
+| `min(a, b, …)`, `max(a, b, …)` | Smallest / largest |
+| `round(x)`, `round(x, 2)` | Round, optionally to a number of decimals |
+| `floor(x)`, `ceil(x)` | Round down / up |
+| `abs(x)`, `sqrt(x)`, `exp(x)`, `ln(x)`, `log10(x)` | Maths functions |
+| `sum(a, b, …)` | Add everything up |
+| `combin(n, k)` | Ways to pick `k` out of `n` (like COMBIN in spreadsheets) |
+| `and(a, b)`, `or(a, b)`, `not(a)` | Logic: 1 or 0 |
+
+### Tables from a formula
+
+<CalcTable caption="Interest by money and cap" value="min(floor(money / 5), cap)" rows={{ name: 'money', label: 'Money', from: 0, to: 40, step: 10 }} cols={{ name: 'cap', label: 'Cap', from: 5, to: 20, step: 5 }} format="money" decimals={0} />
+
+```mdx
+<CalcTable
+  caption="Interest by money and cap"
+  value="min(floor(money / 5), cap)"
+  rows={{ name: 'money', label: 'Money', from: 0, to: 40, step: 10 }}
+  cols={{ name: 'cap', label: 'Cap', from: 5, to: 20, step: 5 }}
+  format="money"
+  decimals={0}
+/>
+```
+
+`rows` and `cols` each name one value of the formula and the range it runs through (`step` is optional, default 1).
+
+### A calculated number in a sentence
+
+With $37 you earn <Value of="min(floor(money / 5), 5)" vars={{ money: 37 }} format="money" decimals={0} /> interest.
+
+```mdx
+With $37 you earn <Value of="min(floor(money / 5), 5)" vars={{ money: 37 }} format="money" decimals={0} /> interest.
+```
+
+The number is calculated when the page is shown, so it can't go out of date when you change the formula.
+
+## Embedding tools
+
+A published tool can be shown inside a guide. It always shows the tool's latest published version, with a link to the tool's own page.
+
+```mdx
+<Tool id="interest-calculator" />
+```
+
+`id` is the tool's web address name (the part after `/tools/`). The easiest way is **Blocks → Embed a tool** in the editor. Tools can't embed other tools.
+
+## Tier lists
+
+Anyone can make a tier list at [/tierlists/new](/tierlists/new). Published tier lists can be embedded in guides and tools:
+
+```mdx
+<TierList id="AbC123xy" />
+```
+
+`id` is the code at the end of the tier list's address. Use **Blocks → Embed a tier list** to pick one. Private tier lists can't be embedded.
+
+## What isn't allowed
+
+Guides run on the website's server, so a few things are blocked for safety. They're listed as problems in the editor:
+
+- **Curly brackets in text**, like `{this}`. Write `\{` to show a curly bracket.
+- **`import` and `export` lines.**
+- **Scripts, iframes, styles and event handlers** such as `onClick`.
+- **Links starting with `javascript:` or `data:`.**
+- **Components that aren't on this page.**
+
+Option values must be plain: text in quotes, numbers in curly brackets like `default={25}`, and lists or groups like the `options` and `rows` above.
+
+## Saving and publishing
+
+- **Drafts save automatically** and are never shown to readers.
+- **Problems** appear in a red bar above the editor, with line numbers, and block publishing until fixed.
+- **Publish** makes the current draft live. Keep editing afterwards; changes go live the next time you publish.
+- **History** lists every published version; **Restore** brings one back into the draft.
+- **Settings** sets the web address, sidebar section and order. Admins can also change the owner.
