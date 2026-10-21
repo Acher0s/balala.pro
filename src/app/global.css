@@ -15,3 +15,14 @@ html > body[data-scroll-locked] {
 #nd-subnav a {
   white-space: nowrap;
 }
+
+/* No sidebar column on wider screens; on phones the sidebar stays as the menu drawer. */
+@media (min-width: 768px) {
+  #nd-notebook-layout {
+    --fd-sidebar-width: 0px !important;
+    --fd-sidebar-col: 0px !important;
+  }
+  #nd-notebook-layout > :has(> #nd-sidebar) {
+    display: none;
+  }
+}

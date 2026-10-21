@@ -6,8 +6,8 @@ import { siteLayoutOptions } from "@/lib/site-layout";
 
 /**
  * The one layout every public page uses, so the top bar looks the same everywhere:
- * header with the site sections on top, the guides/tools sidebar on the left (it also holds the
- * header links on phones).
+ * header with the site sections on top. There's no sidebar on wider screens (see global.css); on
+ * phones the sidebar is the menu drawer, holding the header links and the guides.
  *
  * `plain` is for pages that aren't articles (home, tier lists): their content isn't wrapped in a
  * docs page, so it's placed in the layout's main area here.
@@ -30,6 +30,7 @@ export async function SiteLayout({
       tree={siteTree}
       {...options}
       nav={{ ...options.nav, mode: "top" }}
+      sidebar={{ collapsible: false }}
     >
       {plain ? (
         <div className="flex min-w-0 flex-col [grid-area:main]">{children}</div>
