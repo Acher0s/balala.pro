@@ -18,19 +18,25 @@ Extra mult and chips would be from any jokers or cards, including the base chips
 A king can be red seal and steel at the same time which would mean that with 1 red steel king, you input 1 into red king and 1 into red steel.
 
 <Calc id="hand-score-baron" title="High Card with Baron and Mime">
-  <Input name="hand" label="Hand" default={1} options={[{ label: 'High Card', value: 1 }, { label: 'Pair', value: 2 }, { label: '2 Pair', value: 3 }, { label: '3oak', value: 4 }, { label: 'Straight', value: 5 }, { label: 'Flush', value: 6 }, { label: 'Full House', value: 7 }, { label: '4oak', value: 8 }, { label: 'Straight Flush', value: 9 }, { label: '5oak', value: 10 }, { label: 'Flush House', value: 11 }, { label: 'Flush 5', value: 12 }]} />
-  <Input name="level" label="Level" default={10} min={1} />
-  <Input name="xmult" label="Extra Mult" default={0} min={0} />
-  <Input name="xchips" label="Extra Chips" default={10} min={0} />
-  <Input name="kings" label="Kings" default={3} min={0} />
-  <Input name="redkings" label="Red Kings" default={2} min={0} />
-  <Input name="steel" label="Steel" default={3} min={0} />
-  <Input name="redsteel" label="Red Steel" default={2} min={0} />
-  <Input name="baron" label="Baron" default={2} min={0} />
-  <Input name="mime" label="Mime" default={3} min={0} />
-  <Output label="Hand score before x mult" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips)" decimals={0} />
-  <Output label="Total x mult" value="1.5 ^ steel * 1.5 ^ (redsteel * 2) * 1.5 ^ (baron * (kings + redkings * 2)) * 1.5 ^ (mime * baron * (kings + redkings)) * 1.5 ^ (mime * (steel + redsteel))" />
-  <Output label="Score" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips) * (1.5 ^ steel * 1.5 ^ (redsteel * 2) * 1.5 ^ (baron * (kings + redkings * 2)) * 1.5 ^ (mime * baron * (kings + redkings)) * 1.5 ^ (mime * (steel + redsteel)))" decimals={0} />
+  <Section title="Hand">
+    <Input name="hand" label="Hand" default={1} options={[{ label: 'High Card', value: 1 }, { label: 'Pair', value: 2 }, { label: '2 Pair', value: 3 }, { label: '3oak', value: 4 }, { label: 'Straight', value: 5 }, { label: 'Flush', value: 6 }, { label: 'Full House', value: 7 }, { label: '4oak', value: 8 }, { label: 'Straight Flush', value: 9 }, { label: '5oak', value: 10 }, { label: 'Flush House', value: 11 }, { label: 'Flush 5', value: 12 }]} />
+    <Input name="level" label="Level" default={10} min={1} />
+    <Input name="xmult" label="Extra Mult" default={0} min={0} />
+    <Input name="xchips" label="Extra Chips" default={10} min={0} />
+  </Section>
+  <Section title="Cards and jokers">
+    <Input name="kings" label="Kings" default={3} min={0} />
+    <Input name="redkings" label="Red Kings" default={2} min={0} />
+    <Input name="steel" label="Steel" default={3} min={0} />
+    <Input name="redsteel" label="Red Steel" default={2} min={0} />
+    <Input name="baron" label="Baron" default={2} min={0} />
+    <Input name="mime" label="Mime" default={3} min={0} />
+  </Section>
+  <Section title="Results">
+    <Output label="Hand score before x mult" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips)" decimals={0} />
+    <Output label="Total x mult" value="1.5 ^ steel * 1.5 ^ (redsteel * 2) * 1.5 ^ (baron * (kings + redkings * 2)) * 1.5 ^ (mime * baron * (kings + redkings)) * 1.5 ^ (mime * (steel + redsteel))" />
+    <Output label="Score" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips) * (1.5 ^ steel * 1.5 ^ (redsteel * 2) * 1.5 ^ (baron * (kings + redkings * 2)) * 1.5 ^ (mime * baron * (kings + redkings)) * 1.5 ^ (mime * (steel + redsteel)))" decimals={0} />
+  </Section>
 </Calc>
 
 </Column>
@@ -39,19 +45,25 @@ A king can be red seal and steel at the same time which would mean that with 1 r
 ## Flush 5: Idol and Ancient
 
 <Calc id="hand-score-idol" title="Flush 5 with Idol and Ancient">
-  <Input name="hand" label="Hand" default={12} options={[{ label: 'High Card', value: 1 }, { label: 'Pair', value: 2 }, { label: '2 Pair', value: 3 }, { label: '3oak', value: 4 }, { label: 'Straight', value: 5 }, { label: 'Flush', value: 6 }, { label: 'Full House', value: 7 }, { label: '4oak', value: 8 }, { label: 'Straight Flush', value: 9 }, { label: '5oak', value: 10 }, { label: 'Flush House', value: 11 }, { label: 'Flush 5', value: 12 }]} />
-  <Input name="level" label="Level" default={10} min={1} />
-  <Input name="xmult" label="Extra Mult" default={0} min={0} />
-  <Input name="xchips" label="Extra Chips" default={10} min={0} />
-  <Input name="idol" label="Idol" default={3} min={0} hint="Copies" />
-  <Input name="idolhits" label="Idol triggers" default={5} min={0} />
-  <Input name="ancient" label="Ancient" default={1} min={0} hint="Copies" />
-  <Input name="ancienthits" label="Ancient triggers" default={5} min={0} />
-  <Input name="steel" label="Steel" default={0} min={0} />
-  <Input name="redsteel" label="Red Steel" default={0} min={0} />
-  <Output label="Hand score before x mult" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips)" decimals={0} />
-  <Output label="Total x mult" value="2 ^ (idol * idolhits) * 1.5 ^ (ancient * ancienthits) * 1.5 ^ steel * 1.5 ^ (redsteel * 2)" />
-  <Output label="Score" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips) * (2 ^ (idol * idolhits) * 1.5 ^ (ancient * ancienthits) * 1.5 ^ steel * 1.5 ^ (redsteel * 2))" decimals={0} />
+  <Section title="Hand">
+    <Input name="hand" label="Hand" default={12} options={[{ label: 'High Card', value: 1 }, { label: 'Pair', value: 2 }, { label: '2 Pair', value: 3 }, { label: '3oak', value: 4 }, { label: 'Straight', value: 5 }, { label: 'Flush', value: 6 }, { label: 'Full House', value: 7 }, { label: '4oak', value: 8 }, { label: 'Straight Flush', value: 9 }, { label: '5oak', value: 10 }, { label: 'Flush House', value: 11 }, { label: 'Flush 5', value: 12 }]} />
+    <Input name="level" label="Level" default={10} min={1} />
+    <Input name="xmult" label="Extra Mult" default={0} min={0} />
+    <Input name="xchips" label="Extra Chips" default={10} min={0} />
+  </Section>
+  <Section title="Cards and jokers">
+    <Input name="idol" label="Idol" default={3} min={0} hint="Copies" />
+    <Input name="idolhits" label="Idol triggers" default={5} min={0} />
+    <Input name="ancient" label="Ancient" default={1} min={0} hint="Copies" />
+    <Input name="ancienthits" label="Ancient triggers" default={5} min={0} />
+    <Input name="steel" label="Steel" default={0} min={0} />
+    <Input name="redsteel" label="Red Steel" default={0} min={0} />
+  </Section>
+  <Section title="Results">
+    <Output label="Hand score before x mult" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips)" decimals={0} />
+    <Output label="Total x mult" value="2 ^ (idol * idolhits) * 1.5 ^ (ancient * ancienthits) * 1.5 ^ steel * 1.5 ^ (redsteel * 2)" />
+    <Output label="Score" value="(choose(hand, 1, 2, 2, 3, 4, 4, 4, 7, 8, 12, 14, 16) + (level - 1) * choose(hand, 1, 1, 1, 2, 3, 2, 2, 3, 4, 3, 4, 3) + xmult) * (choose(hand, 5, 10, 20, 30, 30, 35, 40, 60, 100, 120, 140, 160) + (level - 1) * choose(hand, 10, 15, 20, 20, 30, 15, 25, 30, 40, 35, 40, 50) + xchips) * (2 ^ (idol * idolhits) * 1.5 ^ (ancient * ancienthits) * 1.5 ^ steel * 1.5 ^ (redsteel * 2))" decimals={0} />
+  </Section>
 </Calc>
 
 </Column>

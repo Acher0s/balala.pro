@@ -7,16 +7,22 @@ tags: [tool, shop]
 ---
 
 <Calc id="shop-rolls" title="Estimated Things seen in Shop">
-  <Input name="cost" label="Starting Cost" default={5} min={0} />
-  <Input name="rolls" label="Rolls Done" default={1} min={1} />
-  <Input name="slots" label="Shop Slots" default={2} min={1} />
-  <Input name="voucher" label="Voucher" default={1} options={[{ label: 'Base', value: 1 }, { label: 'Tarot Merchant', value: 2 }, { label: 'Tarot Tycoon', value: 3 }, { label: 'Zodiac', value: 4 }]} />
-  <Output label="Total Spent" value="(rolls / 2) * (2 * cost + (rolls - 1) * 1)" format="money" decimals={0} />
-  <Output label="Avg Cost/Roll" value="((rolls / 2) * (2 * cost + (rolls - 1) * 1)) / rolls" format="money" />
-  <Output label="Joker" value="20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
-  <Output label="Rare" value="0.05 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
-  <Output label="Uncommon" value="0.25 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
-  <Output label="Common" value="0.7 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
-  <Output label="Planet" value="choose(voucher, 4, 4, 4, 9.6) / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
-  <Output label="Tarot" value="choose(voucher, 4, 9.6, 32, 9.6) / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+  <Section title="Shop">
+    <Input name="cost" label="Starting Cost" default={5} min={0} />
+    <Input name="rolls" label="Rolls Done" default={1} min={1} />
+    <Input name="slots" label="Shop Slots" default={2} min={1} />
+    <Input name="voucher" label="Voucher" default={1} options={[{ label: 'Base', value: 1 }, { label: 'Tarot Merchant', value: 2 }, { label: 'Tarot Tycoon', value: 3 }, { label: 'Zodiac', value: 4 }]} />
+  </Section>
+  <Section title="Cost">
+    <Output label="Total Spent" value="(rolls / 2) * (2 * cost + (rolls - 1) * 1)" format="money" decimals={0} />
+    <Output label="Avg Cost/Roll" value="((rolls / 2) * (2 * cost + (rolls - 1) * 1)) / rolls" format="money" />
+  </Section>
+  <Section title="Seen in shop">
+    <Output label="Joker" value="20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+    <Output label="Rare" value="0.05 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+    <Output label="Uncommon" value="0.25 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+    <Output label="Common" value="0.7 * 20 / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+    <Output label="Planet" value="choose(voucher, 4, 4, 4, 9.6) / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+    <Output label="Tarot" value="choose(voucher, 4, 9.6, 32, 9.6) / (20 + choose(voucher, 4, 4, 4, 9.6) + choose(voucher, 4, 9.6, 32, 9.6)) * slots * rolls" />
+  </Section>
 </Calc>

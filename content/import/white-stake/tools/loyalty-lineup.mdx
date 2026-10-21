@@ -1,32 +1,28 @@
 ---
 title: Loyalty Card lineup
-description: How many hands are left on Loyalty Card before each hand of the small blind, big blind and PvP.
+description: How to make Loyalty Card trigger on the last hand of the PvP.
 author: King
 patch: 0.5.5
 tags: [tool, jokers]
 ---
 
-<Calc id="loyalty-lineup" title="Loyalty Card lineup">
-  <Input name="every" label="Loyalty Card Hands" default={6} min={1} />
-  <Input name="hands" label="Total Hands" default={5} min={1} max={6} />
-  <Output label="Small · hand 1" value="if(1 > hands, 0 / 0, mod(3 * hands - every - 1, every))" decimals={0} />
-  <Output label="Small · hand 2" value="if(2 > hands, 0 / 0, mod(3 * hands - every - 2, every))" decimals={0} />
-  <Output label="Small · hand 3" value="if(3 > hands, 0 / 0, mod(3 * hands - every - 3, every))" decimals={0} />
-  <Output label="Small · hand 4" value="if(4 > hands, 0 / 0, mod(3 * hands - every - 4, every))" decimals={0} />
-  <Output label="Small · hand 5" value="if(5 > hands, 0 / 0, mod(3 * hands - every - 5, every))" decimals={0} />
-  <Output label="Small · hand 6" value="if(6 > hands, 0 / 0, mod(3 * hands - every - 6, every))" decimals={0} />
-  <Output label="Big · hand 1" value="if(1 > hands, 0 / 0, mod(2 * hands - every - 1, every))" decimals={0} />
-  <Output label="Big · hand 2" value="if(2 > hands, 0 / 0, mod(2 * hands - every - 2, every))" decimals={0} />
-  <Output label="Big · hand 3" value="if(3 > hands, 0 / 0, mod(2 * hands - every - 3, every))" decimals={0} />
-  <Output label="Big · hand 4" value="if(4 > hands, 0 / 0, mod(2 * hands - every - 4, every))" decimals={0} />
-  <Output label="Big · hand 5" value="if(5 > hands, 0 / 0, mod(2 * hands - every - 5, every))" decimals={0} />
-  <Output label="Big · hand 6" value="if(6 > hands, 0 / 0, mod(2 * hands - every - 6, every))" decimals={0} />
-  <Output label="PvP · hand 1" value="if(1 > hands, 0 / 0, mod(1 * hands - every - 1, every))" decimals={0} />
-  <Output label="PvP · hand 2" value="if(2 > hands, 0 / 0, mod(1 * hands - every - 2, every))" decimals={0} />
-  <Output label="PvP · hand 3" value="if(3 > hands, 0 / 0, mod(1 * hands - every - 3, every))" decimals={0} />
-  <Output label="PvP · hand 4" value="if(4 > hands, 0 / 0, mod(1 * hands - every - 4, every))" decimals={0} />
-  <Output label="PvP · hand 5" value="if(5 > hands, 0 / 0, mod(1 * hands - every - 5, every))" decimals={0} />
-  <Output label="PvP · hand 6" value="if(6 > hands, 0 / 0, mod(1 * hands - every - 6, every))" decimals={0} />
-</Calc>
+<Joker id="loyalty_card" /> gives X4 Mult every 6 hands you play, counting every blind. In the shop it shows how many hands are left: it counts down by one per hand, shows **Active!** after **1 remaining**, and the next hand you play gets the X4. Then it starts again at **5 remaining**.
 
-Loyalty hits on 0, the number you see above is how many hands are remaining on loyalty before that hand is played.
+Lining up loyalty means having it occur on your last hand in pvp. For that, it has to show your number of hands minus one when the PvP starts, for example **4 remaining** with 5 hands.
+
+<Calc id="loyalty-lineup" title="Loyalty Card lineup">
+  <Section title="Your run">
+    <Input name="now" label="Loyalty Card says" default={2} options={[{ label: 'Active!', value: 0 }, { label: '1 remaining', value: 1 }, { label: '2 remaining', value: 2 }, { label: '3 remaining', value: 3 }, { label: '4 remaining', value: 4 }, { label: '5 remaining', value: 5 }]} />
+    <Input name="hands" label="Hands per blind" default={5} min={1} max={10} hint="You play all of them in the PvP" />
+    <Input name="planned" label="Hands you'll play before the PvP" default={10} min={0} hint="From now, in this ante's small and big blind" />
+  </Section>
+  <Section title="From where you are">
+    <Output label="Hands to play before the PvP" value="mod(now - (hands - 1), 6)" decimals={0} hint="Or 6, 12, … more" />
+    <Output label="Your plan triggers on PvP hand" value="if(mod(now - planned, 6) + 1 <= hands, mod(now - planned, 6) + 1, 0 / 0)" decimals={0} hint="— means it doesn't trigger during the PvP" />
+  </Section>
+  <Section title="It should say, in the shop before the…">
+    <Output label="Small blind" value="mod(3 * hands - 1, 6)" decimals={0} hint="If you play all your hands in the small and big blind. 0 is Active!" />
+    <Output label="Big blind" value="mod(2 * hands - 1, 6)" decimals={0} hint="If you play all your hands in the big blind. 0 is Active!" />
+    <Output label="PvP" value="mod(hands - 1, 6)" decimals={0} hint="0 is Active!" />
+  </Section>
+</Calc>

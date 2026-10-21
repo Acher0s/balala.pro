@@ -18,13 +18,17 @@ Calculations are to determine odds of obtaining one of the wanted consumables wi
 ## Tarots
 
 <Calc id="blocking-tarots" title="Tarot blocking">
-  <Input name="total" label="Total Tarots" default={21} min={1} />
-  <Input name="wanted" label="Wanted Tarots" default={5} min={0} />
-  <Input name="blocked" label="Tarots Blocked" default={3} min={0} />
-  <Input name="inpack" label="Tarots in Pack" default={5} min={1} />
-  <Output label="No Block" value="1 - combin(total - wanted, inpack) / combin(total, inpack)" format="percent" />
-  <Output label="W/Block" value="1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)" format="percent" />
-  <Output label="% Increase" value="(1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)) / (1 - combin(total - wanted, inpack) / combin(total, inpack)) - 1" format="percent" />
+  <Section title="Pack">
+    <Input name="total" label="Total Tarots" default={21} min={1} />
+    <Input name="wanted" label="Wanted Tarots" default={5} min={0} />
+    <Input name="blocked" label="Tarots Blocked" default={3} min={0} />
+    <Input name="inpack" label="Tarots in Pack" default={5} min={1} />
+  </Section>
+  <Section title="Odds">
+    <Output label="No Block" value="1 - combin(total - wanted, inpack) / combin(total, inpack)" format="percent" />
+    <Output label="W/Block" value="1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)" format="percent" />
+    <Output label="% Increase" value="(1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)) / (1 - combin(total - wanted, inpack) / combin(total, inpack)) - 1" format="percent" />
+  </Section>
 </Calc>
 
 </Column>
@@ -33,13 +37,17 @@ Calculations are to determine odds of obtaining one of the wanted consumables wi
 ## Planets
 
 <Calc id="blocking-planets" title="Planet blocking">
-  <Input name="total" label="Total Planets" default={13} min={1} />
-  <Input name="wanted" label="Wanted Planets" default={3} min={0} />
-  <Input name="blocked" label="Planets Blocked" default={2} min={0} />
-  <Input name="inpack" label="Planets in Pack" default={3} min={1} />
-  <Output label="No Block" value="1 - combin(total - wanted, inpack) / combin(total, inpack)" format="percent" />
-  <Output label="W/Block" value="1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)" format="percent" />
-  <Output label="% Increase" value="(1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)) / (1 - combin(total - wanted, inpack) / combin(total, inpack)) - 1" format="percent" />
+  <Section title="Pack">
+    <Input name="total" label="Total Planets" default={13} min={1} />
+    <Input name="wanted" label="Wanted Planets" default={3} min={0} />
+    <Input name="blocked" label="Planets Blocked" default={2} min={0} />
+    <Input name="inpack" label="Planets in Pack" default={3} min={1} />
+  </Section>
+  <Section title="Odds">
+    <Output label="No Block" value="1 - combin(total - wanted, inpack) / combin(total, inpack)" format="percent" />
+    <Output label="W/Block" value="1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)" format="percent" />
+    <Output label="% Increase" value="(1 - combin(total - wanted - blocked, inpack) / combin(total - blocked, inpack)) / (1 - combin(total - wanted, inpack) / combin(total, inpack)) - 1" format="percent" />
+  </Section>
 </Calc>
 
 </Column>
