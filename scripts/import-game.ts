@@ -320,6 +320,8 @@ interface SpriteJob {
   id: string;
   pos: { x: number; y: number };
   soul?: { x: number; y: number };
+  /** Sheet the soul layer comes from, when it isn't the item's own sheet. */
+  soulSheet?: string;
   /** A mod's own sprite sheet; vanilla items use the game's sheet for their kind. */
   sheet?: Buffer;
   cell?: { w: number; h: number };
@@ -398,6 +400,13 @@ for (const [key, center] of Object.entries(centers)) {
     pos: center.pos as { x: number; y: number },
     soul: center.soul_pos as { x: number; y: number } | undefined,
   });
+  // The Soul's gem isn't a soul_pos: the game draws a shared sprite from the Enhancers sheet
+  // on top of it (G.shared_soul in game.lua, drawn in Card:draw).
+  if (key === "c_soul") {
+    const job = jobs[jobs.length - 1];
+    job.soul = centers.soul?.pos as { x: number; y: number };
+    job.soulSheet = "Enhancers";
+  }
 }
 
 // Seals: sprite positions live in G.shared_seals, text in descriptions.Other.<colour>_seal
@@ -595,7 +604,8 @@ for (const job of jobs) {
   const src = job.sheet ?? sheet(SHEET_BY_KIND[job.kind]);
   let img = await crop(src, job.pos, job.cell);
   if (job.soul) {
-    const soul = await crop(src, job.soul, job.cell);
+    const soulSrc = job.soulSheet ? sheet(job.soulSheet) : src;
+    const soul = await crop(soulSrc, job.soul, job.cell);
     img = await sharp(img)
       .composite([{ input: soul }])
       .png()
