@@ -13,7 +13,7 @@ export const STATE_COOKIE = "bmpu_oauth_state";
 export const NEXT_COOKIE = "bmpu_login_next";
 const SESSION_DAYS = 30;
 
-/** The writer studio. */
+/** The author studio. */
 export const STUDIO = "/studio";
 export const LOGIN = "/login";
 

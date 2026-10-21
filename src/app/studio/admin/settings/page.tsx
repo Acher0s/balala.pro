@@ -11,6 +11,7 @@ export default async function SiteSettingsPage() {
       <SiteSettingsForm
         siteName={settings.siteName}
         homeIntro={settings.homeIntro}
+        announcement={settings.announcement}
       />
     </main>
   );

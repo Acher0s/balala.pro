@@ -2,7 +2,7 @@ import { stringify } from "yaml";
 
 /**
  * What a new guide starts with: a tutorial that shows everything the editor can do,
- * each feature with a live example and the source that produces it. Writers delete it as they go.
+ * each feature with a live example and the source that produces it. Authors delete it as they go.
  */
 export function tutorialGuide({
   title,

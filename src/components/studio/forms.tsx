@@ -11,6 +11,8 @@ import {
   setUserRole,
 } from "@/app/studio/actions";
 import type { Role } from "@/db/schema";
+import { EXAMPLE_ANNOUNCEMENT } from "@/lib/announcement-example";
+import { ROLE_LABELS } from "@/lib/roles";
 
 export const field =
   "w-full rounded-md border bg-fd-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-fd-primary";
@@ -63,7 +65,7 @@ export function RequestAccessForm() {
       action={(fd) => run(() => requestWriterAccess(fd))}
       className="flex flex-col gap-3 rounded-xl border bg-fd-card p-4"
     >
-      <h2 className="font-semibold">Request writer access</h2>
+      <h2 className="font-semibold">Request author access</h2>
       <label className="flex flex-col gap-1 text-sm">
         What would you like to write about?
         <textarea
@@ -165,9 +167,9 @@ export function RoleSelect({
         className={`${field} w-auto`}
         onChange={(e) => run(() => setUserRole(userId, e.target.value as Role))}
       >
-        <option value="none">No access</option>
-        <option value="writer">Writer</option>
-        <option value="admin">Admin</option>
+        <option value="none">{ROLE_LABELS.none} (no access)</option>
+        <option value="writer">{ROLE_LABELS.writer}</option>
+        <option value="admin">{ROLE_LABELS.admin}</option>
       </select>
       <ErrorText error={error} />
     </span>
@@ -177,12 +179,15 @@ export function RoleSelect({
 export function SiteSettingsForm({
   siteName,
   homeIntro,
+  announcement: initialAnnouncement,
 }: {
   siteName: string;
   homeIntro: string;
+  announcement: string;
 }) {
   const { pending, error, run } = useAction();
   const [saved, setSaved] = useState(false);
+  const [announcement, setAnnouncement] = useState(initialAnnouncement);
   return (
     <form
       action={(fd) =>
@@ -191,6 +196,7 @@ export function SiteSettingsForm({
             saveSiteSettings({
               siteName: String(fd.get("siteName")),
               homeIntro: String(fd.get("homeIntro")),
+              announcement,
             }),
           () => setSaved(true),
         )
@@ -216,6 +222,36 @@ export function SiteSettingsForm({
           className={field}
           onChange={() => setSaved(false)}
         />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="flex items-center justify-between gap-2">
+          Home page announcement
+          {!announcement && (
+            <button
+              type="button"
+              className="text-xs underline"
+              onClick={() => {
+                setAnnouncement(EXAMPLE_ANNOUNCEMENT);
+                setSaved(false);
+              }}
+            >
+              Use example text
+            </button>
+          )}
+        </span>
+        <textarea
+          value={announcement}
+          rows={10}
+          placeholder="Leave empty for no announcement."
+          className={`${field} font-mono`}
+          onChange={(e) => {
+            setAnnouncement(e.target.value);
+            setSaved(false);
+          }}
+        />
+        <span className="text-xs text-fd-muted-foreground">
+          Shown at the top of the home page. Uses the same markup as guides.
+        </span>
       </label>
       <ErrorText error={error} />
       <span className="flex items-center gap-3">

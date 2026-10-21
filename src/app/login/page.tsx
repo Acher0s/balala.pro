@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { devLoginEnabled, getCurrentUser, safeNext } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/roles";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -26,7 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div>
         <h1 className="text-2xl font-bold">Sign in</h1>
         <p className="mt-1 text-sm text-fd-muted-foreground">
-          Sign in to save tier lists to your account. Writers also use this to
+          Sign in to save tier lists to your account. Authors also use this to
           get to the studio.
         </p>
       </div>
@@ -51,7 +52,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                 href={`/api/auth/dev-login?as=${role}&${q}`}
                 className="rounded-md border px-2 py-1 hover:bg-fd-accent"
               >
-                Sign in as test {role === "none" ? "member" : role}
+                Sign in as test {ROLE_LABELS[role].toLowerCase()}
               </a>
             ))}
           </div>

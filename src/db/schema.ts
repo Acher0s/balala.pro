@@ -10,7 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-/** "none" = signed in but not (yet) a writer. Writers edit their own guides; admins edit everything. */
+/** "none" = signed in but not (yet) an author. "writer" = author (shown as "Author"): edits their own guides. Admins edit everything. */
 export type Role = "none" | "writer" | "admin";
 
 export const users = pgTable("users", {
@@ -169,7 +169,7 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType: () => "bytea",
 });
 
-/** Images and GIFs uploaded by writers, served at /media/<id>. */
+/** Images and GIFs uploaded by authors, served at /media/<id>. */
 export const media = pgTable("media", {
   id: text("id").primaryKey(),
   ownerId: uuid("owner_id").references(() => users.id, {

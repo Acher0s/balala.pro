@@ -49,11 +49,11 @@ export function AccountMenu({ user }: { user: MenuUser | null }) {
         </Link>
         {user.role === "none" ? (
           <Link href="/studio" className={item}>
-            Become a writer
+            Become an author
           </Link>
         ) : (
           <Link href="/studio" className={item}>
-            Writer studio
+            Author studio
           </Link>
         )}
         <form action={signOut} className="border-t pt-1">

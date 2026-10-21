@@ -28,7 +28,11 @@ import {
   compileGuideCached,
   GuideValidationError,
 } from "@/lib/mdx/compile";
-import { type SiteSettings, saveSettings } from "@/lib/settings";
+import {
+  announcementSource,
+  type SiteSettings,
+  saveSettings,
+} from "@/lib/settings";
 import { publishedTierListIds } from "@/lib/tierlists";
 
 export interface ActionResult {
@@ -344,7 +348,33 @@ export async function saveSiteSettings(
   await assertUser("admin");
   const siteName = values.siteName.trim().slice(0, 80);
   if (!siteName) return { ok: false, error: "The site needs a name." };
-  await saveSettings({ siteName, homeIntro: values.homeIntro.slice(0, 2000) });
+  const announcement = values.announcement.trim().slice(0, 5000);
+  if (announcement) {
+    // Same checks as a guide; line numbers counted from the top of the announcement box.
+    const offset = announcementSource("").split("\n").length - 2;
+    const problems = await problemsOf(
+      announcementSource(announcement),
+      "guide",
+    );
+    if (problems.length) {
+      return {
+        ok: false,
+        error: problems
+          .map((p) =>
+            p.replace(
+              /^line (\d+)/,
+              (_m, n: string) => `line ${Number(n) - offset}`,
+            ),
+          )
+          .join("\n"),
+      };
+    }
+  }
+  await saveSettings({
+    siteName,
+    homeIntro: values.homeIntro.slice(0, 2000),
+    announcement,
+  });
   return { ok: true };
 }
 

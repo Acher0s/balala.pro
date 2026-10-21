@@ -18,8 +18,8 @@ The studio isn't linked from the site; go to `/studio` directly. Everyone signs 
 
 | Role | Can |
 | --- | --- |
-| Visitor (signed in, no role) | Request writer access |
-| Writer | Create guides, and edit, publish or delete **their own** guides |
+| Member (signed in, no role) | Request author access, make tier lists |
+| Author | Create guides, and edit, publish or delete **their own** guides |
 | Admin | Everything: all guides, approve/deny requests, change roles, card data, site settings |
 
 - **Editing**: source on the left, live preview of the draft in the middle, card picker and blocks on the right.
@@ -31,7 +31,7 @@ The studio isn't linked from the site; go to `/studio` directly. Everyone signs 
   publishing until fixed.
 - **Admin → Cards** changes how a card is shown (name, rarity, cost, effect text), e.g. for BMP balance changes.
 
-In local development the login page also has "Sign in as test admin/writer/visitor" buttons, so you can try
+In local development the login page also has "Sign in as test admin/author/member" buttons, so you can try
 everything without a Discord app. They don't exist in production.
 
 ### Safety
@@ -60,7 +60,7 @@ Values that depend on the run show as `?`; admins can fix them under **Admin →
 
 ## Guide syntax
 
-The full, live reference is at **/docs** on the site (writers and admins; it's also in the header when signed in). Its source is [content/docs/markup-reference.mdx](content/docs/markup-reference.mdx), and a test checks every example in it is valid.
+The full, live reference is at **/docs** on the site (authors and admins; it's also in the header when signed in). Its source is [content/docs/markup-reference.mdx](content/docs/markup-reference.mdx), and a test checks every example in it is valid.
 
 
 ```mdx

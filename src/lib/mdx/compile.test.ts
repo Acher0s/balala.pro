@@ -182,3 +182,13 @@ describe("the markup reference", () => {
     expect(compiled.toc.length).toBeGreaterThan(15);
   });
 });
+
+describe("the example announcement", () => {
+  it("passes the same checks as the admin's own text", async () => {
+    const { EXAMPLE_ANNOUNCEMENT } = await import("@/lib/announcement-example");
+    const { announcementSource } = await import("@/lib/settings");
+    await expect(
+      compileGuide(announcementSource(EXAMPLE_ANNOUNCEMENT)),
+    ).resolves.toBeTruthy();
+  });
+});

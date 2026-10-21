@@ -5,7 +5,7 @@ import { getDb, schema } from "@/db";
 import { assertUser } from "@/lib/auth";
 import { MAX_UPLOAD_BYTES, sniffImageType } from "@/lib/media";
 
-/** Writers: upload an image or GIF. Returns the URL to use in a guide. */
+/** Authors: upload an image or GIF. Returns the URL to use in a guide. */
 export async function uploadMedia(
   formData: FormData,
 ): Promise<{ ok: boolean; url?: string; error?: string }> {

@@ -9,7 +9,7 @@ export default function Layout({ children }: LayoutProps<"/docs">) {
         name: "Documentation",
         children: [
           { type: "page", name: "Guide markup reference", url: "/docs" },
-          { type: "page", name: "Writer studio", url: "/studio" },
+          { type: "page", name: "Author studio", url: "/studio" },
         ],
       }}
     >

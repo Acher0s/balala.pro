@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-/** Writers' reference for everything the guide markup can do, rendered through the real pipeline. */
+/** Authors' reference for everything the guide markup can do, rendered through the real pipeline. */
 export default async function DocsPage() {
   await requireUser("writer", "/docs");
   const source = await readFile(

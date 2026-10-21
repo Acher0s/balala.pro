@@ -31,7 +31,7 @@ export default async function StudioHome() {
         <h1 className="text-2xl font-bold">Welcome, {user.displayName}</h1>
         {latest?.status === "pending" ? (
           <p className="rounded-xl border bg-fd-card p-4">
-            Your request to become a writer is waiting for an admin. You'll get
+            Your request to become an author is waiting for an admin. You'll get
             access as soon as it's approved.
           </p>
         ) : (
@@ -42,7 +42,8 @@ export default async function StudioHome() {
               </p>
             )}
             <p className="text-fd-muted-foreground">
-              You can read guides, but writing needs approval from an admin.
+              You can read guides, but writing guides needs approval from an
+              admin.
             </p>
             <RequestAccessForm />
           </>
@@ -78,7 +79,7 @@ export default async function StudioHome() {
           href={`${STUDIO}/admin/requests`}
           className="rounded-xl border border-fd-primary/40 bg-fd-primary/10 p-3 text-sm"
         >
-          {pending} writer request{pending === 1 ? "" : "s"} waiting for a
+          {pending} author request{pending === 1 ? "" : "s"} waiting for a
           decision →
         </Link>
       )}

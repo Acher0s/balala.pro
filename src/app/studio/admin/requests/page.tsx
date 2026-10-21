@@ -17,7 +17,7 @@ export default async function RequestsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
-      <h1 className="text-2xl font-bold">Writer requests</h1>
+      <h1 className="text-2xl font-bold">Author requests</h1>
       <Panel title={`Waiting (${pending.length})`}>
         {pending.length === 0 && (
           <p className="text-sm text-fd-muted-foreground">Nothing to review.</p>

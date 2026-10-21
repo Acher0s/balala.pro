@@ -5,13 +5,26 @@ import { getDb, schema } from "@/db";
 export interface SiteSettings {
   siteName: string;
   homeIntro: string;
+  /** Shown in a box at the top of the home page, in guide markup. Empty = no announcement. */
+  announcement: string;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
   siteName: "BMP University",
   homeIntro:
     "Guides for Balatro Multiplayer, with calculators you can use right on the page.",
+  announcement: "",
 };
+
+/** The announcement as a guide-markup document, so it can use the same validation and rendering. */
+export function announcementSource(text: string) {
+  return `---
+title: Announcement
+---
+
+${text}
+`;
+}
 
 export async function getSettings(): Promise<SiteSettings> {
   const db = await getDb();

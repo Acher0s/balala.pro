@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { StudioNav } from "@/components/studio/studio-nav";
 import { getCurrentUser, hasRole, STUDIO } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/roles";
 import { signOut } from "./actions";
 
 export const metadata: Metadata = {
@@ -43,7 +44,7 @@ export default async function StudioLayout({
             <span>
               {user.displayName}{" "}
               <span className="text-fd-muted-foreground">
-                ({user.role === "none" ? "visitor" : user.role})
+                ({ROLE_LABELS[user.role]})
               </span>
             </span>
             <form action={signOut}>

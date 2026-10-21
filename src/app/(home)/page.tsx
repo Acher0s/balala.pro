@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Announcement } from "@/components/announcement";
 import { listPublished, pageUrl } from "@/lib/guides";
 import { getSettings } from "@/lib/settings";
 
@@ -24,6 +25,7 @@ export default async function HomePage() {
           {settings.homeIntro}
         </p>
       </div>
+      <Announcement text={settings.announcement} />
       {guides.length === 0 && (
         <p className="text-fd-muted-foreground">No guides yet.</p>
       )}

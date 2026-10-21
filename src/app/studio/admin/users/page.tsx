@@ -24,7 +24,7 @@ export default async function UsersPage() {
       <div>
         <h1 className="text-2xl font-bold">People</h1>
         <p className="text-sm text-fd-muted-foreground">
-          Everyone who has signed in. Writers edit their own guides; admins can
+          Everyone who has signed in. Authors edit their own guides; admins can
           edit everything. Setting someone to "No access" also signs them out.
         </p>
       </div>
