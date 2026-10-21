@@ -704,9 +704,13 @@ function SettingsPanel({
 
   return (
     <div className="flex flex-col gap-4 text-sm">
+      {/* onSubmit, not a form action: React resets a form after an action, which would show
+          the fields' old values (and "Part of" as Nothing) although the new ones were saved. */}
       <form
         className="flex flex-col gap-3"
-        action={(fd) =>
+        onSubmit={(e) => {
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
           start(async () => {
             const res = await updateGuideSettings(guide.id, {
               slug: String(fd.get("slug")),
@@ -719,8 +723,8 @@ function SettingsPanel({
             });
             setMessage(res.ok ? "Saved" : (res.error ?? "Failed"));
             if (res.ok) router.refresh();
-          })
-        }
+          });
+        }}
       >
         <label className="flex flex-col gap-1">
           URL name
