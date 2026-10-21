@@ -13,16 +13,26 @@ Lining up loyalty means having it occur on your last hand in pvp. For that, it h
 <Calc id="loyalty-lineup" title="Loyalty Card lineup">
   <Section title="Your run">
     <Input name="now" label="Loyalty Card says" default={2} options={[{ label: 'Active!', value: 0 }, { label: '1 remaining', value: 1 }, { label: '2 remaining', value: 2 }, { label: '3 remaining', value: 3 }, { label: '4 remaining', value: 4 }, { label: '5 remaining', value: 5 }]} />
-    <Input name="hands" label="Hands per blind" default={5} min={1} max={10} hint="You play all of them in the PvP" />
-    <Input name="planned" label="Hands you'll play before the PvP" default={10} min={0} hint="From now, in this ante's small and big blind" />
+    <Input name="hands" label="Hands" default={5} min={1} max={10}/>
   </Section>
-  <Section title="From where you are">
-    <Output label="Hands to play before the PvP" value="mod(now - (hands - 1), 6)" decimals={0} hint="Or 6, 12, … more" />
-    <Output label="Your plan triggers on PvP hand" value="if(mod(now - planned, 6) + 1 <= hands, mod(now - planned, 6) + 1, 0 / 0)" decimals={0} hint="— means it doesn't trigger during the PvP" />
+
+  <Section title="It should say, in the shop before the… (0 = Active!)">
+    <Output label="Small blind" value="mod(3 * hands - 1, 6)" decimals={0}  />
+    <Output label="Big blind" value="mod(2 * hands - 1, 6)" decimals={0}  />
+    <Output label="PvP" value="mod(hands - 1, 6)" decimals={0} />
   </Section>
-  <Section title="It should say, in the shop before the…">
-    <Output label="Small blind" value="mod(3 * hands - 1, 6)" decimals={0} hint="If you play all your hands in the small and big blind. 0 is Active!" />
-    <Output label="Big blind" value="mod(2 * hands - 1, 6)" decimals={0} hint="If you play all your hands in the big blind. 0 is Active!" />
-    <Output label="PvP" value="mod(hands - 1, 6)" decimals={0} hint="0 is Active!" />
+
+  <Section title="Hands to play in the big blind, by hands played in the small blind (— = can't line it up)">
+    <Output label="0 in small" value="if(0 > hands, 0 / 0, if(mod(now - hands + 1 - 0, 6) <= hands, mod(now - hands + 1 - 0, 6), 0 / 0))" decimals={0} />
+    <Output label="1 in small" value="if(1 > hands, 0 / 0, if(mod(now - hands + 1 - 1, 6) <= hands, mod(now - hands + 1 - 1, 6), 0 / 0))" decimals={0} />
+    <Output label="2 in small" value="if(2 > hands, 0 / 0, if(mod(now - hands + 1 - 2, 6) <= hands, mod(now - hands + 1 - 2, 6), 0 / 0))" decimals={0} />
+    <Output label="3 in small" value="if(3 > hands, 0 / 0, if(mod(now - hands + 1 - 3, 6) <= hands, mod(now - hands + 1 - 3, 6), 0 / 0))" decimals={0} />
+    <Output label="4 in small" value="if(4 > hands, 0 / 0, if(mod(now - hands + 1 - 4, 6) <= hands, mod(now - hands + 1 - 4, 6), 0 / 0))" decimals={0} />
+    <Output label="5 in small" value="if(5 > hands, 0 / 0, if(mod(now - hands + 1 - 5, 6) <= hands, mod(now - hands + 1 - 5, 6), 0 / 0))" decimals={0} />
+    <Output label="6 in small" value="if(6 > hands, 0 / 0, if(mod(now - hands + 1 - 6, 6) <= hands, mod(now - hands + 1 - 6, 6), 0 / 0))" decimals={0} />
+    <Output label="7 in small" value="if(7 > hands, 0 / 0, if(mod(now - hands + 1 - 7, 6) <= hands, mod(now - hands + 1 - 7, 6), 0 / 0))" decimals={0} />
+    <Output label="8 in small" value="if(8 > hands, 0 / 0, if(mod(now - hands + 1 - 8, 6) <= hands, mod(now - hands + 1 - 8, 6), 0 / 0))" decimals={0} />
+    <Output label="9 in small" value="if(9 > hands, 0 / 0, if(mod(now - hands + 1 - 9, 6) <= hands, mod(now - hands + 1 - 9, 6), 0 / 0))" decimals={0} />
+    <Output label="10 in small" value="if(10 > hands, 0 / 0, if(mod(now - hands + 1 - 10, 6) <= hands, mod(now - hands + 1 - 10, 6), 0 / 0))" decimals={0} />
   </Section>
 </Calc>
