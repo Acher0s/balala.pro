@@ -74,8 +74,7 @@ export interface Preset {
 }
 
 export const PRESETS: Preset[] = [
-  { id: "jokers", label: "All jokers", groups: ["joker"] },
-  { id: "mp-jokers", label: "Multiplayer jokers", groups: ["multiplayer"] },
+  { id: "jokers", label: "All jokers", groups: ["joker", "multiplayer"] },
   { id: "tarots", label: "All tarots", groups: ["tarot"] },
   { id: "planets", label: "All planets", groups: ["planet"] },
   { id: "spectrals", label: "All spectrals", groups: ["spectral"] },
