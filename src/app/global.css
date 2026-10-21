@@ -26,3 +26,14 @@ html > body[data-scroll-locked] {
     display: none;
   }
 }
+
+/* Without the sidebar, centre the article in the space left of the table of contents. */
+#nd-page > * {
+  margin-inline: auto;
+  width: 100%;
+}
+
+/* Pages without a table of contents don't keep an empty column for it on the right. */
+#nd-notebook-layout:not(:has(#nd-toc)) {
+  --fd-toc-width: 0px !important;
+}
