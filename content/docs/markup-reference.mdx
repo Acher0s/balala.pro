@@ -382,7 +382,7 @@ Calculators let readers try their own numbers. A `Calc` block holds `Input`s (wh
 | --- | --- |
 | `label` | What readers see |
 | `value` | The formula, in quotes |
-| `format` | `money` ($1.50), `percent` (50%) or left out for a plain number |
+| `format` | `money` ($1.50), `percent` (50%), `e` for big scores (4.40e14) or left out for a plain number |
 | `decimals` | How many decimals to show (default 2) |
 | `hint` | Optional small text under the result |
 
@@ -405,6 +405,8 @@ Formulas work like spreadsheet formulas.
 | `abs(x)`, `sqrt(x)`, `exp(x)`, `ln(x)`, `log10(x)` | Maths functions |
 | `sum(a, b, …)` | Add everything up |
 | `combin(n, k)` | Ways to pick `k` out of `n` (like COMBIN in spreadsheets) |
+| `mod(a, b)` | Remainder of `a` divided by `b`: `mod(7, 6)` is 1 (like MOD in spreadsheets) |
+| `choose(n, a, b, …)` | The `n`-th value: `choose(2, 10, 20, 30)` is 20. Handy with a dropdown (like CHOOSE in spreadsheets) |
 | `and(a, b)`, `or(a, b)`, `not(a)` | Logic: 1 or 0 |
 
 ### Tables from a formula

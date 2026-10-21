@@ -3,6 +3,7 @@ import {
   DocsDescription,
   DocsPage,
   DocsTitle,
+  type FooterProps,
 } from "fumadocs-ui/layouts/notebook/page";
 import { GuideMeta } from "@/components/guide-meta";
 import { getMDXComponents } from "@/components/mdx";
@@ -15,6 +16,7 @@ export async function GuideView({
   source,
   sourceLines = false,
   articleOnly = false,
+  pager = {},
 }: {
   cacheKey: string;
   source: string;
@@ -22,6 +24,8 @@ export async function GuideView({
   sourceLines?: boolean;
   /** Just the article, without the docs page chrome (table of contents etc.). */
   articleOnly?: boolean;
+  /** Previous/next page links at the bottom; none unless given. */
+  pager?: FooterProps["items"];
 }) {
   await ensureCardOverrides();
   const { frontmatter, Body, toc } = await compileGuideCached(
@@ -56,7 +60,7 @@ export async function GuideView({
   }
 
   return (
-    <DocsPage toc={toc}>
+    <DocsPage toc={toc} footer={{ items: pager }}>
       <DocsTitle>{frontmatter.title}</DocsTitle>
       {frontmatter.description && (
         <DocsDescription className="mb-0">

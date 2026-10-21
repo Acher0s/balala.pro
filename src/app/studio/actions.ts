@@ -14,6 +14,7 @@ import {
   safeNext,
 } from "@/lib/auth";
 import { reloadCardOverrides } from "@/lib/card-overrides";
+import { getImportPack } from "@/lib/content-import";
 import { toolTemplate, tutorialGuide } from "@/lib/guide-template";
 import {
   draftCacheKey,
@@ -338,6 +339,52 @@ export async function deleteGuide(id: string) {
   const db = await getDb();
   await db.delete(schema.guides).where(eq(schema.guides.id, id));
   redirect(STUDIO);
+}
+
+// --- Admin: content import -----------------------------------------------
+
+/**
+ * Imports the chosen pages of a content pack as drafts: new pages are created (owned by the
+ * admin), existing ones get the file as their draft. What's published is never touched.
+ */
+export async function importPages(
+  packId: string,
+  slugs: string[],
+): Promise<ActionResult> {
+  const admin = await assertUser("admin");
+  const pack = await getImportPack(packId);
+  const chosen = pack.pages.filter((p) => slugs.includes(p.slug));
+  const conflicts = chosen.filter((p) => p.status === "conflict");
+  if (conflicts.length)
+    return {
+      ok: false,
+      error: conflicts
+        .map((p) => `"${p.slug}" is already used by a page of another kind.`)
+        .join("\n"),
+    };
+  const db = await getDb();
+  const now = new Date();
+  for (const p of chosen) {
+    const placement = {
+      section: pack.section,
+      position: p.position,
+      updatedAt: now,
+    };
+    if (p.status === "new")
+      await db.insert(schema.guides).values({
+        kind: p.kind,
+        slug: p.slug,
+        authorId: admin.id,
+        draftSource: p.source,
+        ...placement,
+      });
+    else
+      await db
+        .update(schema.guides)
+        .set({ draftSource: p.source, ...placement })
+        .where(eq(schema.guides.slug, p.slug));
+  }
+  return { ok: true };
 }
 
 // --- Admin: site ---------------------------------------------------------

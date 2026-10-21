@@ -1,0 +1,32 @@
+---
+title: Loyalty Card lineup
+description: How many hands are left on Loyalty Card before each hand of the small blind, big blind and PvP.
+author: King
+patch: 0.5.5
+tags: [tool, jokers]
+---
+
+<Calc id="loyalty-lineup" title="Loyalty Card lineup">
+  <Input name="every" label="Loyalty Card Hands" default={6} min={1} />
+  <Input name="hands" label="Total Hands" default={5} min={1} max={6} />
+  <Output label="Small · hand 1" value="if(1 > hands, 0 / 0, mod(3 * hands - every - 1, every))" decimals={0} />
+  <Output label="Small · hand 2" value="if(2 > hands, 0 / 0, mod(3 * hands - every - 2, every))" decimals={0} />
+  <Output label="Small · hand 3" value="if(3 > hands, 0 / 0, mod(3 * hands - every - 3, every))" decimals={0} />
+  <Output label="Small · hand 4" value="if(4 > hands, 0 / 0, mod(3 * hands - every - 4, every))" decimals={0} />
+  <Output label="Small · hand 5" value="if(5 > hands, 0 / 0, mod(3 * hands - every - 5, every))" decimals={0} />
+  <Output label="Small · hand 6" value="if(6 > hands, 0 / 0, mod(3 * hands - every - 6, every))" decimals={0} />
+  <Output label="Big · hand 1" value="if(1 > hands, 0 / 0, mod(2 * hands - every - 1, every))" decimals={0} />
+  <Output label="Big · hand 2" value="if(2 > hands, 0 / 0, mod(2 * hands - every - 2, every))" decimals={0} />
+  <Output label="Big · hand 3" value="if(3 > hands, 0 / 0, mod(2 * hands - every - 3, every))" decimals={0} />
+  <Output label="Big · hand 4" value="if(4 > hands, 0 / 0, mod(2 * hands - every - 4, every))" decimals={0} />
+  <Output label="Big · hand 5" value="if(5 > hands, 0 / 0, mod(2 * hands - every - 5, every))" decimals={0} />
+  <Output label="Big · hand 6" value="if(6 > hands, 0 / 0, mod(2 * hands - every - 6, every))" decimals={0} />
+  <Output label="PvP · hand 1" value="if(1 > hands, 0 / 0, mod(1 * hands - every - 1, every))" decimals={0} />
+  <Output label="PvP · hand 2" value="if(2 > hands, 0 / 0, mod(1 * hands - every - 2, every))" decimals={0} />
+  <Output label="PvP · hand 3" value="if(3 > hands, 0 / 0, mod(1 * hands - every - 3, every))" decimals={0} />
+  <Output label="PvP · hand 4" value="if(4 > hands, 0 / 0, mod(1 * hands - every - 4, every))" decimals={0} />
+  <Output label="PvP · hand 5" value="if(5 > hands, 0 / 0, mod(1 * hands - every - 5, every))" decimals={0} />
+  <Output label="PvP · hand 6" value="if(6 > hands, 0 / 0, mod(1 * hands - every - 6, every))" decimals={0} />
+</Calc>
+
+Loyalty hits on 0, the number you see above is how many hands are remaining on loyalty before that hand is played.

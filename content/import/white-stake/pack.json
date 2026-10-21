@@ -1,0 +1,68 @@
+{
+  "title": "White Stake Guide",
+  "section": "White Stake",
+  "pages": [
+    { "kind": "tool", "slug": "hand-score", "file": "tools/hand-score.mdx" },
+    {
+      "kind": "tool",
+      "slug": "one-shot-levels",
+      "file": "tools/one-shot-levels.mdx"
+    },
+    { "kind": "tool", "slug": "shop-rolls", "file": "tools/shop-rolls.mdx" },
+    {
+      "kind": "tool",
+      "slug": "blocking-odds",
+      "file": "tools/blocking-odds.mdx"
+    },
+    {
+      "kind": "tool",
+      "slug": "money-generators",
+      "file": "tools/money-generators.mdx"
+    },
+    {
+      "kind": "tool",
+      "slug": "loyalty-lineup",
+      "file": "tools/loyalty-lineup.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake",
+      "file": "guides/white-stake.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-core-principles",
+      "file": "guides/core-principles.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-playstyles-and-goals",
+      "file": "guides/playstyles-and-goals.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-deck-strategies",
+      "file": "guides/deck-strategies.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-shop-theory",
+      "file": "guides/shop-theory.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-planets-and-blinds",
+      "file": "guides/planets-and-blinds.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-high-card-vs-retriggers",
+      "file": "guides/high-card-vs-retriggers.mdx"
+    },
+    {
+      "kind": "guide",
+      "slug": "white-stake-advanced-tech",
+      "file": "guides/advanced-tech.mdx"
+    }
+  ]
+}

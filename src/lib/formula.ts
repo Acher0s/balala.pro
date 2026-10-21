@@ -208,6 +208,10 @@ const FUNCTIONS: Record<string, (...args: number[]) => number> = {
     if (k < 0 || k > n) return 0;
     return factorial(n) / (factorial(k) * factorial(n - k));
   },
+  /** Remainder with the sign of the divisor, same as the spreadsheet MOD(a, b). */
+  mod: (a, b) => a - b * Math.floor(a / b),
+  /** The n-th of the values (1-based), same as the spreadsheet CHOOSE(n, …). */
+  choose: (n, ...values) => values[Math.trunc(n) - 1] ?? Number.NaN,
   and: (...xs) => (xs.every(Boolean) ? 1 : 0),
   or: (...xs) => (xs.some(Boolean) ? 1 : 0),
   not: (x) => (x ? 0 : 1),

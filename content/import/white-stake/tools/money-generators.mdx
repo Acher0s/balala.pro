@@ -1,0 +1,36 @@
+---
+title: Money generator calculator
+description: How much money Lucky Cards, Business Card, Gold Seals, Golden Ticket, Reserved Parking and gold cards make over a number of triggers.
+author: King
+patch: 0.5.5
+tags: [tool, econ]
+---
+
+## Played cards
+
+<Calc id="money-played" title="$ Generators: played cards">
+  <Input name="dice" label="Oops! All 6s" default={0} options={[{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }]} />
+  <Input name="lucky" label="Lucky Cards: triggers" default={12} min={0} />
+  <Input name="business" label="Business Card: copies" default={2} min={0} />
+  <Input name="businesshits" label="Business Card: triggers" default={15} min={0} />
+  <Input name="goldseal" label="Gold Seals: triggers" default={0} min={0} />
+  <Input name="ticket" label="Golden Ticket: copies" default={1} min={0} />
+  <Input name="tickethits" label="Golden Ticket: triggers" default={3} min={0} />
+  <Output label="Lucky Cards" value="if(dice, 1 / 15 * 20 * 2, 1 / 15 * 20) * lucky" format="money" />
+  <Output label="Business Card" value="if(dice, 2 * 1 / 2 * 2 * business, 2 * 1 / 2 * business) * businesshits" format="money" />
+  <Output label="Gold Seals" value="3 * goldseal" format="money" />
+  <Output label="Golden Ticket" value="4 * ticket * tickethits" format="money" />
+  <Output label="Total" value="if(dice, 1 / 15 * 20 * 2, 1 / 15 * 20) * lucky + if(dice, 2 * 1 / 2 * 2 * business, 2 * 1 / 2 * business) * businesshits + 3 * goldseal + 4 * ticket * tickethits" format="money" />
+</Calc>
+
+## Held in hand
+
+<Calc id="money-held" title="$ Generators: held in hand">
+  <Input name="dice" label="Oops! All 6s" default={1} options={[{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }]} />
+  <Input name="parking" label="Reserved Parking: copies" default={2} min={0} />
+  <Input name="parkinghits" label="Reserved Parking: triggers" default={10} min={0} />
+  <Input name="gold" label="Gold in hand: triggers" default={15} min={0} />
+  <Output label="Reserved Parking" value="if(dice, 1 / 2 * 2 * parking, 1 / 2 * parking) * parkinghits" format="money" />
+  <Output label="Gold in hand" value="3 * gold" format="money" />
+  <Output label="Total" value="if(dice, 1 / 2 * 2 * parking, 1 / 2 * parking) * parkinghits + 3 * gold" format="money" />
+</Calc>

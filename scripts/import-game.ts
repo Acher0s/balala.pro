@@ -463,7 +463,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
   for (const file of luaFiles) {
     const src = readFileSync(file, "utf8");
     for (const m of src.matchAll(
-      /SMODS\.(Atlas|Joker|Consumable)\s*\(\s*\{/g,
+      /SMODS\.(Atlas|Joker|Consumable|Back)\s*\(\s*\{/g,
     )) {
       const def = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
       if (m[1] === "Atlas") {
@@ -490,9 +490,11 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
 
   for (const { file, type, def } of defs) {
     const key = String(def.key);
-    const set = type === "Joker" ? "Joker" : String(def.set);
+    // Jokers and decks (Backs) say what they are by their type; consumables by their set.
+    const set = type === "Consumable" ? String(def.set) : type;
     const kind = KIND_BY_SET[set];
-    const fullKey = `${type === "Joker" ? "j" : "c"}_mp_${key}`;
+    const prefix = { Joker: "j", Back: "b" }[type] ?? "c";
+    const fullKey = `${prefix}_mp_${key}`;
     const desc = modLoc[set]?.[fullKey];
     if (!kind || !desc) continue;
 
@@ -549,7 +551,11 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     if (typeof def.cost === "number") item.cost = def.cost;
     data.items[kind][id] = item;
 
-    const atlas = def.atlas ? atlases.get(String(def.atlas)) : undefined;
+    // Atlases may be referenced with the mod's prefix ("mp_decks" for the atlas "decks").
+    const atlasKey = def.atlas ? String(def.atlas) : undefined;
+    const atlas = atlasKey
+      ? (atlases.get(atlasKey) ?? atlases.get(atlasKey.replace(/^mp_/, "")))
+      : undefined;
     jobs.push({
       kind,
       id,

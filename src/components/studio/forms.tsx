@@ -6,12 +6,14 @@ import {
   type ActionResult,
   createGuide,
   decideRequest,
+  importPages,
   requestWriterAccess,
   saveSiteSettings,
   setUserRole,
 } from "@/app/studio/actions";
 import type { Role } from "@/db/schema";
 import { EXAMPLE_ANNOUNCEMENT } from "@/lib/announcement-example";
+import type { ImportPage, ImportStatus } from "@/lib/content-import";
 import { ROLE_LABELS } from "@/lib/roles";
 
 export const field =
@@ -283,5 +285,122 @@ export function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+const IMPORT_STATUS: Record<ImportStatus, string> = {
+  new: "New",
+  same: "Draft up to date",
+  changed: "Replaces your draft",
+  conflict: "Slug used by another page",
+};
+
+/**
+ * One content pack: pick pages and import them as drafts. New pages are ticked; pages whose
+ * draft differs from the file aren't, so edits made on the site aren't replaced by accident.
+ */
+export function ImportPackForm({
+  id,
+  title,
+  section,
+  pages,
+}: {
+  id: string;
+  title: string;
+  section: string;
+  pages: Omit<ImportPage, "source">[];
+}) {
+  const { pending, error, run } = useAction();
+  const importable = (p: Omit<ImportPage, "source">) =>
+    p.status === "new" || p.status === "changed";
+  const [chosen, setChosen] = useState(
+    () => new Set(pages.filter((p) => p.status === "new").map((p) => p.slug)),
+  );
+  const [done, setDone] = useState(false);
+  const toggle = (slug: string) =>
+    setChosen((s) => {
+      const next = new Set(s);
+      if (!next.delete(slug)) next.add(slug);
+      return next;
+    });
+  return (
+    <form
+      action={() =>
+        run(
+          () => importPages(id, [...chosen]),
+          () => {
+            setChosen(new Set());
+            setDone(true);
+          },
+        )
+      }
+      className="flex flex-col gap-3 rounded-xl border bg-fd-card p-4"
+    >
+      <div>
+        <h2 className="font-semibold">{title}</h2>
+        {section && (
+          <p className="text-sm text-fd-muted-foreground">Section: {section}</p>
+        )}
+      </div>
+      <ul className="flex flex-col divide-y text-sm">
+        {pages.map((p) => (
+          <li key={p.slug} className="flex items-center gap-3 py-2">
+            <input
+              type="checkbox"
+              aria-label={`Import ${p.title}`}
+              disabled={!importable(p)}
+              checked={chosen.has(p.slug)}
+              onChange={() => toggle(p.slug)}
+            />
+            <span className="w-10 shrink-0 text-xs uppercase text-fd-muted-foreground">
+              {p.kind}
+            </span>
+            <span className="min-w-0 flex-1 truncate">
+              {p.id ? (
+                <a
+                  href={`/studio/guides/${p.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {p.title}
+                </a>
+              ) : (
+                <span className="font-medium">{p.title}</span>
+              )}
+              {p.published && (
+                <span className="ml-2 text-xs text-fd-muted-foreground">
+                  Live
+                </span>
+              )}
+            </span>
+            <span
+              className={
+                p.status === "changed" || p.status === "conflict"
+                  ? "text-xs text-amber-600 dark:text-amber-400"
+                  : "text-xs text-fd-muted-foreground"
+              }
+            >
+              {IMPORT_STATUS[p.status]}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <ErrorText error={error} />
+      <span className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending || chosen.size === 0}
+          className={primaryButton}
+        >
+          {pending
+            ? "Importing…"
+            : `Import ${chosen.size} ${chosen.size === 1 ? "page" : "pages"}`}
+        </button>
+        {done && (
+          <span className="text-sm text-fd-muted-foreground">
+            Imported as drafts. Open a page to review and publish it.
+          </span>
+        )}
+      </span>
+    </form>
   );
 }

@@ -1,4 +1,5 @@
-export type ValueFormat = "number" | "money" | "percent";
+/** "e" is how Balatro players write big scores: 4.40e14. */
+export type ValueFormat = "number" | "money" | "percent" | "e";
 
 /** Without `decimals`, plain numbers drop the fraction when they're whole (3, not 3.00). */
 export function formatValue(
@@ -13,6 +14,8 @@ export function formatValue(
       return `${value < 0 ? "-" : ""}$${Math.abs(value).toFixed(places)}`;
     case "percent":
       return `${(value * 100).toFixed(places)}%`;
+    case "e":
+      return value.toExponential(places).replace("e+", "e");
     default:
       return decimals === undefined && Number.isInteger(value)
         ? String(value)

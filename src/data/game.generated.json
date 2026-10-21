@@ -14148,6 +14148,350 @@
         "w": 142,
         "h": 190,
         "source": "vanilla"
+      },
+      "mp_violet": {
+        "key": "b_mp_violet",
+        "name": "Violet Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "+1",
+              "c": "attention"
+            },
+            {
+              "t": " Voucher in shop"
+            }
+          ],
+          [
+            {
+              "t": "Vouchers are "
+            },
+            {
+              "t": "50%",
+              "c": "attention"
+            },
+            {
+              "t": " off "
+            }
+          ],
+          [
+            {
+              "t": "during Ante "
+            },
+            {
+              "t": "1",
+              "c": "attention"
+            },
+            {
+              "t": ", and "
+            },
+            {
+              "t": "30%",
+              "c": "attention"
+            },
+            {
+              "t": " off"
+            }
+          ],
+          [
+            {
+              "t": "during Ante "
+            },
+            {
+              "t": "2",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_violet.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_indigo": {
+        "key": "b_mp_indigo",
+        "name": "Indigo Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Choose "
+            },
+            {
+              "t": "+1",
+              "c": "attention"
+            },
+            {
+              "t": " additional card"
+            }
+          ],
+          [
+            {
+              "t": "from all Booster Packs"
+            }
+          ],
+          [
+            {
+              "t": "Booster Packs are "
+            },
+            {
+              "t": "unskippable",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_indigo.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_orange": {
+        "key": "b_mp_orange",
+        "name": "Orange Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Start run with a"
+            }
+          ],
+          [
+            {
+              "t": "Giga Standard Pack",
+              "c": "attention"
+            },
+            {
+              "t": ", and"
+            }
+          ],
+          [
+            {
+              "t": "2",
+              "c": "attention"
+            },
+            {
+              "t": " copies of "
+            },
+            {
+              "t": "The Hanged Man",
+              "c": "tarot"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_orange.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_white": {
+        "key": "b_mp_white",
+        "name": "White Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "View "
+            },
+            {
+              "t": "Nemesis'",
+              "x": "purple",
+              "c": "white"
+            },
+            {
+              "t": " current"
+            }
+          ],
+          [
+            {
+              "t": "deck and Joker setup"
+            }
+          ],
+          [
+            {
+              "t": "(Updates at PvP blind)",
+              "c": "inactive"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_white.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_oracle": {
+        "key": "b_mp_oracle",
+        "name": "Oracle Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Start run with "
+            },
+            {
+              "t": "Medium",
+              "c": "spectral"
+            }
+          ],
+          [
+            {
+              "t": "and "
+            },
+            {
+              "t": "Clearance Sale",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "Balance is capped at"
+            }
+          ],
+          [
+            {
+              "t": "$50",
+              "c": "money"
+            },
+            {
+              "t": " + "
+            },
+            {
+              "t": "current interest cap",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_oracle.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_gradient": {
+        "key": "b_mp_gradient",
+        "name": "Gradient Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Cards are also considered"
+            }
+          ],
+          [
+            {
+              "t": "one rank "
+            },
+            {
+              "t": "higher",
+              "c": "attention"
+            },
+            {
+              "t": " or "
+            },
+            {
+              "t": "lower",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "for all "
+            },
+            {
+              "t": "Joker",
+              "c": "attention"
+            },
+            {
+              "t": " effects"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_gradient.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_heidelberg": {
+        "key": "b_mp_heidelberg",
+        "name": "Heidelberg Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Creates a "
+            },
+            {
+              "t": "Negative",
+              "c": "dark_edition"
+            },
+            {
+              "t": " copy of"
+            }
+          ],
+          [
+            {
+              "t": "1",
+              "c": "attention"
+            },
+            {
+              "t": " random "
+            },
+            {
+              "t": "consumable",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "card in your possession"
+            }
+          ],
+          [
+            {
+              "t": "at the end of the "
+            },
+            {
+              "t": "shop",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_heidelberg.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
+      },
+      "mp_cocktail": {
+        "key": "b_mp_cocktail",
+        "name": "Cocktail Deck",
+        "kind": "deck",
+        "text": [
+          [
+            {
+              "t": "Copies all effects"
+            }
+          ],
+          [
+            {
+              "t": "of "
+            },
+            {
+              "t": "3",
+              "c": "attention"
+            },
+            {
+              "t": " other decks"
+            }
+          ],
+          [
+            {
+              "t": "at random"
+            }
+          ]
+        ],
+        "image": "/game/deck/mp_cocktail.webp",
+        "w": 142,
+        "h": 190,
+        "source": "multiplayer"
       }
     }
   },

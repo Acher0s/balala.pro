@@ -67,6 +67,25 @@ export async function listPublished(kind?: PageKind): Promise<PublishedPage[]> {
   return rows.filter((g) => !kind || g.kind === kind).map(toPublished);
 }
 
+/**
+ * The pages before and after this one in its section, so a series of guides (e.g. "White Stake")
+ * reads in order. Pages outside a section get no links.
+ */
+export async function sectionNeighbours(page: PublishedPage) {
+  if (!page.section) return {};
+  const pages = (await listPublished(page.kind)).filter(
+    (p) => p.section === page.section,
+  );
+  const i = pages.findIndex((p) => p.id === page.id);
+  const link = (p: PublishedPage | undefined) =>
+    p && {
+      name: p.frontmatter.title,
+      description: p.frontmatter.description,
+      url: pageUrl(p.kind, p.slug),
+    };
+  return { previous: link(pages[i - 1]), next: link(pages[i + 1]) };
+}
+
 export async function getPublished(
   kind: PageKind,
   slug: string,

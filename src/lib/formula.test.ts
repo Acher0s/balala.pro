@@ -14,6 +14,14 @@ describe("formula", () => {
     expect(evalf("10 / 4 - 1")).toBe(1.5);
   });
 
+  it("supports mod() and choose() like spreadsheets", () => {
+    expect(evalf("mod(7, 6)")).toBe(1);
+    expect(evalf("mod(-1, 6)")).toBe(5);
+    expect(evalf("choose(2, 10, 20, 30)")).toBe(20);
+    expect(evalf("choose(h, 1, 2, 3)", { h: 3 })).toBe(3);
+    expect(evalf("choose(4, 1, 2, 3)")).toBeNaN();
+  });
+
   it("reads variables", () => {
     expect(evalf("P * R / 2", { P: 3, R: 4 })).toBe(6);
   });
