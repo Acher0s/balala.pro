@@ -39,6 +39,7 @@ export const ALLOWED_COMPONENTS = new Set([
   "Calc",
   "Input",
   "Output",
+  "Section",
   "Value",
   "CalcTable",
   "Callout",

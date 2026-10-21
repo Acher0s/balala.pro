@@ -3,7 +3,7 @@ import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
-import { Calc, CalcTable, Input, Output, Value } from "./calc";
+import { Calc, CalcTable, Input, Output, Section, Value } from "./calc";
 import { Center } from "./center";
 import { Column, Columns } from "./columns";
 import {
@@ -52,6 +52,7 @@ export function getMDXComponents(components?: MDXComponents) {
     Calc,
     Input,
     Output,
+    Section,
     Value,
     CalcTable,
     ...components,

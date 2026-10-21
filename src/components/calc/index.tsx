@@ -72,6 +72,30 @@ export function Calc({
 }
 
 /**
+ * A titled group inside a calculator, e.g. the inputs under "Your hand" and the outputs under
+ * "Results". It takes a full row and lays out its own inputs and outputs, two per row when there's
+ * room. Sections after the first get a divider above them.
+ */
+export function Section({
+  title,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="col-span-full flex flex-col gap-2 [&+&]:mt-1 [&+&]:border-t [&+&]:pt-4">
+      {title && (
+        <h5 className="text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">
+          {title}
+        </h5>
+      )}
+      <div className="grid gap-3 @md:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+/**
  * A number computed from a formula at build time, for use inside prose:
  * <Value of="P * R / 2" vars={{ P: 3, R: 2 }} format="money" />
  */

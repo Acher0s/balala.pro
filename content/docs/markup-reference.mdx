@@ -413,6 +413,36 @@ Calculators let readers try their own numbers. A `Calc` block holds `Input`s (wh
 
 Readers can click **ƒx** on any result to see its formula. A formula that uses an input that doesn't exist is listed as a problem.
 
+### Grouping inputs and results
+
+Inputs and outputs are shown in the order you write them, two per row. To keep them apart, put them in `Section`s: each section gets a full row with its own heading, and a line separates it from the one above.
+
+<Calc id="docs-sections" title="Hand score">
+  <Section title="Your hand">
+    <Input name="chips" label="Chips" default={100} min={0} />
+    <Input name="mult" label="Mult" default={20} min={0} />
+    <Input name="xmult" label="x Mult" default={3} min={1} step={0.5} />
+  </Section>
+  <Section title="Results">
+    <Output label="Score" value="chips * mult * xmult" decimals={0} />
+  </Section>
+</Calc>
+
+```mdx
+<Calc id="docs-sections" title="Hand score">
+  <Section title="Your hand">
+    <Input name="chips" label="Chips" default={100} min={0} />
+    <Input name="mult" label="Mult" default={20} min={0} />
+    <Input name="xmult" label="x Mult" default={3} min={1} step={0.5} />
+  </Section>
+  <Section title="Results">
+    <Output label="Score" value="chips * mult * xmult" decimals={0} />
+  </Section>
+</Calc>
+```
+
+`title` is optional. Use as many sections as you like, for example one for your deck, one for your jokers and one for the results. Use **Blocks → Calculator with sections** to start from an example.
+
 ### Formulas
 
 Formulas work like spreadsheet formulas.

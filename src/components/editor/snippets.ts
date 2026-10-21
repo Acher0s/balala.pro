@@ -117,6 +117,19 @@ Second column
 `,
   },
   {
+    label: "Calculator with sections",
+    text: `<Calc id="my-calc" title="Calculator">
+  <Section title="Inputs">
+    <Input name="a" label="First value" default={1} min={0} />
+    <Input name="b" label="Second value" default={2} min={0} />
+  </Section>
+  <Section title="Results">
+    <Output label="Result" value="a * b" />
+  </Section>
+</Calc>
+`,
+  },
+  {
     label: "Dropdown input",
     text: `<Input
   name="mode"
