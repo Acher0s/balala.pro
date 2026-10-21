@@ -224,6 +224,10 @@ export function SiteSettingsForm({
           className={field}
           onChange={() => setSaved(false)}
         />
+        <span className="text-xs text-fd-muted-foreground">
+          Written like a guide: [links](https://…), **bold** and card names
+          work. Line breaks are kept.
+        </span>
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="flex items-center justify-between gap-2">

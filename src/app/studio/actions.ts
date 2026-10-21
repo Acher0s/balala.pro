@@ -30,10 +30,11 @@ import {
   GuideValidationError,
 } from "@/lib/mdx/compile";
 import {
-  announcementSource,
+  introMarkup,
   type SiteSettings,
   saveSettings,
   saveTheme,
+  siteTextSource,
 } from "@/lib/settings";
 import { siteThemeSchema } from "@/lib/theme";
 import { publishedTierListIds } from "@/lib/tierlists";
@@ -406,33 +407,23 @@ export async function saveSiteSettings(
   await assertUser("admin");
   const siteName = values.siteName.trim().slice(0, 80);
   if (!siteName) return { ok: false, error: "The site needs a name." };
+  const homeIntro = values.homeIntro.trim().slice(0, 2000);
   const announcement = values.announcement.trim().slice(0, 5000);
-  if (announcement) {
-    // Same checks as a guide; line numbers counted from the top of the announcement box.
-    const offset = announcementSource("").split("\n").length - 2;
-    const problems = await problemsOf(
-      announcementSource(announcement),
-      "guide",
-    );
-    if (problems.length) {
-      return {
-        ok: false,
-        error: problems
-          .map((p) =>
-            p.replace(
-              /^line (\d+)/,
-              (_m, n: string) => `line ${Number(n) - offset}`,
-            ),
-          )
-          .join("\n"),
-      };
-    }
+  // Same checks as a guide; line numbers counted from the top of each box.
+  const offset = siteTextSource("").split("\n").length - 2;
+  const problems: string[] = [];
+  for (const [field, markup] of [
+    ["Intro", introMarkup(homeIntro)],
+    ["Announcement", announcement],
+  ] as const) {
+    if (!markup) continue;
+    for (const p of await problemsOf(siteTextSource(markup), "guide"))
+      problems.push(
+        `${field}: ${p.replace(/^line (\d+)/, (_m, n: string) => `line ${Number(n) - offset}`)}`,
+      );
   }
-  await saveSettings({
-    siteName,
-    homeIntro: values.homeIntro.slice(0, 2000),
-    announcement,
-  });
+  if (problems.length) return { ok: false, error: problems.join("\n") };
+  await saveSettings({ siteName, homeIntro, announcement });
   return { ok: true };
 }
 

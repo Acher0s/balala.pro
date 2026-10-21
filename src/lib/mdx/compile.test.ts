@@ -186,9 +186,9 @@ describe("the markup reference", () => {
 describe("the example announcement", () => {
   it("passes the same checks as the admin's own text", async () => {
     const { EXAMPLE_ANNOUNCEMENT } = await import("@/lib/announcement-example");
-    const { announcementSource } = await import("@/lib/settings");
+    const { siteTextSource } = await import("@/lib/settings");
     await expect(
-      compileGuide(announcementSource(EXAMPLE_ANNOUNCEMENT)),
+      compileGuide(siteTextSource(EXAMPLE_ANNOUNCEMENT)),
     ).resolves.toBeTruthy();
   });
 });
@@ -205,5 +205,20 @@ describe("links to headings", () => {
     const html = renderToStaticMarkup(createElement(Body));
     expect(html).toContain('href="#parking-mime-bug"');
     expect(html).not.toContain("/preview/");
+  });
+});
+
+describe("home intro", () => {
+  it("keeps line breaks and turns Markdown links into links", async () => {
+    const { introMarkup, siteTextSource } = await import("@/lib/settings");
+    const text =
+      "Maybe this helps you get good at BMP idk\nFor more info about the BMP mod, check out [their website](https://balatromp.com/)";
+    expect(introMarkup(text)).toBe(
+      "Maybe this helps you get good at BMP idk<br />\nFor more info about the BMP mod, check out [their website](https://balatromp.com/)",
+    );
+    expect(introMarkup("Intro\n\n- a\n- b")).toBe("Intro\n\n- a\n- b");
+    await expect(
+      compileGuide(siteTextSource(introMarkup(text))),
+    ).resolves.toBeDefined();
   });
 });

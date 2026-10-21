@@ -17,14 +17,34 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   announcement: "",
 };
 
-/** The announcement as a guide-markup document, so it can use the same validation and rendering. */
-export function announcementSource(text: string) {
+/** Text from Studio → Site as a guide-markup document, so it gets the same validation and rendering. */
+export function siteTextSource(text: string) {
   return `---
-title: Announcement
+title: Site text
 ---
 
 ${text}
 `;
+}
+
+const NOT_PLAIN_TEXT = /^(\s|[-*+>|<#]|\d+\.\s|$)/;
+
+/**
+ * The home intro is typed like a normal text box, so a line break should stay a line break
+ * (Markdown would join the lines). Lists, headings and the like are left alone.
+ */
+export function introMarkup(text: string) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  return lines
+    .map((line, i) => {
+      const next = lines[i + 1];
+      return next !== undefined &&
+        !NOT_PLAIN_TEXT.test(line) &&
+        !NOT_PLAIN_TEXT.test(next)
+        ? `${line}<br />`
+        : line;
+    })
+    .join("\n");
 }
 
 export async function getSettings(): Promise<SiteSettings> {

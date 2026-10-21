@@ -1,6 +1,6 @@
 import { BookOpen, Calculator, Rows3 } from "lucide-react";
 import Link from "next/link";
-import { Announcement } from "@/components/announcement";
+import { Announcement, HomeIntro } from "@/components/announcement";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +33,7 @@ export default async function HomePage() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
       <div>
         <h1 className="mb-3 text-3xl font-bold">{settings.siteName}</h1>
-        <p className="whitespace-pre-line text-fd-muted-foreground">
-          {settings.homeIntro}
-        </p>
+        <HomeIntro text={settings.homeIntro} />
       </div>
       <nav className="grid gap-3 sm:grid-cols-3">
         {SECTIONS.map(({ href, title, text, Icon }) => (
