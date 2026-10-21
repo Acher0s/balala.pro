@@ -260,6 +260,8 @@ function resolveExpr(
 }
 
 const unresolved: string[] = [];
+/** Mod cards whose sprite sheet couldn't be read; they'd show a vanilla sprite instead. */
+const missingAtlases: string[] = [];
 
 function resolveVars(
   name: string,
@@ -467,10 +469,15 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     )) {
       const def = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
       if (m[1] === "Atlas") {
-        // Some atlases compute their path in code; only plain file names can be read.
-        if (typeof def.path !== "string") continue;
+        // A plain file name, or one per language ({ default = "c_asteroid.png", ru = … }).
+        // Some atlases compute their path in code; those can't be read.
+        const path =
+          typeof def.path === "string"
+            ? def.path
+            : (def.path as Table | undefined)?.default;
+        if (typeof path !== "string") continue;
         atlases.set(String(def.key), {
-          path: String(def.path),
+          path,
           px: Number(def.px ?? 71),
           py: Number(def.py ?? 95),
         });
@@ -556,6 +563,9 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     const atlas = atlasKey
       ? (atlases.get(atlasKey) ?? atlases.get(atlasKey.replace(/^mp_/, "")))
       : undefined;
+    // Without its atlas the card would silently get a vanilla sprite at the same position.
+    if (atlasKey && !atlas)
+      missingAtlases.push(`${desc.name} (atlas "${atlasKey}")`);
     jobs.push({
       kind,
       id,
@@ -683,4 +693,11 @@ if (unresolved.length) {
     `\n${unresolved.length} values depend on game state and show as "?" (fix them in src/data/overrides.ts):`,
   );
   for (const u of unresolved) console.log(`  - ${u}`);
+}
+if (missingAtlases.length) {
+  console.log(
+    `
+${missingAtlases.length} mod cards have a sprite sheet that couldn't be read, so their images are wrong:`,
+  );
+  for (const m of missingAtlases) console.log(`  - ${m}`);
 }
