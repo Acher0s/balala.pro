@@ -10,7 +10,12 @@ import { compileGuide, GuideValidationError } from "@/lib/mdx/compile";
 const IMPORT_DIR = join(process.cwd(), "content", "import");
 
 interface Manifest {
-  pages: { kind: "guide" | "tool"; slug: string; file: string }[];
+  pages: {
+    kind: "guide" | "tool";
+    slug: string;
+    file: string;
+    parent?: string;
+  }[];
 }
 
 const packs = readdirSync(IMPORT_DIR, { withFileTypes: true })
@@ -31,6 +36,16 @@ describe.each(packs)("content pack $id", ({ dir, manifest }) => {
   it("lists every file once, with unique slugs", () => {
     const slugs = manifest.pages.map((p) => p.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it("only makes guides parts of a main guide in the same pack", () => {
+    const pages = new Map(manifest.pages.map((p) => [p.slug, p]));
+    for (const p of manifest.pages.filter((p) => p.parent)) {
+      const parent = pages.get(p.parent as string);
+      expect(p.kind, p.slug).toBe("guide");
+      expect(parent?.kind, p.slug).toBe("guide");
+      expect(parent?.parent, p.slug).toBeUndefined();
+    }
   });
 
   it.each(manifest.pages)("$slug compiles", async ({ kind, file }) => {

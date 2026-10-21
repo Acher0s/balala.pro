@@ -13,10 +13,14 @@ import { SLUG_RE, safeFrontmatter } from "@/lib/guides";
  *   {
  *     "title": "White Stake Guide",
  *     "section": "White Stake",
- *     "pages": [{ "kind": "guide", "slug": "white-stake", "file": "white-stake.mdx" }, …]
+ *     "pages": [
+ *       { "kind": "guide", "slug": "white-stake", "file": "white-stake.mdx" },
+ *       { "kind": "guide", "slug": "white-stake-shop", "file": "shop.mdx", "parent": "white-stake" },
+ *       …
+ *     ]
  *   }
  *
- * Pages keep the manifest's order within their section.
+ * Pages keep the manifest's order; "parent" makes a page a part of that main guide.
  */
 const IMPORT_DIR = join(process.cwd(), "content", "import");
 const PACK_ID_RE = /^[a-z0-9-]+$/;
@@ -30,6 +34,7 @@ const manifestSchema = z.object({
         kind: z.enum(["guide", "tool"]),
         slug: z.string().regex(SLUG_RE),
         file: z.string().min(1),
+        parent: z.string().regex(SLUG_RE).optional(),
       }),
     )
     .min(1),
@@ -38,8 +43,10 @@ const manifestSchema = z.object({
 export type ImportStatus =
   /** No page with this slug yet. */
   | "new"
-  /** The draft already matches the file. */
+  /** The draft and where it's listed already match the file. */
   | "same"
+  /** Same draft, but its section, order or main guide differ: importing only moves it. */
+  | "moved"
   /** The draft differs from the file: importing replaces it. */
   | "changed"
   /** The slug belongs to a page of the other kind (a guide vs a tool). */
@@ -51,6 +58,8 @@ export interface ImportPage {
   title: string;
   source: string;
   position: number;
+  /** Slug of the main guide this page is a part of. */
+  parent: string | null;
   status: ImportStatus;
   published: boolean;
   /** The existing page's id, for linking to its editor. */
@@ -64,9 +73,11 @@ export interface ImportPack {
   pages: ImportPage[];
 }
 
-function readPack(id: string): Omit<ImportPack, "pages"> & {
-  pages: Omit<ImportPage, "status" | "published" | "id">[];
-} {
+type PackFile = Omit<ImportPage, "status" | "published" | "id">;
+
+function readPack(
+  id: string,
+): Omit<ImportPack, "pages"> & { pages: PackFile[] } {
   if (!PACK_ID_RE.test(id)) throw new Error(`Unknown pack "${id}".`);
   const dir = join(IMPORT_DIR, id);
   const manifest = manifestSchema.parse(
@@ -90,6 +101,7 @@ function readPack(id: string): Omit<ImportPack, "pages"> & {
         title: safeFrontmatter(source, p.slug).title,
         source,
         position: positions[p.kind]++,
+        parent: p.parent ?? null,
       };
     }),
   };
@@ -108,27 +120,34 @@ export async function listImportPacks(): Promise<ImportPack[]> {
 export async function getImportPack(id: string): Promise<ImportPack> {
   const pack = readPack(id);
   const db = await getDb();
+  const slugs = [
+    ...new Set(
+      pack.pages.flatMap((p) => (p.parent ? [p.slug, p.parent] : [p.slug])),
+    ),
+  ];
   const rows = await db
     .select()
     .from(schema.guides)
-    .where(
-      inArray(
-        schema.guides.slug,
-        pack.pages.map((p) => p.slug),
-      ),
-    );
+    .where(inArray(schema.guides.slug, slugs));
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
   return {
     ...pack,
     pages: pack.pages.map((p) => {
       const row = bySlug.get(p.slug);
+      const parentId = p.parent ? (bySlug.get(p.parent)?.id ?? null) : null;
+      const placed =
+        row?.section === pack.section &&
+        row.position === p.position &&
+        row.parentId === parentId;
       const status: ImportStatus = !row
         ? "new"
         : row.kind !== p.kind
           ? "conflict"
-          : row.draftSource === p.source
-            ? "same"
-            : "changed";
+          : row.draftSource !== p.source
+            ? "changed"
+            : placed
+              ? "same"
+              : "moved";
       return {
         ...p,
         status,

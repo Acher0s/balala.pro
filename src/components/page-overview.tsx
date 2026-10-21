@@ -6,7 +6,7 @@ import {
 } from "fumadocs-ui/layouts/notebook/page";
 import Link from "next/link";
 import type { PageKind } from "@/db/schema";
-import { listPublished, pageUrl } from "@/lib/guides";
+import { groupParts, listPublished, pageUrl } from "@/lib/guides";
 
 const COPY: Record<
   PageKind,
@@ -25,9 +25,12 @@ const COPY: Record<
   },
 };
 
-/** /guides and /tools: every published page of that kind, grouped by sidebar section. */
+/**
+ * /guides and /tools: the published pages of that kind, grouped by section. Parts of a main guide
+ * aren't listed; readers reach them from the main guide.
+ */
 export async function PageOverview({ kind }: { kind: PageKind }) {
-  const pages = await listPublished(kind);
+  const { main: pages, parts } = groupParts(await listPublished(kind));
   const sections = new Map<string, typeof pages>();
   for (const p of pages)
     sections.set(p.section, [...(sections.get(p.section) ?? []), p]);
@@ -57,8 +60,13 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
                         {p.frontmatter.description}
                       </span>
                     )}
-                    {p.frontmatter.tags.length > 0 && (
+                    {(p.frontmatter.tags.length > 0 || parts.has(p.id)) && (
                       <span className="mt-3 flex flex-wrap gap-1">
+                        {parts.has(p.id) && (
+                          <span className="rounded-full bg-fd-primary px-2 py-0.5 text-xs font-medium text-fd-primary-foreground">
+                            {parts.get(p.id)?.length} parts
+                          </span>
+                        )}
                         {p.frontmatter.tags.map((tag) => (
                           <span
                             key={tag}

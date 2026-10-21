@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   customType,
   index,
   integer,
@@ -73,9 +74,17 @@ export const guides = pgTable(
     authorId: uuid("author_id").references(() => users.id, {
       onDelete: "set null",
     }),
-    /** Sidebar group, e.g. "Jokers". Empty = top level. */
+    /** Sidebar group, e.g. "Jokers". Empty = top level. Ignored for parts of another guide. */
     section: text("section").notNull().default(""),
+    /** Order within the section, or among the parts of the parent guide. */
     position: integer("position").notNull().default(0),
+    /**
+     * The main guide this one is a part of (e.g. "Core principles" of the White Stake guide).
+     * Parts aren't listed on their own; readers reach them from the main guide. One level only.
+     */
+    parentId: uuid("parent_id").references((): AnyPgColumn => guides.id, {
+      onDelete: "set null",
+    }),
     /** The working copy: MDX with frontmatter. Autosaved by the editor, never shown publicly. */
     draftSource: text("draft_source").notNull(),
     /** What the public site shows. Null until first published. */
@@ -88,7 +97,10 @@ export const guides = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex("guides_slug_idx").on(t.slug)],
+  (t) => [
+    uniqueIndex("guides_slug_idx").on(t.slug),
+    index("guides_parent_idx").on(t.parentId),
+  ],
 );
 
 /** Every published version, for history and rollback. */

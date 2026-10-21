@@ -2,13 +2,21 @@
   "title": "White Stake Guide",
   "section": "White Stake",
   "pages": [
-    { "kind": "tool", "slug": "hand-score", "file": "tools/hand-score.mdx" },
+    {
+      "kind": "tool",
+      "slug": "hand-score",
+      "file": "tools/hand-score.mdx"
+    },
     {
       "kind": "tool",
       "slug": "one-shot-levels",
       "file": "tools/one-shot-levels.mdx"
     },
-    { "kind": "tool", "slug": "shop-rolls", "file": "tools/shop-rolls.mdx" },
+    {
+      "kind": "tool",
+      "slug": "shop-rolls",
+      "file": "tools/shop-rolls.mdx"
+    },
     {
       "kind": "tool",
       "slug": "blocking-odds",
@@ -32,37 +40,44 @@
     {
       "kind": "guide",
       "slug": "white-stake-core-principles",
-      "file": "guides/core-principles.mdx"
+      "file": "guides/core-principles.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-playstyles-and-goals",
-      "file": "guides/playstyles-and-goals.mdx"
+      "file": "guides/playstyles-and-goals.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-deck-strategies",
-      "file": "guides/deck-strategies.mdx"
+      "file": "guides/deck-strategies.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-shop-theory",
-      "file": "guides/shop-theory.mdx"
+      "file": "guides/shop-theory.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-planets-and-blinds",
-      "file": "guides/planets-and-blinds.mdx"
+      "file": "guides/planets-and-blinds.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-high-card-vs-retriggers",
-      "file": "guides/high-card-vs-retriggers.mdx"
+      "file": "guides/high-card-vs-retriggers.mdx",
+      "parent": "white-stake"
     },
     {
       "kind": "guide",
       "slug": "white-stake-advanced-tech",
-      "file": "guides/advanced-tech.mdx"
+      "file": "guides/advanced-tech.mdx",
+      "parent": "white-stake"
     }
   ]
 }

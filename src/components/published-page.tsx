@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GuideView } from "@/components/guide-view";
 import type { PageKind } from "@/db/schema";
-import { getPublished, sectionNeighbours } from "@/lib/guides";
+import { getPublished, pageNeighbours, publishedParent } from "@/lib/guides";
 
 /** The public page for a published guide or tool. */
 export async function PublishedPage({
@@ -18,7 +18,8 @@ export async function PublishedPage({
     <GuideView
       cacheKey={`${page.id}:${page.publishedAt?.getTime()}`}
       source={page.source}
-      pager={await sectionNeighbours(page)}
+      pager={await pageNeighbours(page)}
+      partOf={await publishedParent(page)}
     />
   );
 }

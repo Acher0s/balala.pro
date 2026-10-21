@@ -11,6 +11,7 @@ import {
   guideStatus,
   listPublished,
   pageUrl,
+  safeFrontmatter,
 } from "@/lib/guides";
 import { listPublishedTierLists } from "@/lib/tierlists";
 
@@ -57,6 +58,26 @@ export default async function EditGuidePage({
           .where(inArray(schema.users.role, ["writer", "admin"]))
       : [];
 
+  // Guides this one can become a part of: main guides (one level only) the user may edit.
+  const allGuides = await db
+    .select()
+    .from(schema.guides)
+    .where(eq(schema.guides.kind, "guide"));
+  const hasParts = allGuides.some((g) => g.parentId === guide.id);
+  const parentOptions =
+    guide.kind === "guide" && !hasParts
+      ? allGuides
+          .filter(
+            (g) =>
+              g.id !== guide.id && g.parentId === null && canEditGuide(user, g),
+          )
+          .map((g) => ({
+            id: g.id,
+            title: safeFrontmatter(g.draftSource, g.slug).title,
+          }))
+          .sort((a, b) => a.title.localeCompare(b.title))
+      : [];
+
   const catalog: CatalogEntry[] = KINDS.flatMap((kind) =>
     listItemEntries(kind).map(([itemId, item]) => ({
       kind,
@@ -78,12 +99,15 @@ export default async function EditGuidePage({
         slug: guide.slug,
         section: guide.section,
         position: guide.position,
+        parentId: guide.parentId,
+        hasParts,
         authorId: guide.authorId,
         status: guideStatus(guide),
         kind: guide.kind,
         url: pageUrl(guide.kind, guide.slug),
       }}
       initialSource={guide.draftSource}
+      parentOptions={parentOptions}
       catalog={catalog}
       revisions={revisions.map((r) => ({
         id: r.id,

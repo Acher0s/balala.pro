@@ -69,6 +69,8 @@ export default async function StudioHome() {
         .where(and(eq(schema.writerRequests.status, "pending")))
     : [{ pending: 0 }];
 
+  const titles = new Map(guides.map((g) => [g.guide.id, g.title]));
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10">
       <h1 className="text-2xl font-bold">
@@ -101,6 +103,9 @@ export default async function StudioHome() {
                 <span className="text-xs text-fd-muted-foreground">
                   {guide.kind === "tool" ? "Tool" : "Guide"} ·{" "}
                   {pageUrl(guide.kind, guide.slug)} · {STATUS_LABEL[status]}
+                  {guide.parentId &&
+                    titles.has(guide.parentId) &&
+                    ` · part of ${titles.get(guide.parentId)}`}
                   {isAdmin &&
                     ` · by ${guide.authorId ? (authors.get(guide.authorId) ?? "?") : "nobody"}`}
                 </span>

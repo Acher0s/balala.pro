@@ -14,6 +14,8 @@ export interface CleanupRow {
   kind: "guide" | "tool";
   title: string;
   url: string;
+  /** Title of the main guide this is a part of. */
+  partOf: string | null;
   status: "draft" | "published" | "changed";
   author: string;
   updatedAt: string;
@@ -166,6 +168,7 @@ export function BulkDeleteForm({ rows }: { rows: CleanupRow[] }) {
                   </a>
                   <span className="block text-xs text-fd-muted-foreground">
                     {r.kind === "tool" ? "Tool" : "Guide"} · {r.url}
+                    {r.partOf && ` · part of ${r.partOf}`}
                   </span>
                 </td>
                 <td

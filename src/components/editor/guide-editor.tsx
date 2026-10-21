@@ -55,6 +55,10 @@ interface EditorGuide {
   slug: string;
   section: string;
   position: number;
+  /** The main guide this is a part of. */
+  parentId: string | null;
+  /** Other guides are parts of this one, so it can't become a part itself. */
+  hasParts: boolean;
   authorId: string | null;
   status: "draft" | "published" | "changed";
   kind: "guide" | "tool";
@@ -65,6 +69,7 @@ interface EditorGuide {
 export function GuideEditor({
   guide,
   initialSource,
+  parentOptions,
   catalog,
   revisions,
   authors,
@@ -74,6 +79,8 @@ export function GuideEditor({
 }: {
   guide: EditorGuide;
   initialSource: string;
+  /** Main guides this one can become a part of. */
+  parentOptions: { id: string; title: string }[];
   catalog: CatalogEntry[];
   revisions: { id: string; at: string; by: string }[];
   authors: { id: string; name: string }[];
@@ -658,6 +665,7 @@ export function GuideEditor({
             {tab === "settings" && (
               <SettingsPanel
                 guide={guide}
+                parentOptions={parentOptions}
                 authors={authors}
                 isAdmin={isAdmin}
                 published={status !== "draft"}
@@ -676,12 +684,14 @@ export function GuideEditor({
 
 function SettingsPanel({
   guide,
+  parentOptions,
   authors,
   isAdmin,
   published,
   onUnpublished,
 }: {
   guide: EditorGuide;
+  parentOptions: { id: string; title: string }[];
   authors: { id: string; name: string }[];
   isAdmin: boolean;
   published: boolean;
@@ -690,6 +700,7 @@ function SettingsPanel({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [parentId, setParentId] = useState(guide.parentId ?? "");
 
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -699,8 +710,9 @@ function SettingsPanel({
           start(async () => {
             const res = await updateGuideSettings(guide.id, {
               slug: String(fd.get("slug")),
-              section: String(fd.get("section")),
+              section: String(fd.get("section") ?? guide.section),
               position: Number(fd.get("position")),
+              parentId: guide.kind === "guide" ? parentId || null : undefined,
               authorId: isAdmin
                 ? String(fd.get("authorId")) || null
                 : undefined,
@@ -714,19 +726,44 @@ function SettingsPanel({
           URL name
           <input name="slug" defaultValue={guide.slug} className={field} />
         </label>
+        {guide.kind === "guide" && (
+          <label className="flex flex-col gap-1">
+            Part of{" "}
+            <span className="text-xs text-fd-muted-foreground">
+              {guide.hasParts
+                ? "Other guides are parts of this one, so it stays a main guide."
+                : "Parts aren't listed on the Guides page; readers reach them from the main guide."}
+            </span>
+            <select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              disabled={guide.hasParts}
+              className={field}
+            >
+              <option value="">Nothing: a main guide</option>
+              {parentOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {!parentId && (
+          <label className="flex flex-col gap-1">
+            Section{" "}
+            <span className="text-xs text-fd-muted-foreground">
+              Groups guides on the Guides page, e.g. Jokers; empty = top
+            </span>
+            <input
+              name="section"
+              defaultValue={guide.section}
+              className={field}
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1">
-          Sidebar section{" "}
-          <span className="text-xs text-fd-muted-foreground">
-            e.g. Jokers; empty = top
-          </span>
-          <input
-            name="section"
-            defaultValue={guide.section}
-            className={field}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          Order in section
+          {parentId ? "Order among the parts" : "Order in section"}
           <input
             name="position"
             type="number"

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { ItemKind } from "@/data/game-types";
 import type { ItemOverride } from "@/data/overrides";
 import { getDb, schema } from "@/db";
-import type { PageKind, Role } from "@/db/schema";
+import type { Guide, PageKind, Role } from "@/db/schema";
 import {
   assertUser,
   canEditGuide,
@@ -279,9 +279,11 @@ export async function updateGuideSettings(
     section: string;
     position: number;
     authorId?: string | null;
+    /** The main guide this one is a part of; null makes it a main guide. */
+    parentId?: string | null;
   },
 ): Promise<ActionResult> {
-  const { user } = await editableGuide(id);
+  const { user, guide } = await editableGuide(id);
   const slug = settings.slug.trim();
   if (!SLUG_RE.test(slug))
     return {
@@ -296,10 +298,18 @@ export async function updateGuideSettings(
   if (taken)
     return { ok: false, error: `${pageUrl(taken.kind, slug)} already exists.` };
 
+  if (settings.parentId) {
+    const problem = await parentProblem(guide, settings.parentId, user);
+    if (problem) return { ok: false, error: problem };
+  }
+
   await db
     .update(schema.guides)
     .set({
       slug,
+      ...(settings.parentId !== undefined
+        ? { parentId: settings.parentId }
+        : {}),
       section: settings.section.trim().slice(0, 60),
       position: Number.isFinite(settings.position)
         ? Math.trunc(settings.position)
@@ -312,6 +322,33 @@ export async function updateGuideSettings(
     })
     .where(eq(schema.guides.id, id));
   return { ok: true };
+}
+
+/** Why `guide` can't become a part of `parentId`, or null if it can. One level of parts only. */
+async function parentProblem(
+  guide: Guide,
+  parentId: string,
+  user: Awaited<ReturnType<typeof assertUser>>,
+): Promise<string | null> {
+  if (guide.kind !== "guide") return "Only guides can be part of a guide.";
+  if (parentId === guide.id) return "A guide can't be a part of itself.";
+  const db = await getDb();
+  const [parent] = await db
+    .select()
+    .from(schema.guides)
+    .where(eq(schema.guides.id, parentId));
+  if (!parent || parent.kind !== "guide" || !canEditGuide(user, parent))
+    return "That main guide wasn't found.";
+  if (parent.parentId)
+    return "That guide is itself a part of another guide; pick its main guide.";
+  const [part] = await db
+    .select({ id: schema.guides.id })
+    .from(schema.guides)
+    .where(eq(schema.guides.parentId, guide.id))
+    .limit(1);
+  if (part)
+    return "Other guides are parts of this one, so it can't become a part itself.";
+  return null;
 }
 
 export async function restoreRevision(
@@ -357,7 +394,8 @@ export async function deleteGuides(ids: string[]): Promise<ActionResult> {
 
 /**
  * Imports the chosen pages of a content pack as drafts: new pages are created (owned by the
- * admin), existing ones get the file as their draft. What's published is never touched.
+ * admin), changed ones get the file as their draft, and all get the pack's placement (section,
+ * order, main guide). What's published is never touched.
  */
 export async function importPages(
   packId: string,
@@ -393,9 +431,26 @@ export async function importPages(
     else
       await db
         .update(schema.guides)
-        .set({ draftSource: p.source, ...placement })
+        .set({
+          ...(p.status === "changed" ? { draftSource: p.source } : {}),
+          ...placement,
+        })
         .where(eq(schema.guides.slug, p.slug));
   }
+  // Main guides may have been created just now, so link parts once everything exists.
+  const parentSlugs = chosen.flatMap((p) => (p.parent ? [p.parent] : []));
+  const parents = parentSlugs.length
+    ? await db
+        .select({ id: schema.guides.id, slug: schema.guides.slug })
+        .from(schema.guides)
+        .where(inArray(schema.guides.slug, parentSlugs))
+    : [];
+  const parentIds = new Map(parents.map((r) => [r.slug, r.id]));
+  for (const p of chosen)
+    await db
+      .update(schema.guides)
+      .set({ parentId: p.parent ? (parentIds.get(p.parent) ?? null) : null })
+      .where(eq(schema.guides.slug, p.slug));
   return { ok: true };
 }
 

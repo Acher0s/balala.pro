@@ -294,14 +294,15 @@ export function Panel({
 
 const IMPORT_STATUS: Record<ImportStatus, string> = {
   new: "New",
-  same: "Draft up to date",
+  same: "Up to date",
+  moved: "Updates where it's listed",
   changed: "Replaces your draft",
   conflict: "Slug used by another page",
 };
 
 /**
- * One content pack: pick pages and import them as drafts. New pages are ticked; pages whose
- * draft differs from the file aren't, so edits made on the site aren't replaced by accident.
+ * One content pack: pick pages and import them as drafts. Only new pages are ticked, so neither
+ * edits nor reorganising done on the site are undone by accident.
  */
 export function ImportPackForm({
   id,
@@ -316,7 +317,8 @@ export function ImportPackForm({
 }) {
   const { pending, error, run } = useAction();
   const importable = (p: Omit<ImportPage, "source">) =>
-    p.status === "new" || p.status === "changed";
+    p.status === "new" || p.status === "changed" || p.status === "moved";
+  const allImportable = pages.filter(importable).map((p) => p.slug);
   const [chosen, setChosen] = useState(
     () => new Set(pages.filter((p) => p.status === "new").map((p) => p.slug)),
   );
@@ -347,6 +349,21 @@ export function ImportPackForm({
         )}
       </div>
       <ul className="flex flex-col divide-y text-sm">
+        <li className="flex items-center gap-3 pb-2 text-xs text-fd-muted-foreground">
+          <input
+            type="checkbox"
+            aria-label="Select all"
+            disabled={allImportable.length === 0}
+            checked={
+              allImportable.length > 0 &&
+              allImportable.every((s) => chosen.has(s))
+            }
+            onChange={(e) =>
+              setChosen(new Set(e.target.checked ? allImportable : []))
+            }
+          />
+          Select all
+        </li>
         {pages.map((p) => (
           <li key={p.slug} className="flex items-center gap-3 py-2">
             <input
@@ -360,6 +377,7 @@ export function ImportPackForm({
               {p.kind}
             </span>
             <span className="min-w-0 flex-1 truncate">
+              {p.parent && <span className="text-fd-muted-foreground">↳ </span>}
               {p.id ? (
                 <a
                   href={`/studio/guides/${p.id}`}

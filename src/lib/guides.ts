@@ -34,6 +34,8 @@ export interface PublishedPage {
   slug: string;
   section: string;
   position: number;
+  /** The main guide this is a part of, if any (see schema.guides.parentId). */
+  parentId: string | null;
   source: string;
   publishedAt: Date | null;
   frontmatter: Frontmatter;
@@ -46,6 +48,7 @@ function toPublished(g: Guide): PublishedPage {
     slug: g.slug,
     section: g.section,
     position: g.position,
+    parentId: g.parentId,
     source: g.publishedSource as string,
     publishedAt: g.publishedAt,
     frontmatter: safeFrontmatter(g.publishedSource, g.slug),
@@ -68,22 +71,67 @@ export async function listPublished(kind?: PageKind): Promise<PublishedPage[]> {
 }
 
 /**
- * The pages before and after this one in its section, so a series of guides (e.g. "White Stake")
- * reads in order. Pages outside a section get no links.
+ * Splits pages into main pages and the parts of each main guide. A part whose main guide isn't
+ * published is treated as a main page, so it never becomes unreachable.
  */
-export async function sectionNeighbours(page: PublishedPage) {
-  if (!page.section) return {};
-  const pages = (await listPublished(page.kind)).filter(
-    (p) => p.section === page.section,
-  );
-  const i = pages.findIndex((p) => p.id === page.id);
-  const link = (p: PublishedPage | undefined) =>
-    p && {
-      name: p.frontmatter.title,
-      description: p.frontmatter.description,
-      url: pageUrl(p.kind, p.slug),
-    };
-  return { previous: link(pages[i - 1]), next: link(pages[i + 1]) };
+export function groupParts(pages: PublishedPage[]) {
+  const ids = new Set(pages.map((p) => p.id));
+  const isPart = (p: PublishedPage) =>
+    p.parentId !== null && ids.has(p.parentId);
+  const parts = new Map<string, PublishedPage[]>();
+  for (const p of pages.filter(isPart)) {
+    const parentId = p.parentId as string;
+    parts.set(parentId, [...(parts.get(parentId) ?? []), p]);
+  }
+  for (const list of parts.values())
+    list.sort(
+      (a, b) => a.position - b.position || a.slug.localeCompare(b.slug),
+    );
+  return { main: pages.filter((p) => !isPart(p)), parts };
+}
+
+const footerLink = (p: PublishedPage | undefined) =>
+  p && {
+    name: p.frontmatter.title,
+    description: p.frontmatter.description,
+    url: pageUrl(p.kind, p.slug),
+  };
+
+/**
+ * Previous/next links. A main guide and its parts read as one series (main guide first); other
+ * pages link to the main pages next to them in their section. Pages outside a section get none.
+ */
+export async function pageNeighbours(page: PublishedPage) {
+  const all = await listPublished(page.kind);
+  const { main, parts } = groupParts(all);
+  const parentId =
+    page.parentId && parts.has(page.parentId) ? page.parentId : null;
+  const seriesId = parentId ?? (parts.has(page.id) ? page.id : null);
+  let list: PublishedPage[];
+  if (seriesId) {
+    const head = all.find((p) => p.id === seriesId) as PublishedPage;
+    list = [head, ...(parts.get(seriesId) ?? [])];
+  } else if (page.section) {
+    list = main.filter((p) => p.section === page.section && !parts.has(p.id));
+  } else return {};
+  const i = list.findIndex((p) => p.id === page.id);
+  return { previous: footerLink(list[i - 1]), next: footerLink(list[i + 1]) };
+}
+
+/** The published main guide a page is part of, for the "Part of …" link above its title. */
+export async function publishedParent(page: PublishedPage) {
+  if (!page.parentId) return null;
+  const db = await getDb();
+  const [g] = await db
+    .select()
+    .from(schema.guides)
+    .where(eq(schema.guides.id, page.parentId))
+    .limit(1);
+  if (!g?.publishedSource) return null;
+  return {
+    title: safeFrontmatter(g.publishedSource, g.slug).title,
+    url: pageUrl(g.kind, g.slug),
+  };
 }
 
 export async function getPublished(
@@ -100,30 +148,40 @@ export async function getPublished(
   return toPublished(g);
 }
 
-/** Sidebar: guides (top level, then one separator per section), then a "Tools" group. */
+/**
+ * Sidebar (the phone menu): main guides (top level, then one separator per section), a main
+ * guide with parts as a folder, then a "Tools" group.
+ */
 export async function getPageTree(): Promise<PageTree.Root> {
   const pages = await listPublished();
+  const { main, parts } = groupParts(pages.filter((p) => p.kind === "guide"));
+  const item = (p: PublishedPage): PageTree.Item => ({
+    type: "page",
+    name: p.frontmatter.title,
+    url: pageUrl(p.kind, p.slug),
+  });
   const children: PageTree.Node[] = [];
   let section: string | null = null;
-  for (const g of pages.filter((p) => p.kind === "guide")) {
+  for (const g of main) {
     if (g.section !== section && g.section !== "")
       children.push({ type: "separator", name: g.section });
     section = g.section;
-    children.push({
-      type: "page",
-      name: g.frontmatter.title,
-      url: pageUrl("guide", g.slug),
-    });
+    const own = parts.get(g.id);
+    children.push(
+      own
+        ? {
+            type: "folder",
+            name: g.frontmatter.title,
+            index: item(g),
+            children: own.map(item),
+          }
+        : item(g),
+    );
   }
   const tools = pages.filter((p) => p.kind === "tool");
   if (tools.length) {
     children.push({ type: "separator", name: "Tools" });
-    for (const t of tools)
-      children.push({
-        type: "page",
-        name: t.frontmatter.title,
-        url: pageUrl("tool", t.slug),
-      });
+    for (const t of tools) children.push(item(t));
   }
   return { name: "Guides", children };
 }
