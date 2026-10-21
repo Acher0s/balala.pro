@@ -601,6 +601,28 @@ for (const job of jobs) {
       .png()
       .toBuffer();
   }
+  if (job.kind === "joker" && job.id === "wee") {
+    // The game draws Wee Joker with Joker's sprite at 70% size (card.lua, Card:set_ability):
+    // shrink it onto a full-size transparent card so it shows as small as in the game.
+    const { width = CELL_W, height = CELL_H } = await sharp(img).metadata();
+    const small = await sharp(img)
+      .resize(Math.round(width * 0.7), Math.round(height * 0.7), {
+        kernel: "nearest",
+      })
+      .png()
+      .toBuffer();
+    img = await sharp({
+      create: {
+        width,
+        height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: small, gravity: "center" }])
+      .png()
+      .toBuffer();
+  }
   if (job.kind === "seal") {
     // Seals are drawn on top of a card, so their sheet cell is mostly empty:
     // keep the full cell for <PlayingCard> and trim it for showing the seal on its own.
