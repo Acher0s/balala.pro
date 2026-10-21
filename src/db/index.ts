@@ -21,7 +21,9 @@ async function connect(): Promise<Db> {
     const { default: postgres } = await import("postgres");
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    const client = url ? postgres(url, { max: 10 }) : postgres({ max: 10 });
+    // Migrations log harmless "already exists, skipping" notices on every start.
+    const options = { max: 10, onnotice: () => {} };
+    const client = url ? postgres(url, options) : postgres(options);
     const db = drizzle(client, { schema });
     await migrate(db, { migrationsFolder: MIGRATIONS });
     return db;

@@ -40,10 +40,14 @@ import {
   SNIPPETS,
 } from "./snippets";
 
-type SaveState = "saved" | "unsaved" | "saving" | "error";
+type SaveState = "saved" | "unsaved" | "saving" | "error" | "outdated";
 type Tab = "cards" | "blocks" | "settings" | "history";
 
 const AUTOSAVE_MS = 600;
+/** How often unsaved changes are saved (or a failed save retried) no matter what. */
+const SAFETY_SAVE_MS = 10_000;
+/** A save that takes longer than this counts as failed (and is retried). */
+const SAVE_TIMEOUT_MS = 20_000;
 const STUDIO = "/studio";
 
 interface EditorGuide {
@@ -95,6 +99,19 @@ export function GuideEditor({
   const syncRef = useRef(true);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadRef = useRef<(files: File[]) => void>(() => {});
+  // Every edit bumps editVersion; a save records the version it sent. The draft is only
+  // "saved" when the server has the latest version.
+  const editVersion = useRef(0);
+  const savedVersion = useRef(0);
+  const saving = useRef(false);
+  // Set once the site has been redeployed under this open page: saves can't succeed until
+  // the page is reloaded.
+  const outdated = useRef(false);
+  const backupKey = `bmpu-guide-backup:${guide.id}`;
+  /** Text kept in this browser that the server may not have (e.g. it was down). */
+  const [backup, setBackup] = useState<{ source: string; at: number } | null>(
+    null,
+  );
 
   /** Tells the preview which source line is at the top of the editor (fractional for smoothness). */
   const sendScroll = useCallback(() => {
@@ -143,19 +160,75 @@ export function GuideEditor({
   const save = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
     const source = view.current?.state.doc.toString();
-    if (source === undefined) return;
+    // One save at a time; the periodic check below picks up anything typed meanwhile.
+    if (source === undefined || saving.current || outdated.current) return;
+    const version = editVersion.current;
+    saving.current = true;
     setState("saving");
     try {
-      const res = await saveDraft(guide.id, source);
+      // A stuck server must not block retries forever.
+      const res = await Promise.race([
+        saveDraft(guide.id, source),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Save timed out")),
+            SAVE_TIMEOUT_MS,
+          ),
+        ),
+      ]);
+      savedVersion.current = Math.max(savedVersion.current, version);
       setProblems(res.problems ?? []);
-      setState("saved");
       setStatus((s) => (s === "published" ? "changed" : s));
       reloadPreview();
+      if (editVersion.current === version) {
+        setState("saved");
+        // The server has everything: the browser backup is no longer needed.
+        try {
+          localStorage.removeItem(backupKey);
+        } catch {
+          // ignore
+        }
+      } else setState("unsaved");
     } catch (e) {
+      // A newer version of the site is running; this page's save action no longer exists.
+      if (
+        e instanceof Error &&
+        /Server Action .* was not found/.test(e.message)
+      ) {
+        outdated.current = true;
+        setState("outdated");
+        return;
+      }
+      // Server unreachable or restarting: keep the text in the browser and retry.
       setState("error");
-      setProblems([(e as Error).message]);
+    } finally {
+      saving.current = false;
     }
-  }, [guide.id, reloadPreview]);
+  }, [guide.id, reloadPreview, backupKey]);
+
+  // Safety net: every 10 seconds, save anything the server doesn't have yet. This covers
+  // long stretches of typing without a pause and retries after a failed save.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (editVersion.current !== savedVersion.current && !saving.current)
+        void save();
+    }, SAFETY_SAVE_MS);
+    return () => clearInterval(id);
+  }, [save]);
+
+  // A backup from an earlier visit that differs from the server's draft: offer to restore it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: checked once, against the draft the page opened with
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(backupKey);
+      if (!raw) return;
+      const found = JSON.parse(raw) as { source: string; at: number };
+      if (found.source !== initialSource) setBackup(found);
+      else localStorage.removeItem(backupKey);
+    } catch {
+      // No usable backup.
+    }
+  }, []);
 
   // CodeMirror is created once; later content changes come from typing or the insert panel.
   // biome-ignore lint/correctness/useExhaustiveDependencies: initialSource is only the starting document
@@ -201,7 +274,20 @@ export function GuideEditor({
         ]),
         EditorView.updateListener.of((u) => {
           if (!u.docChanged) return;
-          setState("unsaved");
+          editVersion.current++;
+          setState((s) => (s === "error" || s === "outdated" ? s : "unsaved"));
+          // Keep a copy in the browser until the server confirms it has this text.
+          try {
+            localStorage.setItem(
+              backupKey,
+              JSON.stringify({
+                source: u.state.doc.toString(),
+                at: Date.now(),
+              }),
+            );
+          } catch {
+            // Storage full or blocked: the server save still happens.
+          }
           if (timer.current) clearTimeout(timer.current);
           timer.current = setTimeout(() => void save(), AUTOSAVE_MS);
         }),
@@ -230,7 +316,8 @@ export function GuideEditor({
 
   useEffect(() => {
     const onLeave = (e: BeforeUnloadEvent) => {
-      if (state === "unsaved" || state === "saving") e.preventDefault();
+      // After a redeploy the text is in the browser backup, which the reloaded page offers back.
+      if (state !== "saved" && state !== "outdated") e.preventDefault();
     };
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
@@ -302,7 +389,9 @@ export function GuideEditor({
     saved: "Draft saved",
     unsaved: "Unsaved changes",
     saving: "Saving…",
-    error: "Save failed",
+    error: "Save failed, retrying… (your text is kept in this browser)",
+    outdated:
+      "The site was updated. Reload to keep saving (your text is kept in this browser)",
   }[state];
   const statusLabel = {
     draft: "Not published",
@@ -325,12 +414,23 @@ export function GuideEditor({
         </span>
         <span
           className={
-            state === "error" ? "text-red-500" : "text-fd-muted-foreground"
+            state === "error" || state === "outdated"
+              ? "text-red-500"
+              : "text-fd-muted-foreground"
           }
           aria-live="polite"
         >
           {saveLabel}
         </span>
+        {state === "outdated" && (
+          <button
+            type="button"
+            className="rounded-md border px-2 py-0.5 text-xs font-medium hover:bg-fd-accent"
+            onClick={() => window.location.reload()}
+          >
+            Reload
+          </button>
+        )}
         {notice && <span className="text-fd-muted-foreground">{notice}</span>}
         <span className="ml-auto flex items-center gap-2">
           <label
@@ -380,6 +480,47 @@ export function GuideEditor({
           </button>
         </span>
       </header>
+
+      {backup && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
+          <span>
+            This browser has unsaved text for this guide from{" "}
+            {new Date(backup.at).toLocaleString()}.
+          </span>
+          <button
+            type="button"
+            className={primaryButton}
+            onClick={() => {
+              const v = view.current;
+              if (v)
+                v.dispatch({
+                  changes: {
+                    from: 0,
+                    to: v.state.doc.length,
+                    insert: backup.source,
+                  },
+                });
+              setBackup(null);
+            }}
+          >
+            Restore it
+          </button>
+          <button
+            type="button"
+            className={secondaryButton}
+            onClick={() => {
+              try {
+                localStorage.removeItem(backupKey);
+              } catch {
+                // ignore
+              }
+              setBackup(null);
+            }}
+          >
+            Discard
+          </button>
+        </div>
+      )}
 
       {problems.length > 0 && (
         <div className="max-h-28 overflow-y-auto border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-sm">
