@@ -85,7 +85,7 @@ export function CalcProvider({
     <CalcContext.Provider value={state}>
       <section
         id={id}
-        className="not-prose my-6 rounded-xl border bg-fd-card p-4 shadow-sm"
+        className="not-prose @container my-6 rounded-xl border bg-fd-card p-4 shadow-sm"
       >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h4 className="font-semibold">{title ?? "Calculator"}</h4>
@@ -117,7 +117,8 @@ export function CalcProvider({
             )}
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+        {/* Two per row when the calculator itself is wide enough, e.g. not inside <Columns>. */}
+        <div className="grid gap-3 @md:grid-cols-2">{children}</div>
       </section>
     </CalcContext.Provider>
   );

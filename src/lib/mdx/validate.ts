@@ -32,6 +32,8 @@ export const ALLOWED_COMPONENTS = new Set([
   "CardRow",
   "Level",
   "Center",
+  "Columns",
+  "Column",
   "Tool",
   "TierList",
   "Calc",

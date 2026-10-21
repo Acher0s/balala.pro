@@ -6,6 +6,9 @@ patch: 0.5.5
 tags: [tool, econ]
 ---
 
+<Columns>
+<Column>
+
 ## Played cards
 
 <Calc id="money-played" title="$ Generators: played cards">
@@ -23,6 +26,9 @@ tags: [tool, econ]
   <Output label="Total" value="if(dice, 1 / 15 * 20 * 2, 1 / 15 * 20) * lucky + if(dice, 2 * 1 / 2 * 2 * business, 2 * 1 / 2 * business) * businesshits + 3 * goldseal + 4 * ticket * tickethits" format="money" />
 </Calc>
 
+</Column>
+<Column>
+
 ## Held in hand
 
 <Calc id="money-held" title="$ Generators: held in hand">
@@ -34,3 +40,6 @@ tags: [tool, econ]
   <Output label="Gold in hand" value="3 * gold" format="money" />
   <Output label="Total" value="if(dice, 1 / 2 * 2 * parking, 1 / 2 * parking) * parkinghits + 3 * gold" format="money" />
 </Calc>
+
+</Column>
+</Columns>

@@ -5,6 +5,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 import { Calc, CalcTable, Input, Output, Value } from "./calc";
 import { Center } from "./center";
+import { Column, Columns } from "./columns";
 import {
   CardRow,
   Deck,
@@ -44,6 +45,8 @@ export function getMDXComponents(components?: MDXComponents) {
     CardRow,
     Level,
     Center,
+    Columns,
+    Column,
     Tool,
     TierList,
     Calc,

@@ -210,6 +210,31 @@ Several cards inside one `Center` sit side by side:
 </Center>
 ```
 
+### Side by side
+
+Put two things next to each other, like two calculators. They sit side by side when there's room and stack on narrow screens. Use **Blocks → Two columns**.
+
+```mdx
+<Columns>
+<Column>
+
+### Left
+
+Text, cards or a calculator.
+
+</Column>
+<Column>
+
+### Right
+
+More text, cards or a calculator.
+
+</Column>
+</Columns>
+```
+
+Leave an empty line after `<Column>` and before `</Column>`, so the text inside is read as normal guide text. Calculators can also go straight into `Columns` without a `Column` around each.
+
 ### Playing cards
 
 <PlayingCard card="KH" enhancement="steel" seal="red" /> <PlayingCard card="QS" /> <PlayingCard card="10D" enhancement="gold" seal="gold" />

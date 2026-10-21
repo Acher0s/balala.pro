@@ -92,6 +92,22 @@ $SELECTION
 `,
   },
   {
+    label: "Two columns",
+    text: `<Columns>
+<Column>
+
+$SELECTION
+
+</Column>
+<Column>
+
+Second column
+
+</Column>
+</Columns>
+`,
+  },
+  {
     label: "Calculator",
     text: `<Calc id="my-calc" title="Calculator">
   <Input name="a" label="First value" default={1} min={0} />
