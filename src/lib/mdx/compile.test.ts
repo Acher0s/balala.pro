@@ -192,3 +192,18 @@ describe("the example announcement", () => {
     ).resolves.toBeTruthy();
   });
 });
+
+describe("links to headings", () => {
+  it("turns links copied from the editor preview into same-page jumps", async () => {
+    const { Body } = await compileGuide(
+      guide(
+        "## Parking Mime bug\n\nSee the [bug](https://balala.pro/preview/66c0e1c7-d93a-4728-ba54-8462ec99908b#parking-mime-bug) and [this](/preview/66c0e1c7-d93a-4728-ba54-8462ec99908b#parking-mime-bug).",
+      ),
+    );
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { createElement } = await import("react");
+    const html = renderToStaticMarkup(createElement(Body));
+    expect(html).toContain('href="#parking-mime-bug"');
+    expect(html).not.toContain("/preview/");
+  });
+});

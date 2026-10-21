@@ -66,6 +66,16 @@ Leave an empty line between paragraphs. A single line break is joined into the s
 [a link to another guide](/guides/reserved-parking)
 ```
 
+### Links to a heading on the same page
+
+Write `#` and the heading's id to jump down (or up) to it: [back to the details block](#the-details-block).
+
+```md
+[back to the details block](#the-details-block)
+```
+
+The id is the heading in lowercase with dashes instead of spaces, so `## Parking Mime bug` becomes `#parking-mime-bug`. You can also copy it: hover a heading in the preview and click its link icon. Links copied from the preview are turned into same-page jumps automatically.
+
 ### Lists
 
 - Bullets start with `-`

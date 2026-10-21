@@ -27,7 +27,9 @@ async function connect(): Promise<Db> {
     return db;
   }
   if (process.env.NODE_ENV === "production") {
-    throw new Error("No database configured: set PGHOST etc. or DATABASE_URL. See .env.example.");
+    throw new Error(
+      "No database configured: set PGHOST etc. or DATABASE_URL. See .env.example.",
+    );
   }
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");

@@ -93,6 +93,42 @@ function shiftLines(e: unknown, offset: number): never {
   ]);
 }
 
+interface LinkNode {
+  type: string;
+  url?: string;
+  name?: string | null;
+  attributes?: { type: string; name?: string; value?: unknown }[];
+  children?: LinkNode[];
+}
+
+/** A link to a heading on the editor's private preview page: /preview/<id>#heading */
+const PREVIEW_ANCHOR =
+  /^(?:https?:\/\/[^/]+)?\/preview\/[0-9a-f-]{36}(#[^\s]+)$/i;
+
+/**
+ * Turns links copied from the editor preview ("Copy link" on a heading) into plain
+ * same-page jumps (#heading), so readers scroll to the heading instead of hitting the
+ * private preview page.
+ */
+function remarkLocalAnchors() {
+  return (tree: LinkNode) => {
+    const visit = (node: LinkNode) => {
+      if ((node.type === "link" || node.type === "definition") && node.url) {
+        node.url = node.url.replace(PREVIEW_ANCHOR, "$1");
+      }
+      if (node.name === "a") {
+        for (const attr of node.attributes ?? []) {
+          if (attr.name === "href" && typeof attr.value === "string") {
+            attr.value = attr.value.replace(PREVIEW_ANCHOR, "$1");
+          }
+        }
+      }
+      for (const child of node.children ?? []) visit(child);
+    };
+    visit(tree);
+  };
+}
+
 interface HastNode {
   type: string;
   tagName?: string;
@@ -162,6 +198,7 @@ export async function compileGuide(
       development: false,
       remarkPlugins: [
         [remarkValidateGuide, validate],
+        remarkLocalAnchors,
         remarkGfm,
         [remarkHeading, { generateToc: true }],
       ],
