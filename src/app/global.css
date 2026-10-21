@@ -34,17 +34,29 @@ html > body[data-scroll-locked] {
 }
 
 /*
- * Guides: the table of contents goes on the left, where the sidebar was, lined up with the
- * header's left edge. The article is centred in the space to its right.
+ * Guides: the table of contents goes on the left, where the sidebar was, a little in from the
+ * header's left edge. A quarter of the spare width goes between it and the article, the rest
+ * after the article, so the article stays close to the contents without hugging them.
+ * 964px is the article's 900px plus its padding.
  */
 #nd-notebook-layout:has(#nd-toc) {
+  --nd-article-col: 964px;
+  --nd-spare: max(
+    0px,
+    min(var(--fd-layout-width, 97rem), 100vw - 2rem) -
+    var(--fd-toc-width) -
+    var(--nd-article-col)
+  );
   grid-template:
-    ". header header ."
-    ". toc-popover toc-popover ."
-    ". toc main ." 1fr
-    / minmax(min-content, 1fr) var(--fd-toc-width)
-    minmax(0, calc(var(--fd-layout-width, 97rem) - var(--fd-toc-width)))
+    ". header header header header ."
+    ". toc-popover toc-popover toc-popover toc-popover ."
+    ". toc . main . ." 1fr
+    / minmax(min-content, 1fr) var(--fd-toc-width) calc(var(--nd-spare) / 4)
+    minmax(0, var(--nd-article-col)) calc(var(--nd-spare) * 3 / 4)
     minmax(min-content, 1fr) !important;
+}
+#nd-toc {
+  padding-inline-start: 1.5rem;
 }
 
 /* Pages without a table of contents don't keep an empty column for it on the right. */
