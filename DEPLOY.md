@@ -62,7 +62,7 @@ nano .env
 | `SITE_URL` | The public address, e.g. `https://balala.pro` (no trailing slash) |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | From step 3 |
 | `ADMIN_DISCORD_IDS` | Your Discord user id (Discord → Settings → Advanced → Developer Mode, then right-click your name → Copy User ID). You become admin on your first sign-in |
-| `POSTGRES_PASSWORD` | A long random password, e.g. from `openssl rand -base64 24` |
+| `POSTGRES_PASSWORD` | A long random password, e.g. from `openssl rand -hex 24`. Set it before the first start: the database keeps the password it was created with |
 
 ## 5. Start it
 

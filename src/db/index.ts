@@ -10,21 +10,24 @@ export type Db = PostgresJsDatabase<typeof schema>;
 const MIGRATIONS = join(process.cwd(), "drizzle");
 
 /**
- * Production uses Postgres (DATABASE_URL). Without it — local development — an embedded
- * Postgres (PGlite) stores data in .data/pglite, so no database server is needed.
+ * Production uses Postgres, configured either by DATABASE_URL or by the standard PGHOST,
+ * PGUSER, PGPASSWORD and PGDATABASE variables (Docker uses these, so the password never has
+ * to be escaped inside a URL). Without either — local development — an embedded Postgres
+ * (PGlite) stores data in .data/pglite, so no database server is needed.
  */
 async function connect(): Promise<Db> {
   const url = process.env.DATABASE_URL;
-  if (url) {
+  if (url || process.env.PGHOST) {
     const { default: postgres } = await import("postgres");
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    const db = drizzle(postgres(url, { max: 10 }), { schema });
+    const client = url ? postgres(url, { max: 10 }) : postgres({ max: 10 });
+    const db = drizzle(client, { schema });
     await migrate(db, { migrationsFolder: MIGRATIONS });
     return db;
   }
   if (process.env.NODE_ENV === "production") {
-    throw new Error("DATABASE_URL is not set. See .env.example.");
+    throw new Error("No database configured: set PGHOST etc. or DATABASE_URL. See .env.example.");
   }
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
