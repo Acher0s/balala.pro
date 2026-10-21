@@ -33,7 +33,9 @@ import {
   announcementSource,
   type SiteSettings,
   saveSettings,
+  saveTheme,
 } from "@/lib/settings";
+import { siteThemeSchema } from "@/lib/theme";
 import { publishedTierListIds } from "@/lib/tierlists";
 
 export interface ActionResult {
@@ -431,6 +433,15 @@ export async function saveSiteSettings(
     homeIntro: values.homeIntro.slice(0, 2000),
     announcement,
   });
+  return { ok: true };
+}
+
+/** Studio → Style: the site's colours, roundness and heading font. */
+export async function saveSiteTheme(theme: unknown): Promise<ActionResult> {
+  await assertUser("admin");
+  const parsed = siteThemeSchema.safeParse(theme);
+  if (!parsed.success) return { ok: false, error: "That theme isn't valid." };
+  await saveTheme(parsed.data);
   return { ok: true };
 }
 
