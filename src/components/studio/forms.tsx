@@ -24,7 +24,7 @@ export const secondaryButton =
   "rounded-md border px-3 py-1.5 text-sm hover:bg-fd-accent disabled:opacity-50";
 
 /** Runs a server action from a form and shows its error, if any. */
-function useAction() {
+export function useAction() {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -54,7 +54,7 @@ function useAction() {
   return { pending, error, run };
 }
 
-function ErrorText({ error }: { error: string | null }) {
+export function ErrorText({ error }: { error: string | null }) {
   return error ? (
     <p className="whitespace-pre-line text-sm text-red-500">{error}</p>
   ) : null;

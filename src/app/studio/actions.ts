@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ItemKind } from "@/data/game-types";
 import type { ItemOverride } from "@/data/overrides";
@@ -339,6 +339,15 @@ export async function deleteGuide(id: string) {
   const db = await getDb();
   await db.delete(schema.guides).where(eq(schema.guides.id, id));
   redirect(STUDIO);
+}
+
+/** Admins: delete many guides and tools at once (their version history goes with them). */
+export async function deleteGuides(ids: string[]): Promise<ActionResult> {
+  await assertUser("admin");
+  if (ids.length === 0) return { ok: false, error: "Nothing selected." };
+  const db = await getDb();
+  await db.delete(schema.guides).where(inArray(schema.guides.id, ids));
+  return { ok: true };
 }
 
 // --- Admin: content import -----------------------------------------------
