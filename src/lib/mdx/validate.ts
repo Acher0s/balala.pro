@@ -31,6 +31,7 @@ export const ALLOWED_COMPONENTS = new Set([
   "PlayingCard",
   "CardRow",
   "Level",
+  "Center",
   "Tool",
   "TierList",
   "Calc",

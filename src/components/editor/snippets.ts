@@ -83,6 +83,15 @@ $SELECTION
 `,
   },
   {
+    label: "Centered",
+    text: `<Center>
+
+$SELECTION
+
+</Center>
+`,
+  },
+  {
     label: "Calculator",
     text: `<Calc id="my-calc" title="Calculator">
   <Input name="a" label="First value" default={1} min={0} />
