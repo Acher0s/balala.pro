@@ -14,8 +14,9 @@ export async function Announcement({ text }: { text: string }) {
     await ensureCardOverrides();
     const { Body } = await compileGuideCached(key, source);
     return (
-      <aside className="rounded-xl border border-fd-primary/30 bg-fd-primary/5 px-5 py-1">
-        <DocsBody>
+      // Small and quiet: it sits below the site's main buttons.
+      <aside className="rounded-lg border bg-fd-card px-4 py-0.5 text-sm text-fd-muted-foreground [&_h2]:mt-3 [&_h2]:mb-1 [&_h2]:text-base [&_h2]:text-fd-foreground [&_h3]:text-sm [&_li]:my-0.5 [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2">
+        <DocsBody className="text-sm">
           <Body components={getMDXComponents()} />
         </DocsBody>
       </aside>
