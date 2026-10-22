@@ -39,7 +39,8 @@ export default async function HomePage() {
           pool={fallingPool(falling.blacklist)}
         />
       )}
-      <div>
+      {/* A solid box, so falling cards never pass behind the text and make it hard to read. */}
+      <div className="rounded-xl border bg-fd-card p-5">
         <h1 className="mb-3 text-3xl font-bold">{settings.siteName}</h1>
         <HomeIntro text={settings.homeIntro} />
       </div>

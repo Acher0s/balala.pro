@@ -415,7 +415,7 @@ export function FallingCards({
       return ref !== undefined && blocked.has(ref);
     };
 
-    const spawn = (anywhere: boolean) => {
+    const spawn = (spreadOut: boolean) => {
       const s = settingsRef.current;
       const picture = nextPicture(s);
       if (!picture) return;
@@ -424,8 +424,9 @@ export function FallingCards({
       const falling: Falling = {
         picture,
         x: Math.random() * width,
-        // At the start the screen is filled; later cards come in from above.
-        y: anywhere ? Math.random() * height : -s.size * 1.5,
+        // Every card comes in from above. The first ones are spread out up there, so they arrive
+        // one after another instead of all at once.
+        y: -s.size * 1.5 - (spreadOut ? Math.random() * height : 0),
         rotation: Math.random() * 360,
         speed: Math.max(0.1, vary(s.speedVariation)),
         size,
