@@ -2,8 +2,9 @@ import { z } from "zod";
 
 /**
  * How the Guides and Tools pages are grouped (Studio → Site). Each category collects pages with any
- * of its tags; a page goes in the first category it matches, top to bottom. Pages that match none
- * go under `othersName` (or without a heading if that's empty).
+ * of its tags; a page goes in the first category it matches, top to bottom, or with `everyMatch` in
+ * every category it matches. Pages that match none go under `othersName` (or without a heading if
+ * that's empty).
  */
 export const categoriesSchema = z.object({
   categories: z
@@ -15,6 +16,7 @@ export const categoriesSchema = z.object({
     )
     .max(30),
   othersName: z.string().trim().max(60),
+  everyMatch: z.boolean().default(false),
 });
 
 export type CategorySettings = z.infer<typeof categoriesSchema>;
@@ -23,6 +25,7 @@ export type CategorySettings = z.infer<typeof categoriesSchema>;
 export const DEFAULT_CATEGORIES: CategorySettings = {
   categories: [],
   othersName: "Others",
+  everyMatch: false,
 };
 
 /** Tags compare without case or extra spaces: "White Stake" matches "white stake". */
@@ -45,8 +48,11 @@ export function groupByCategory<T extends { tags: string[] }>(
   const others: T[] = [];
   for (const page of pages) {
     const tags = page.tags.map(normalizeTag);
-    const group = groups.find((g) => tags.some((t) => g.tags.has(t)));
-    (group ? group.pages : others).push(page);
+    const matches = groups.filter((g) => tags.some((t) => g.tags.has(t)));
+    if (matches.length === 0) others.push(page);
+    else
+      for (const g of settings.everyMatch ? matches : matches.slice(0, 1))
+        g.pages.push(page);
   }
   return [
     ...groups.map(({ name, pages }) => ({ name, pages })),

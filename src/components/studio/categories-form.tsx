@@ -47,6 +47,7 @@ export function CategoriesForm({
     })),
   );
   const [othersName, setOthersName] = useState(initial.othersName);
+  const [everyMatch, setEveryMatch] = useState(initial.everyMatch);
   const [saved, setSaved] = useState(false);
 
   const change = (next: Row[]) => {
@@ -82,6 +83,7 @@ export function CategoriesForm({
                 tags: splitTags(r.tags),
               })),
               othersName,
+              everyMatch,
             }),
           () => setSaved(true),
         );
@@ -90,8 +92,8 @@ export function CategoriesForm({
     >
       <p className="text-sm text-fd-muted-foreground">
         Groups on the Guides and Tools pages. A guide or tool goes in the first
-        category, top to bottom, that has one of its tags. Without categories,
-        pages are grouped by their section.
+        category, top to bottom, that has one of its tags (or in every matching
+        one, see below). Without categories, pages are grouped by their section.
       </p>
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed p-3 text-sm text-fd-muted-foreground">
@@ -163,6 +165,24 @@ export function CategoriesForm({
       >
         Add category
       </button>
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={everyMatch}
+          onChange={(e) => {
+            setEveryMatch(e.target.checked);
+            setSaved(false);
+          }}
+          className="mt-1"
+        />
+        <span>
+          Show a page in every category it matches
+          <span className="block text-xs text-fd-muted-foreground">
+            Off: a page tagged both jokers and white stake only shows in the
+            first of those categories. On: it shows in both.
+          </span>
+        </span>
+      </label>
       <label className="flex flex-col gap-1 text-sm">
         Everything else
         <input
