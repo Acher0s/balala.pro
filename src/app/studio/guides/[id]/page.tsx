@@ -24,6 +24,7 @@ const KINDS: ItemKind[] = [
   "enhancement",
   "seal",
   "deck",
+  "stake",
 ];
 
 export default async function EditGuidePage({

@@ -20,6 +20,7 @@ export const TAG_BY_KIND: Record<ItemKind, string> = {
   enhancement: "Enhancement",
   seal: "Seal",
   deck: "Deck",
+  stake: "Stake",
 };
 
 export const KIND_LABELS: Record<ItemKind, string> = {
@@ -31,6 +32,7 @@ export const KIND_LABELS: Record<ItemKind, string> = {
   enhancement: "Enhancements",
   seal: "Seals",
   deck: "Decks",
+  stake: "Stakes",
 };
 
 /**

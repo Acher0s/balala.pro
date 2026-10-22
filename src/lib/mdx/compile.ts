@@ -42,7 +42,7 @@ export const frontmatterSchema = z.object({
 });
 
 const ICON_RE =
-  /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck):(.+)$/;
+  /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck|stake):(.+)$/;
 
 /** The card an `icon` value points to, e.g. "joker:reserved_parking". */
 export function findIcon(icon: string) {

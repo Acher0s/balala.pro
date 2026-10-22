@@ -66,7 +66,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
                           width={120}
                           height={160}
                           style={{ imageRendering: "pixelated" }}
-                          className="absolute -right-6 -bottom-10 h-40 w-[120px] -rotate-12 opacity-25 transition-opacity group-hover:opacity-50"
+                          className="absolute -right-6 -bottom-10 h-40 w-[120px] -rotate-12 object-contain opacity-25 transition-opacity group-hover:opacity-50"
                         />
                       )}
                       <span className="relative block font-semibold">

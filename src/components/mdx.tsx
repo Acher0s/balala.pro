@@ -15,6 +15,7 @@ import {
   PlayingCard,
   Seal,
   Spectral,
+  Stake,
   Tarot,
   Voucher,
 } from "./game-ref";
@@ -41,6 +42,7 @@ export function getMDXComponents(components?: MDXComponents) {
     Enhancement,
     Seal,
     Deck,
+    Stake,
     PlayingCard,
     CardRow,
     Level,

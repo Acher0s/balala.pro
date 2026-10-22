@@ -228,12 +228,31 @@ describe("page icon", () => {
     `---\ntitle: Test\nicon: ${icon}\n---\n\nHi\n`;
 
   it("accepts a card as kind:id, by name or game id", async () => {
-    for (const icon of ["joker:reserved_parking", "tarot:hermit", "deck:mp_violet"])
+    for (const icon of [
+      "joker:reserved_parking",
+      "tarot:hermit",
+      "deck:mp_violet",
+    ])
       await expect(compileGuide(withIcon(icon))).resolves.toBeDefined();
   });
 
   it("rejects anything that isn't a card", async () => {
     for (const icon of ["joker:nope", "reserved_parking", "car:hermit"])
-      await expect(compileGuide(withIcon(icon))).rejects.toThrow(GuideValidationError);
+      await expect(compileGuide(withIcon(icon))).rejects.toThrow(
+        GuideValidationError,
+      );
+  });
+});
+
+describe("stakes", () => {
+  it("knows the vanilla and Multiplayer stake chips, in text and as icons", async () => {
+    await expect(
+      compileGuide(
+        `---\ntitle: Test\nicon: stake:white_stake\n---\n\n<Stake id="white_stake" /> <Stake id="gold" card /> <Stake id="mp_plastic" /> <Stake id="mp_antimatter" />\n`,
+      ),
+    ).resolves.toBeDefined();
+    await expect(
+      compileGuide(`---\ntitle: Test\n---\n\n<Stake id="mp_nope" />\n`),
+    ).rejects.toThrow(GuideValidationError);
   });
 });

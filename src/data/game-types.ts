@@ -17,7 +17,8 @@ export type ItemKind =
   | "voucher"
   | "enhancement"
   | "seal"
-  | "deck";
+  | "deck"
+  | "stake";
 
 export type Rarity = "common" | "uncommon" | "rare" | "legendary";
 

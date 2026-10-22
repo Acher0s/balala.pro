@@ -294,6 +294,7 @@ const KIND_BY_SET: Record<string, ItemKind> = {
   Voucher: "voucher",
   Enhanced: "enhancement",
   Back: "deck",
+  Stake: "stake",
 };
 const SHEET_BY_KIND: Record<ItemKind, string> = {
   joker: "Jokers",
@@ -304,6 +305,7 @@ const SHEET_BY_KIND: Record<ItemKind, string> = {
   enhancement: "Enhancers",
   seal: "Enhancers",
   deck: "Enhancers",
+  stake: "chips",
 };
 
 const handLevels = new Map<string, { l_mult: number; l_chips: number }>();
@@ -341,6 +343,7 @@ const data: GameData = {
     enhancement: {},
     seal: {},
     deck: {},
+    stake: {},
   },
   cards: {},
   baseCard: "/game/enhancement/base.webp",
@@ -436,6 +439,36 @@ for (const m of sealBlock.matchAll(
   jobs.push({ kind: "seal", id, pos: { x: Number(m[2]), y: Number(m[3]) } });
 }
 
+// Stakes: the chips from the stake select screen, in G.P_STAKES; text in descriptions.Stake.
+const STAKE_CELL = { w: 58, h: 58 }; // 29 × 29 at the game's 2x texture scale
+const stakes = parseAssignedTable(gameLua, "self.P_STAKES = {") as Record<
+  string,
+  Table
+>;
+for (const [key, stake] of Object.entries(stakes).sort(
+  ([, a], [, b]) => Number(a.order) - Number(b.order),
+)) {
+  const desc = descriptions.Stake?.[key];
+  if (!desc) continue;
+  const id = idFromKey(key.replace(/^stake_/, "s_"));
+  data.items.stake[id] = {
+    key,
+    name: desc.name,
+    kind: "stake",
+    text: desc.text.map((l) => parseLine(l, [])),
+    image: `/game/stake/${id}.webp`,
+    w: 0,
+    h: 0,
+    source: "vanilla",
+  };
+  jobs.push({
+    kind: "stake",
+    id,
+    pos: stake.pos as { x: number; y: number },
+    cell: STAKE_CELL,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Multiplayer mod (read from the installed mod, if present)
 
@@ -465,7 +498,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
   for (const file of luaFiles) {
     const src = readFileSync(file, "utf8");
     for (const m of src.matchAll(
-      /SMODS\.(Atlas|Joker|Consumable|Back)\s*\(\s*\{/g,
+      /SMODS\.(Atlas|Joker|Consumable|Back|Stake)\s*\(\s*\{/g,
     )) {
       const def = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
       if (m[1] === "Atlas") {
@@ -500,7 +533,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     // Jokers and decks (Backs) say what they are by their type; consumables by their set.
     const set = type === "Consumable" ? String(def.set) : type;
     const kind = KIND_BY_SET[set];
-    const prefix = { Joker: "j", Back: "b" }[type] ?? "c";
+    const prefix = { Joker: "j", Back: "b", Stake: "stake" }[type] ?? "c";
     const fullKey = `${prefix}_mp_${key}`;
     const desc = modLoc[set]?.[fullKey];
     if (!kind || !desc) continue;

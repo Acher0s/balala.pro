@@ -41,6 +41,7 @@ const KIND_COLOUR: Record<ItemKind, string> = {
   enhancement: "#8a9ba8",
   seal: "#e0b44c",
   deck: "#8a9ba8",
+  stake: "#8a9ba8",
 };
 
 const RARITY_COLOUR = {

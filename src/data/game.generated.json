@@ -14493,6 +14493,636 @@
         "h": 190,
         "source": "multiplayer"
       }
+    },
+    "stake": {
+      "white": {
+        "key": "stake_white",
+        "name": "White Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Base Difficulty"
+            }
+          ]
+        ],
+        "image": "/game/stake/white.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "red": {
+        "key": "stake_red",
+        "name": "Red Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Small Blind",
+              "c": "attention"
+            },
+            {
+              "t": " gives"
+            }
+          ],
+          [
+            {
+              "t": "no reward money"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/red.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "green": {
+        "key": "stake_green",
+        "name": "Green Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/green.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "black": {
+        "key": "stake_black",
+        "name": "Black Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Shop can have "
+            },
+            {
+              "t": "Eternal",
+              "c": "attention"
+            },
+            {
+              "t": " Jokers"
+            }
+          ],
+          [
+            {
+              "t": "(Can't be sold or destroyed)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/black.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "blue": {
+        "key": "stake_blue",
+        "name": "Blue Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "-1",
+              "c": "red"
+            },
+            {
+              "t": " Discard"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/blue.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "purple": {
+        "key": "stake_purple",
+        "name": "Purple Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/purple.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "orange": {
+        "key": "stake_orange",
+        "name": "Orange Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Shop can have "
+            },
+            {
+              "t": "Perishable",
+              "c": "attention"
+            },
+            {
+              "t": " Jokers"
+            }
+          ],
+          [
+            {
+              "t": "(Debuffed after 5 Rounds)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/orange.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "gold": {
+        "key": "stake_gold",
+        "name": "Gold Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Shop can have "
+            },
+            {
+              "t": "Rental",
+              "c": "attention"
+            },
+            {
+              "t": " Jokers"
+            }
+          ],
+          [
+            {
+              "t": "(Costs ",
+              "c": "inactive"
+            },
+            {
+              "t": "$3",
+              "c": "money"
+            },
+            {
+              "t": " per round)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies all previous Stakes"
+            }
+          ]
+        ],
+        "image": "/game/stake/gold.webp",
+        "w": 58,
+        "h": 58,
+        "source": "vanilla"
+      },
+      "mp_planet": {
+        "key": "stake_mp_planet",
+        "name": "Planet Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Applies "
+            },
+            {
+              "t": "Black Stake",
+              "c": "black"
+            },
+            {
+              "t": " effects, plus:"
+            }
+          ],
+          [
+            {
+              "t": "Shop can have "
+            },
+            {
+              "t": "Perishable",
+              "c": "attention"
+            },
+            {
+              "t": " Jokers"
+            }
+          ],
+          [
+            {
+              "t": "(Debuffed after 5 Rounds)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_planet.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_spectral": {
+        "key": "stake_mp_spectral",
+        "name": "Spectral Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Applies "
+            },
+            {
+              "t": "Planet Stake",
+              "c": "planet"
+            },
+            {
+              "t": " effects, plus:"
+            }
+          ],
+          [
+            {
+              "t": "Rental",
+              "c": "money"
+            },
+            {
+              "t": " Jokers appear in shop"
+            }
+          ],
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_spectral.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_spectralplus": {
+        "key": "stake_mp_spectralplus",
+        "name": "Spectral+ Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Applies "
+            },
+            {
+              "t": "Spectral Stake",
+              "c": "planet"
+            },
+            {
+              "t": " effects, plus:"
+            }
+          ],
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "even faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_spectralplus.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_plastic": {
+        "key": "stake_mp_plastic",
+        "name": "Plastic Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Earn "
+            },
+            {
+              "t": "$1",
+              "c": "money"
+            },
+            {
+              "t": " of interest per "
+            },
+            {
+              "t": "$10",
+              "c": "money"
+            }
+          ],
+          [
+            {
+              "t": "(Max of ",
+              "c": "inactive"
+            },
+            {
+              "t": "$50",
+              "c": "money"
+            },
+            {
+              "t": ")",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies White Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_plastic.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_pebble": {
+        "key": "stake_mp_pebble",
+        "name": "Pebble Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "Applies Plastic Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_pebble.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_ferrite": {
+        "key": "stake_mp_ferrite",
+        "name": "Ferrite Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Specific Jokers are "
+            },
+            {
+              "t": "Persistent",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "(Can't be destroyed, increasing sell cost)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies Pebble Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_ferrite.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_pyrite": {
+        "key": "stake_mp_pyrite",
+        "name": "Pyrite Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Reroll price increases"
+            }
+          ],
+          [
+            {
+              "t": "by "
+            },
+            {
+              "t": "$2",
+              "c": "money"
+            },
+            {
+              "t": " each reroll"
+            }
+          ],
+          [
+            {
+              "t": "Applies Ferrite Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_pyrite.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_jade": {
+        "key": "stake_mp_jade",
+        "name": "Jade Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Required score scales"
+            }
+          ],
+          [
+            {
+              "t": "faster for each "
+            },
+            {
+              "t": "Ante",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "Applies Pyrite Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_jade.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_crystal": {
+        "key": "stake_mp_crystal",
+        "name": "Crystal Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Specific Jokers are "
+            },
+            {
+              "t": "Unreliable",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "(Doesn't trigger on ",
+              "c": "inactive"
+            },
+            {
+              "t": "final hand",
+              "c": "attention"
+            },
+            {
+              "t": ")",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies Jade Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_crystal.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      },
+      "mp_antimatter": {
+        "key": "stake_mp_antimatter",
+        "name": "Antimatter Stake",
+        "kind": "stake",
+        "text": [
+          [
+            {
+              "t": "Specific Jokers are "
+            },
+            {
+              "t": "Draining",
+              "c": "attention"
+            }
+          ],
+          [
+            {
+              "t": "(",
+              "c": "inactive"
+            },
+            {
+              "t": " X0.75 ",
+              "x": "mult",
+              "c": "white"
+            },
+            {
+              "t": " Mult)",
+              "c": "inactive"
+            }
+          ],
+          [
+            {
+              "t": "Applies Crystal Stake"
+            }
+          ]
+        ],
+        "image": "/game/stake/mp_antimatter.webp",
+        "w": 58,
+        "h": 58,
+        "source": "multiplayer"
+      }
     }
   },
   "cards": {

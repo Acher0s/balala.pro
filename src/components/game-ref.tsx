@@ -158,6 +158,7 @@ export const Enhancement = (props: RefProps) => (
 );
 export const Seal = (props: RefProps) => <GameRef kind="seal" {...props} />;
 export const Deck = (props: RefProps) => <GameRef kind="deck" {...props} />;
+export const Stake = (props: RefProps) => <GameRef kind="stake" {...props} />;
 
 /** A row of cards, e.g. a tier or a joker lineup. */
 export function CardRow({

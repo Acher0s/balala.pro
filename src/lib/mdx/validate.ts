@@ -24,6 +24,7 @@ const CARD_TAGS: Record<string, ItemKind> = {
   Enhancement: "enhancement",
   Seal: "seal",
   Deck: "deck",
+  Stake: "stake",
 };
 
 export const ALLOWED_COMPONENTS = new Set([
