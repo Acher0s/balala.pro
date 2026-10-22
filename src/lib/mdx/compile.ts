@@ -6,6 +6,8 @@ import type { MDXContent } from "mdx/types";
 import * as runtime from "react/jsx-runtime";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { findItem } from "@/data/game";
+import type { ItemKind } from "@/data/game-types";
 import {
   GuideValidationError,
   remarkValidateGuide,
@@ -26,7 +28,27 @@ export const frontmatterSchema = z.object({
   /** BMP version the guide was last checked against, e.g. "0.5.5" */
   patch: z.union([z.string(), z.number()]).transform(String).optional(),
   tags: z.array(z.string()).default([]),
+  /** A card shown with the page in lists, written as kind:id, e.g. joker:reserved_parking */
+  icon: z
+    .string()
+    .optional()
+    .superRefine((value, ctx) => {
+      if (value && !findIcon(value))
+        ctx.addIssue({
+          code: "custom",
+          message: `"${value}" isn't a card. Write it like joker:reserved_parking or tarot:hermit`,
+        });
+    }),
 });
+
+const ICON_RE =
+  /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck):(.+)$/;
+
+/** The card an `icon` value points to, e.g. "joker:reserved_parking". */
+export function findIcon(icon: string) {
+  const m = ICON_RE.exec(icon.trim());
+  return m ? findItem(m[1] as ItemKind, m[2]) : undefined;
+}
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
 

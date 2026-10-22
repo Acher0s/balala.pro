@@ -352,6 +352,30 @@ export function GuideEditor({
     v.focus();
   }, []);
 
+  /** Writes `icon: kind:id` into the details block, replacing any icon already set. */
+  const setIcon = useCallback((entry: CatalogEntry) => {
+    const v = view.current;
+    if (!v) return;
+    const doc = v.state.doc.toString();
+    const line = `icon: ${entry.kind}:${entry.id}`;
+    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(doc);
+    let change: { from: number; to?: number; insert: string };
+    if (!fm) change = { from: 0, insert: `---\n${line}\n---\n\n` };
+    else {
+      const yamlStart = fm[0].indexOf("\n") + 1;
+      const existing = /^icon:.*$/m.exec(fm[1]);
+      change = existing
+        ? {
+            from: yamlStart + existing.index,
+            to: yamlStart + existing.index + existing[0].length,
+            insert: line,
+          }
+        : { from: yamlStart + fm[1].length, insert: `\n${line}` };
+    }
+    v.dispatch({ changes: change });
+    setNotice(`Page icon set to ${entry.name}`);
+  }, []);
+
   const [uploading, setUploading] = useState(false);
   /** Uploads images/GIFs and inserts them as Markdown images at the cursor. */
   const uploadImages = useCallback(
@@ -579,8 +603,15 @@ export function GuideEditor({
             {tab === "cards" && (
               <CardPicker
                 catalog={catalog}
-                onPick={(entry, asCard) =>
-                  insert((sel) => cardMarkup(entry, { selected: sel, asCard }))
+                onPick={(entry, mode) =>
+                  mode === "icon"
+                    ? setIcon(entry)
+                    : insert((sel) =>
+                        cardMarkup(entry, {
+                          selected: sel,
+                          asCard: mode === "card",
+                        }),
+                      )
                 }
               />
             )}
@@ -889,16 +920,19 @@ function HistoryPanel({
   );
 }
 
+/** What clicking a card in the picker does. */
+type PickMode = "text" | "card" | "icon";
+
 function CardPicker({
   catalog,
   onPick,
 }: {
   catalog: CatalogEntry[];
-  onPick: (e: CatalogEntry, asCard: boolean) => void;
+  onPick: (e: CatalogEntry, mode: PickMode) => void;
 }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<CatalogEntry["kind"] | "all">("all");
-  const [asCard, setAsCard] = useState(false);
+  const [mode, setMode] = useState<PickMode>("text");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -930,20 +964,26 @@ function CardPicker({
           </option>
         ))}
       </select>
-      <label className="flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={asCard}
-          onChange={(e) => setAsCard(e.target.checked)}
-        />
-        Insert as large card image
+      <label className="flex flex-col gap-1 text-xs">
+        Clicking a card
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value as PickMode)}
+          className={field}
+        >
+          <option value="text">Inserts its name in the text</option>
+          <option value="card">Inserts it as a large card image</option>
+          <option value="icon">
+            Sets it as the page icon (shown in lists)
+          </option>
+        </select>
       </label>
       <ul className="grid grid-cols-3 gap-2">
         {results.map((e) => (
           <li key={`${e.kind}:${e.id}`}>
             <button
               type="button"
-              onClick={() => onPick(e, asCard)}
+              onClick={() => onPick(e, mode)}
               title={`${e.name} (${e.source ?? e.kind})`}
               className="flex w-full flex-col items-center gap-1 rounded-lg p-1 text-center text-[11px] leading-tight hover:bg-fd-accent"
             >

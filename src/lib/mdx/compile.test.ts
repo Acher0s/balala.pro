@@ -222,3 +222,18 @@ describe("home intro", () => {
     ).resolves.toBeDefined();
   });
 });
+
+describe("page icon", () => {
+  const withIcon = (icon: string) =>
+    `---\ntitle: Test\nicon: ${icon}\n---\n\nHi\n`;
+
+  it("accepts a card as kind:id, by name or game id", async () => {
+    for (const icon of ["joker:reserved_parking", "tarot:hermit", "deck:mp_violet"])
+      await expect(compileGuide(withIcon(icon))).resolves.toBeDefined();
+  });
+
+  it("rejects anything that isn't a card", async () => {
+    for (const icon of ["joker:nope", "reserved_parking", "car:hermit"])
+      await expect(compileGuide(withIcon(icon))).rejects.toThrow(GuideValidationError);
+  });
+});
