@@ -1,6 +1,11 @@
 import "server-only";
 import { eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import {
+  type CategorySettings,
+  categoriesSchema,
+  DEFAULT_CATEGORIES,
+} from "@/lib/categories";
 import { DEFAULT_THEME, type SiteTheme, siteThemeSchema } from "@/lib/theme";
 
 export interface SiteSettings {
@@ -100,6 +105,27 @@ export async function saveTheme(theme: SiteTheme) {
       set: { value: theme },
     });
   themeCache.bmpTheme = theme;
+}
+
+const CATEGORIES_KEY = "categories";
+
+/** How the Guides and Tools pages are grouped (Studio → Site → Categories). */
+export async function getCategories(): Promise<CategorySettings> {
+  const db = await getDb();
+  const [row] = await db
+    .select()
+    .from(schema.siteSettings)
+    .where(eq(schema.siteSettings.key, CATEGORIES_KEY));
+  const parsed = categoriesSchema.safeParse(row?.value);
+  return parsed.success ? parsed.data : DEFAULT_CATEGORIES;
+}
+
+export async function saveCategories(value: CategorySettings) {
+  const db = await getDb();
+  await db
+    .insert(schema.siteSettings)
+    .values({ key: CATEGORIES_KEY, value })
+    .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value } });
 }
 
 export async function saveSettings(values: SiteSettings) {

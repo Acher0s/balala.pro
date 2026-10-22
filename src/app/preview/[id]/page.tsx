@@ -77,6 +77,12 @@ async function ListPreview({
   }
   const where = guide.kind === "tool" ? "Tools" : "Guides";
   const db = await getDb();
+  const [owner] = guide.authorId
+    ? await db
+        .select({ name: schema.users.displayName })
+        .from(schema.users)
+        .where(eq(schema.users.id, guide.authorId))
+    : [];
   const [{ parts }] = await db
     .select({ parts: count() })
     .from(schema.guides)
@@ -98,7 +104,11 @@ async function ListPreview({
         </p>
       ) : (
         <div className="max-w-sm">
-          <PageTile frontmatter={frontmatter} parts={parts} />
+          <PageTile
+            frontmatter={frontmatter}
+            parts={parts}
+            ownerName={owner?.name}
+          />
         </div>
       )}
     </div>

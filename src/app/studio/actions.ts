@@ -14,6 +14,7 @@ import {
   safeNext,
 } from "@/lib/auth";
 import { reloadCardOverrides } from "@/lib/card-overrides";
+import { categoriesSchema } from "@/lib/categories";
 import { getImportPack } from "@/lib/content-import";
 import { toolTemplate, tutorialGuide } from "@/lib/guide-template";
 import {
@@ -32,6 +33,7 @@ import {
 import {
   introMarkup,
   type SiteSettings,
+  saveCategories,
   saveSettings,
   saveTheme,
   siteTextSource,
@@ -485,6 +487,21 @@ export async function saveSiteSettings(
     guidesIntro: values.guidesIntro.trim().slice(0, 300),
     toolsIntro: values.toolsIntro.trim().slice(0, 300),
   });
+  return { ok: true };
+}
+
+/** Studio → Site → Categories: how the Guides and Tools pages are grouped, by tags. */
+export async function saveSiteCategories(
+  value: unknown,
+): Promise<ActionResult> {
+  await assertUser("admin");
+  const parsed = categoriesSchema.safeParse(value);
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: "Every category needs a name and at least one tag.",
+    };
+  await saveCategories(parsed.data);
   return { ok: true };
 }
 

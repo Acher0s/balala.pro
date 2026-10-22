@@ -11,20 +11,29 @@ export function PageTile({
   frontmatter,
   href,
   parts = 0,
+  ownerName,
 }: {
   frontmatter: Frontmatter;
   href?: string;
+  /** Shown as the author when the page's details block doesn't name one. */
+  ownerName?: string | null;
   /** How many parts the guide has, shown as a badge. */
   parts?: number;
 }) {
   const icons = frontmatter.icon
     .map(resolveIcon)
     .filter((item) => item !== undefined);
+  const author = frontmatter.author || ownerName;
   const content = (
     <>
       {/* The page's cards, large and faded in the corner behind the text. */}
       <IconFan cards={icons} />
       <span className="relative block font-semibold">{frontmatter.title}</span>
+      {author && (
+        <span className="relative block text-xs text-fd-muted-foreground">
+          By {author}
+        </span>
+      )}
       {frontmatter.description && (
         <span
           className={`relative mt-1 block text-sm text-fd-muted-foreground ${ICON_PADDING[icons.length]}`}

@@ -39,9 +39,11 @@ export interface PublishedPage {
   source: string;
   publishedAt: Date | null;
   frontmatter: Frontmatter;
+  /** The owner's display name, shown as the author when the page doesn't name one. */
+  ownerName: string | null;
 }
 
-function toPublished(g: Guide): PublishedPage {
+function toPublished(g: Guide, ownerName: string | null = null): PublishedPage {
   return {
     id: g.id,
     kind: g.kind,
@@ -52,6 +54,7 @@ function toPublished(g: Guide): PublishedPage {
     source: g.publishedSource as string,
     publishedAt: g.publishedAt,
     frontmatter: safeFrontmatter(g.publishedSource, g.slug),
+    ownerName,
   };
 }
 
@@ -59,15 +62,18 @@ function toPublished(g: Guide): PublishedPage {
 export async function listPublished(kind?: PageKind): Promise<PublishedPage[]> {
   const db = await getDb();
   const rows = await db
-    .select()
+    .select({ guide: schema.guides, ownerName: schema.users.displayName })
     .from(schema.guides)
+    .leftJoin(schema.users, eq(schema.users.id, schema.guides.authorId))
     .where(isNotNull(schema.guides.publishedSource))
     .orderBy(
       asc(schema.guides.section),
       asc(schema.guides.position),
       asc(schema.guides.slug),
     );
-  return rows.filter((g) => !kind || g.kind === kind).map(toPublished);
+  return rows
+    .filter(({ guide }) => !kind || guide.kind === kind)
+    .map(({ guide, ownerName }) => toPublished(guide, ownerName));
 }
 
 /**
