@@ -818,7 +818,7 @@ function SettingsPanel({
           <label className="flex flex-col gap-1">
             Section{" "}
             <span className="text-xs text-fd-muted-foreground">
-              Groups guides on the Guides page, e.g. Jokers; empty = top
+              Guides in the same section get previous/next links to each other
             </span>
             <input
               name="section"

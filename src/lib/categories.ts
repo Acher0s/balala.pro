@@ -21,7 +21,7 @@ export const categoriesSchema = z.object({
 
 export type CategorySettings = z.infer<typeof categoriesSchema>;
 
-/** No categories: the pages are grouped by their section, as before categories existed. */
+/** No categories: the pages are one list without headings. */
 export const DEFAULT_CATEGORIES: CategorySettings = {
   categories: [],
   othersName: "Others",

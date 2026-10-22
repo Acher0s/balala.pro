@@ -22,8 +22,8 @@ const COPY: Record<PageKind, { title: string; empty: string }> = {
 
 /**
  * /guides and /tools: the published pages of that kind, grouped by the categories set in
- * Studio → Site (by their tags), or by section until categories are set up. Parts of a main
- * guide aren't listed; readers reach them from the main guide.
+ * Studio → Site (by their tags), or in one list without headings if there are none. Parts of a
+ * main guide aren't listed; readers reach them from the main guide.
  */
 export async function PageOverview({ kind }: { kind: PageKind }) {
   const [all, settings, categories] = await Promise.all([
@@ -37,18 +37,14 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
     kind === "tool" ? settings.toolsIntro : settings.guidesIntro;
   const copy = COPY[kind];
 
-  let groups: { name: string; pages: PublishedPage[] }[];
-  if (categories.categories.length > 0) {
-    groups = groupByCategory(
-      pages.map((p) => ({ page: p, tags: p.frontmatter.tags })),
-      categories,
-    ).map((g) => ({ name: g.name, pages: g.pages.map((x) => x.page) }));
-  } else {
-    const sections = new Map<string, PublishedPage[]>();
-    for (const p of pages)
-      sections.set(p.section, [...(sections.get(p.section) ?? []), p]);
-    groups = [...sections].map(([name, list]) => ({ name, pages: list }));
-  }
+  // Without categories, everything is one list without headings.
+  const groups: { name: string; pages: PublishedPage[] }[] =
+    categories.categories.length > 0
+      ? groupByCategory(
+          pages.map((p) => ({ page: p, tags: p.frontmatter.tags })),
+          categories,
+        ).map((g) => ({ name: g.name, pages: g.pages.map((x) => x.page) }))
+      : [{ name: "", pages }];
 
   return (
     <DocsPage>

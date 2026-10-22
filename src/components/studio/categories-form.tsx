@@ -93,7 +93,8 @@ export function CategoriesForm({
       <p className="text-sm text-fd-muted-foreground">
         Groups on the Guides and Tools pages. A guide or tool goes in the first
         category, top to bottom, that has one of its tags (or in every matching
-        one, see below). Without categories, pages are grouped by their section.
+        one, see below). Without categories, everything is one list without
+        headings.
       </p>
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed p-3 text-sm text-fd-muted-foreground">
