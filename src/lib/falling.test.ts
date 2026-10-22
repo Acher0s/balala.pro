@@ -21,3 +21,59 @@ describe("falling cards settings", () => {
       expect(DEFAULT_FALLING.weights[kind]).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe("card rolls (the game's odds)", () => {
+  /** Share of each result over evenly spread rolls in [0, 1). */
+  const shares = (roll: (r: number) => string | null) => {
+    const n = 100_000;
+    const counts = new Map<string, number>();
+    for (let i = 0; i < n; i++) {
+      const result = roll((i + 0.5) / n) ?? "none";
+      counts.set(result, (counts.get(result) ?? 0) + 1);
+    }
+    return Object.fromEntries(
+      [...counts].map(([k, v]) => [k, Math.round((v / n) * 1000) / 10]),
+    );
+  };
+
+  it("gives jokers shop editions: Negative and Polychrome 0.3%, Holo 1.4%, Foil 2%", async () => {
+    const { rollJokerEdition } = await import("./falling");
+    expect(shares(rollJokerEdition)).toEqual({
+      negative: 0.3,
+      polychrome: 0.3,
+      holo: 1.4,
+      foil: 2,
+      none: 96,
+    });
+  });
+
+  it("gives playing cards Standard pack editions: Polychrome 1.2%, Holo 2.8%, Foil 4%", async () => {
+    const { rollEdition } = await import("./falling");
+    expect(shares((r) => rollEdition(r, 2, false))).toEqual({
+      polychrome: 1.2,
+      holo: 2.8,
+      foil: 4,
+      none: 92,
+    });
+  });
+
+  it("enhances 40% of playing cards and seals 20%", async () => {
+    const { rollStandardCard } = await import("./falling");
+    let enhanced = 0;
+    let sealed = 0;
+    const n = 20_000;
+    let seed = 1;
+    // A small fixed pseudo-random sequence, so the test is repeatable.
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let i = 0; i < n; i++) {
+      const card = rollStandardCard(random);
+      if (card.enhancement !== null) enhanced++;
+      if (card.seal !== null) sealed++;
+    }
+    expect(enhanced / n).toBeCloseTo(0.4, 1);
+    expect(sealed / n).toBeCloseTo(0.2, 1);
+  });
+});

@@ -2,15 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  type Edition,
   FALLING_KINDS,
   type FallingKind,
   type FallingPool,
   type FallingSettings,
+  rollJokerEdition,
+  rollStandardCard,
 } from "@/lib/falling";
+
+/**
+ * A card as it falls: its layers (with any enhancement and seal) and edition, drawn once into
+ * `canvas` when its images have loaded, then reused by every card showing it.
+ */
+interface Picture {
+  layers: string[];
+  edition: Edition | null;
+  canvas?: HTMLCanvasElement;
+}
 
 /** One falling card: its picture plus random factors; the settings turn these into motion. */
 interface Falling {
-  layers: string[];
+  picture: Picture;
   x: number;
   y: number;
   rotation: number;
@@ -42,13 +55,67 @@ function image(src: string) {
   return img;
 }
 
-const vary = (variation: number) => 1 + (Math.random() * 2 - 1) * variation;
+const loaded = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0;
 
-function pickCard(pool: FallingPool, settings: FallingSettings) {
+/** Static stand-ins for the game's animated edition shaders, painted over the card's pixels. */
+const SHEENS: Record<Exclude<Edition, "negative">, [number, string[]]> = {
+  foil: [0.35, ["#6f8fff", "#e6f0ff", "#5a7cff", "#e6f0ff", "#6f8fff"]],
+  holo: [0.3, ["#ff3d6e", "#ffb3d1", "#d946ef", "#ffb3d1", "#ff3d6e"]],
+  polychrome: [
+    0.4,
+    ["#ff4d4d", "#ffd84d", "#4dff88", "#4dd2ff", "#a64dff", "#ff4dd2"],
+  ],
+};
+
+/** Draws a picture's layers and edition into one image, the first time all layers are loaded. */
+function render(picture: Picture) {
+  if (picture.canvas) return picture.canvas;
+  const layers = picture.layers.map(image);
+  if (!layers.every(loaded)) return undefined;
+  const w = layers[0].naturalWidth;
+  const h = layers[0].naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return undefined;
+  ctx.imageSmoothingEnabled = false;
+  for (const img of layers) ctx.drawImage(img, 0, 0, w, h);
+  if (picture.edition === "negative") {
+    const data = ctx.getImageData(0, 0, w, h);
+    for (let i = 0; i < data.data.length; i += 4) {
+      data.data[i] = 255 - data.data[i];
+      data.data[i + 1] = 255 - data.data[i + 1];
+      data.data[i + 2] = 255 - data.data[i + 2];
+    }
+    ctx.putImageData(data, 0, 0);
+  } else if (picture.edition) {
+    const [alpha, colours] = SHEENS[picture.edition];
+    const sheen = ctx.createLinearGradient(0, 0, w, h);
+    colours.forEach((c, i) => {
+      sheen.addColorStop(i / (colours.length - 1), c);
+    });
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, w, h);
+  }
+  picture.canvas = canvas;
+  return canvas;
+}
+
+const vary = (variation: number) => 1 + (Math.random() * 2 - 1) * variation;
+const pickFrom = <T,>(list: T[], roll = Math.random()) =>
+  list[Math.floor(roll * list.length)];
+
+/** A random card by the mix's weights, leaving out blacklisted (and, if off, mod) cards. */
+function pickCard(pool: FallingPool, s: FallingSettings, blocked: Set<string>) {
   const choices = FALLING_KINDS.map((kind) => ({
     kind,
-    cards: pool[kind].filter((c) => settings.modCards || !c.mod),
-    weight: settings.weights[kind],
+    cards: pool.kinds[kind].filter(
+      (c) => (s.modCards || !c.mod) && !blocked.has(c.ref),
+    ),
+    weight: s.weights[kind],
   })).filter((c) => c.weight > 0 && c.cards.length > 0);
   const total = choices.reduce((sum, c) => sum + c.weight, 0);
   if (!total) return null;
@@ -61,7 +128,43 @@ function pickCard(pool: FallingPool, settings: FallingSettings) {
       break;
     }
   }
-  return pick.cards[Math.floor(Math.random() * pick.cards.length)];
+  return { kind: pick.kind, card: pickFrom(pick.cards) };
+}
+
+/**
+ * Turns a card into a picture the way the game makes it: playing cards as from a Standard pack
+ * (enhancement, seal, edition), jokers with a shop edition if that's on.
+ */
+function makePicture(
+  kind: FallingKind,
+  layers: string[],
+  pool: FallingPool,
+  s: FallingSettings,
+  blocked: Set<string>,
+): Picture {
+  if (kind === "card") {
+    const roll = rollStandardCard(Math.random);
+    const enhancements = pool.enhancements.filter((e) => !blocked.has(e.ref));
+    const seals = pool.seals.filter((e) => !blocked.has(e.ref));
+    const enhancement =
+      roll.enhancement !== null && enhancements.length
+        ? pickFrom(enhancements, roll.enhancement)
+        : null;
+    const seal =
+      roll.seal !== null && seals.length ? pickFrom(seals, roll.seal) : null;
+    return {
+      layers: [
+        enhancement?.image ?? pool.baseCard,
+        // Stone cards have no rank or suit.
+        ...(enhancement?.stone ? [] : layers),
+        ...(seal ? [seal.image] : []),
+      ],
+      edition: roll.edition,
+    };
+  }
+  if (kind === "joker" && s.jokerEditions)
+    return { layers, edition: rollJokerEdition(Math.random()) };
+  return { layers, edition: null };
 }
 
 /** Weak devices start with fewer cards; data saver turns the effect off. */
@@ -76,8 +179,9 @@ function deviceBudget() {
  * parent. Settings apply live, so the Studio preview reacts while sliders move.
  *
  * Kept light for weak devices: it starts only once the browser is idle, uses at most
- * MAX_PICTURES different images, caps the canvas resolution, and shows fewer cards when frames
- * get slow. Nothing is shown with reduced motion or data saver.
+ * MAX_PICTURES different pictures (each drawn once, editions included), caps the canvas
+ * resolution, and shows fewer cards when frames get slow. Nothing is shown with reduced motion or
+ * data saver.
  */
 export function FallingCards({
   settings,
@@ -122,30 +226,61 @@ export function FallingCards({
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const cards: Falling[] = [];
-    // The pictures in use this visit, picked by the weights; rebuilt when the mix changes.
-    let pictures: ReturnType<typeof pickCard>[] = [];
+    let cards: Falling[] = [];
+    // The pictures in use this visit; rebuilt when the mix, blacklist or editions change.
+    let pictures: Picture[] = [];
     let mix = "";
+    let blocked = new Set<string>();
     const nextPicture = (s: FallingSettings) => {
-      const key = JSON.stringify([s.weights, s.modCards]);
+      const key = JSON.stringify([
+        s.weights,
+        s.modCards,
+        s.jokerEditions,
+        s.blacklist,
+      ]);
       if (key !== mix) {
         mix = key;
         pictures = [];
+        blocked = new Set(s.blacklist);
+        // Blacklisted cards disappear at once instead of finishing their fall.
+        cards = cards.filter((c) =>
+          c.picture.layers.every((l) => !blockedLayer(l)),
+        );
       }
       if (pictures.length < MAX_PICTURES) {
-        const card = pickCard(pool, s);
-        if (card) pictures.push(card);
-        return card;
+        const pick = pickCard(pool, s, blocked);
+        if (!pick) return null;
+        const picture = makePicture(
+          pick.kind,
+          pick.card.layers,
+          pool,
+          s,
+          blocked,
+        );
+        pictures.push(picture);
+        return picture;
       }
-      return pictures[Math.floor(Math.random() * pictures.length)];
+      return pickFrom(pictures);
     };
+    // Which image belongs to a blacklisted card, enhancement or seal.
+    const refByImage = new Map<string, string>();
+    for (const kind of FALLING_KINDS)
+      for (const c of pool.kinds[kind])
+        refByImage.set(c.layers[c.layers.length - 1], c.ref);
+    for (const e of pool.enhancements) refByImage.set(e.image, e.ref);
+    for (const e of pool.seals) refByImage.set(e.image, e.ref);
+    const blockedLayer = (src: string) => {
+      const ref = refByImage.get(src);
+      return ref !== undefined && blocked.has(ref);
+    };
+
     const spawn = (anywhere: boolean) => {
       const s = settingsRef.current;
-      const card = nextPicture(s);
-      if (!card) return;
+      const picture = nextPicture(s);
+      if (!picture) return;
       const z = s.depth ? 0.45 + Math.random() * 0.55 : 1;
       const falling: Falling = {
-        layers: card.layers,
+        picture,
         x: Math.random() * width,
         // At the start the screen is filled; later cards come in from above.
         y: anywhere ? Math.random() * height : -s.size * 1.5,
@@ -161,7 +296,7 @@ export function FallingCards({
       // Far cards are drawn first, so near ones overlap them.
       const at = cards.findIndex((c) => c.z > z);
       cards.splice(at === -1 ? cards.length : at, 0, falling);
-      for (const src of card.layers) image(src);
+      for (const src of picture.layers) image(src);
     };
 
     const wanted = () =>
@@ -211,19 +346,15 @@ export function FallingCards({
       for (let i = cards.length; i < wanted(); i++) spawn(false);
 
       for (const c of cards) {
-        const first = image(c.layers[0]);
-        if (!first.complete || !first.naturalWidth) continue;
+        const picture = render(c.picture);
+        if (!picture) continue;
         const w = s.size * c.size * c.z;
-        const h = (w * first.naturalHeight) / first.naturalWidth;
+        const h = (w * picture.height) / picture.width;
         ctx.save();
         ctx.globalAlpha = s.opacity * (s.depth ? 0.35 + 0.65 * c.z : 1);
         ctx.translate(c.x + Math.sin(c.swayPhase) * s.sway, c.y);
         ctx.rotate((c.rotation * Math.PI) / 180);
-        for (const src of c.layers) {
-          const img = image(src);
-          if (img.complete && img.naturalWidth)
-            ctx.drawImage(img, -w / 2, -h / 2, w, h);
-        }
+        ctx.drawImage(picture, -w / 2, -h / 2, w, h);
         ctx.restore();
       }
     };
@@ -257,5 +388,3 @@ export function FallingCards({
     />
   );
 }
-
-export type { FallingKind };

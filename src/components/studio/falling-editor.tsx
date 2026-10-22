@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { saveFallingSettings } from "@/app/studio/actions";
 import { FallingCards } from "@/components/falling-cards";
 import {
@@ -13,6 +13,7 @@ import {
   DEFAULT_FALLING,
   FALLING_KIND_LABELS,
   FALLING_KINDS,
+  type FallingCatalogEntry,
   type FallingPool,
   type FallingSettings,
 } from "@/lib/falling";
@@ -104,6 +105,110 @@ const SLIDERS: {
   },
 ];
 
+/** Cards, enhancements and seals that never show up: search, click to add, click a chip to remove. */
+function Blacklist({
+  catalog,
+  refs,
+  onChange,
+}: {
+  catalog: FallingCatalogEntry[];
+  refs: string[];
+  onChange: (refs: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const byRef = useMemo(
+    () => new Map(catalog.map((c) => [c.ref, c])),
+    [catalog],
+  );
+  const listed = new Set(refs);
+  const q = query.trim().toLowerCase();
+  const results = q
+    ? catalog
+        .filter(
+          (c) =>
+            !listed.has(c.ref) &&
+            (c.name.toLowerCase().includes(q) ||
+              c.group.toLowerCase().includes(q)),
+        )
+        .slice(0, 40)
+    : [];
+  const thumb = (c: FallingCatalogEntry) => (
+    <span className="relative inline-block h-8 w-6 shrink-0">
+      {c.layers.map((src) => (
+        // biome-ignore lint/performance/noImgElement: tiny sprite thumbnail
+        <img
+          key={src}
+          src={src}
+          alt=""
+          className="absolute inset-0 h-full w-full object-contain"
+          loading="lazy"
+        />
+      ))}
+    </span>
+  );
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-semibold">Blacklist</legend>
+      <p className="text-xs text-fd-muted-foreground">
+        These never show up. Enhancements and seals here are left off playing
+        cards.
+      </p>
+      {refs.length > 0 && (
+        <span className="flex flex-wrap gap-1.5">
+          {refs.map((ref) => {
+            const c = byRef.get(ref);
+            return (
+              <button
+                key={ref}
+                type="button"
+                title="Remove from the blacklist"
+                onClick={() => onChange(refs.filter((r) => r !== ref))}
+                className="flex items-center gap-1.5 rounded-full border py-0.5 pr-2 pl-1 text-xs hover:bg-fd-accent"
+              >
+                {c && thumb(c)}
+                {c?.name ?? ref}
+                <span aria-hidden>✕</span>
+              </button>
+            );
+          })}
+        </span>
+      )}
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search cards to blacklist, e.g. Joker, Hermit, King of Hearts, Stone"
+        className="w-full rounded-md border bg-fd-background px-2 py-1.5 text-sm"
+      />
+      {q && (
+        <ul className="grid max-h-64 grid-cols-2 gap-1 overflow-y-auto sm:grid-cols-3">
+          {results.length === 0 && (
+            <li className="text-xs text-fd-muted-foreground">No matches</li>
+          )}
+          {results.map((c) => (
+            <li key={c.ref}>
+              <button
+                type="button"
+                onClick={() => onChange([...refs, c.ref])}
+                className="flex w-full items-center gap-2 rounded-md p-1 text-left text-xs hover:bg-fd-accent"
+              >
+                {thumb(c)}
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  <span className="block text-fd-muted-foreground">
+                    {c.group}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </fieldset>
+  );
+}
+
 /**
  * Studio → Site → Home page background: settings for the falling cards, with a live preview.
  * Nothing changes on the home page until it's saved.
@@ -111,9 +216,12 @@ const SLIDERS: {
 export function FallingEditor({
   saved,
   pool,
+  catalog,
 }: {
   saved: FallingSettings;
   pool: FallingPool;
+  /** Everything that can show up, for the blacklist. */
+  catalog: FallingCatalogEntry[];
 }) {
   const [settings, setSettings] = useState(saved);
   const [lastSaved, setLastSaved] = useState(saved);
@@ -183,7 +291,29 @@ export function FallingEditor({
           />
           Include Multiplayer mod cards
         </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={settings.jokerEditions}
+            onChange={(e) => set({ jokerEditions: e.target.checked })}
+            className="mt-1"
+          />
+          <span>
+            Jokers can have editions
+            <span className="block text-xs text-fd-muted-foreground">
+              Foil, Holographic, Polychrome or Negative, as often as in the
+              shop. Playing cards always get enhancements, seals and editions as
+              often as from a Standard pack.
+            </span>
+          </span>
+        </label>
       </fieldset>
+
+      <Blacklist
+        catalog={catalog}
+        refs={settings.blacklist}
+        onChange={(blacklist) => set({ blacklist })}
+      />
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold">Motion and look</legend>

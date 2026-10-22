@@ -34,7 +34,10 @@ export default async function HomePage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
       {falling.enabled && (
-        <FallingBackground settings={falling} pool={fallingPool()} />
+        <FallingBackground
+          settings={falling}
+          pool={fallingPool(falling.blacklist)}
+        />
       )}
       <div>
         <h1 className="mb-3 text-3xl font-bold">{settings.siteName}</h1>

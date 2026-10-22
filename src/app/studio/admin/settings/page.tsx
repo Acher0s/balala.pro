@@ -2,7 +2,7 @@ import { CategoriesForm } from "@/components/studio/categories-form";
 import { FallingEditor } from "@/components/studio/falling-editor";
 import { SiteSettingsForm } from "@/components/studio/forms";
 import { requireUser } from "@/lib/auth";
-import { fallingPool } from "@/lib/falling-pool";
+import { fallingCatalog, fallingPool } from "@/lib/falling-pool";
 import { listPublished } from "@/lib/guides";
 import { getCategories, getFalling, getSettings } from "@/lib/settings";
 
@@ -39,7 +39,12 @@ export default async function SiteSettingsPage() {
       </section>
       <section className="flex flex-col gap-3 border-t pt-6">
         <h2 className="text-lg font-semibold">Home page background</h2>
-        <FallingEditor saved={falling} pool={fallingPool()} />
+        <FallingEditor
+          saved={falling}
+          // The preview keeps every card in its sample, so blacklisting applies there live.
+          pool={fallingPool()}
+          catalog={fallingCatalog()}
+        />
       </section>
     </main>
   );
