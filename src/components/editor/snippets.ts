@@ -24,6 +24,8 @@ export const TAG_BY_KIND: Record<ItemKind, string> = {
   seal: "Seal",
   deck: "Deck",
   stake: "Stake",
+  tag: "Tag",
+  booster: "Booster",
 };
 
 export const KIND_LABELS: Record<ItemKind | "card", string> = {
@@ -37,6 +39,8 @@ export const KIND_LABELS: Record<ItemKind | "card", string> = {
   seal: "Seals",
   deck: "Decks",
   stake: "Stakes",
+  tag: "Tags",
+  booster: "Booster packs",
 };
 
 /**
@@ -172,6 +176,15 @@ Second column
     text: `<CardRow title="S">
   <Joker id="blueprint" card />
   <Joker id="brainstorm" card />
+</CardRow>
+`,
+  },
+  {
+    label: "Card row (always one line)",
+    text: `<CardRow singleRow>
+  <Joker id="blueprint" card />
+  <Joker id="brainstorm" card />
+  <Joker id="mime" card />
 </CardRow>
 `,
   },

@@ -29,6 +29,8 @@ const KINDS: ItemKind[] = [
   "enhancement",
   "seal",
   "deck",
+  "tag",
+  "booster",
 ];
 
 /** Everything that can go in a tier list: every card sprite in the game and the Multiplayer mod. */

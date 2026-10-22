@@ -20,4 +20,10 @@ export const overrides: Partial<
     // Example of a BMP balance change (from the White Stake Guide's changelog, 0.5.1):
     // ticket: { rarity: "uncommon", text: ["Played {C:attention}Gold{} cards", "earn {C:money}$4{} when scored"] },
   },
+  tag: {
+    // The hand is picked when the tag appears; the game shows "[Poker Hand]" until then.
+    orbital: {
+      text: ["Upgrade {C:attention}[Poker Hand]", "by {C:attention}3{} levels"],
+    },
+  },
 };

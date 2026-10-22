@@ -31,6 +31,8 @@ const KINDS: ItemKind[] = [
   "seal",
   "deck",
   "stake",
+  "tag",
+  "booster",
 ];
 
 export default async function EditGuidePage({
@@ -101,9 +103,10 @@ export default async function EditGuidePage({
   const gameCards: CatalogEntry[] = KINDS.flatMap((kind) =>
     listItemEntries(kind).map(([itemId, item]) => ({
       kind,
-      // Vanilla cards by readable name ("The Hierophant" → "hierophant"); mod cards by id ("mp_pizza").
+      // Vanilla cards by readable name ("The Hierophant" → "hierophant"); mod cards by id
+      // ("mp_pizza"). Booster packs share names between art variants, so they go by id too.
       id:
-        item.source === "vanilla" && kind !== "seal"
+        item.source === "vanilla" && kind !== "seal" && kind !== "booster"
           ? slugify(item.name.replace(/^The /, ""))
           : itemId,
       name: item.name,

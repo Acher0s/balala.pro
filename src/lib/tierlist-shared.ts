@@ -82,6 +82,8 @@ export const PRESETS: Preset[] = [
   { id: "enhancements", label: "All enhancements", groups: ["enhancement"] },
   { id: "seals", label: "All seals", groups: ["seal"] },
   { id: "decks", label: "All decks", groups: ["deck"] },
+  { id: "tags", label: "All skip tags", groups: ["tag"] },
+  { id: "boosters", label: "All booster packs", groups: ["booster"] },
   { id: "cards", label: "Playing cards", groups: ["card"] },
   { id: "empty", label: "Empty (add your own)", groups: [] },
 ];

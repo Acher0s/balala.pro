@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { colourOf, EffectText } from "@/components/effect-text";
+import { FitRow } from "@/components/fit-row";
 import {
   baseCardImage,
   type GameItem,
@@ -61,8 +62,9 @@ export function HoverCard({ item }: { item: GameItem }) {
   return (
     <span
       role="tooltip"
-      className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 flex w-64 -translate-x-1/2 flex-col items-center gap-2 rounded-xl border-2 bg-[#3a5055] p-2.5 text-center opacity-0 shadow-xl transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
-      style={{ borderColor: colour }}
+      className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 flex w-64 origin-bottom -translate-x-1/2 flex-col items-center gap-2 rounded-xl border-2 bg-[#3a5055] p-2.5 text-center opacity-0 shadow-xl transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      // In a shrunk <CardRow singleRow>, scale back up so the text stays readable.
+      style={{ borderColor: colour, scale: "calc(1 / var(--card-scale, 1))" }}
     >
       <Sprite item={item} alt="" scale={hoverScale(item)} />
       {source && (
@@ -159,13 +161,22 @@ export const Enhancement = (props: RefProps) => (
 export const Seal = (props: RefProps) => <GameRef kind="seal" {...props} />;
 export const Deck = (props: RefProps) => <GameRef kind="deck" {...props} />;
 export const Stake = (props: RefProps) => <GameRef kind="stake" {...props} />;
+export const Tag = (props: RefProps) => <GameRef kind="tag" {...props} />;
+export const Booster = (props: RefProps) => (
+  <GameRef kind="booster" {...props} />
+);
 
-/** A row of cards, e.g. a tier or a joker lineup. */
+/**
+ * A row of cards, e.g. a tier or a joker lineup. Cards wrap onto more lines when there isn't
+ * room; with `singleRow` they stay on one line and shrink to fit instead.
+ */
 export function CardRow({
   title,
+  singleRow,
   children,
 }: {
   title?: string;
+  singleRow?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -175,7 +186,11 @@ export function CardRow({
           {title}
         </span>
       )}
-      <div className="flex flex-wrap gap-3">{children}</div>
+      {singleRow ? (
+        <FitRow>{children}</FitRow>
+      ) : (
+        <div className="flex flex-wrap gap-3">{children}</div>
+      )}
     </div>
   );
 }

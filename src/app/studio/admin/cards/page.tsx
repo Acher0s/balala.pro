@@ -18,6 +18,9 @@ const KINDS: ItemKind[] = [
   "enhancement",
   "seal",
   "deck",
+  "stake",
+  "tag",
+  "booster",
 ];
 
 export default async function CardsPage() {

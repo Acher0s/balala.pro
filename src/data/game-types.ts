@@ -18,7 +18,9 @@ export type ItemKind =
   | "enhancement"
   | "seal"
   | "deck"
-  | "stake";
+  | "stake"
+  | "tag"
+  | "booster";
 
 export type Rarity = "common" | "uncommon" | "rare" | "legendary";
 

@@ -141,13 +141,16 @@ Always write a short description between the square brackets: it's read out by s
 
 Mention a card and readers can hover it to see its picture and in-game effect. The **Cards** tab in the editor inserts these for you.
 
-<Joker id="mime" />, <Tarot id="hierophant" />, <Planet id="jupiter" />, <Spectral id="cryptid" />, <Voucher id="overstock" />, <Enhancement id="steel" />, <Seal id="red" />, <Deck id="red_deck" /> and <Stake id="white_stake" />.
+<Joker id="mime" />, <Tarot id="hierophant" />, <Planet id="jupiter" />, <Spectral id="cryptid" />, <Voucher id="overstock" />, <Enhancement id="steel" />, <Seal id="red" />, <Deck id="red_deck" />, <Stake id="white_stake" />, <Tag id="double_tag" /> and <Booster id="mega_buffoon_pack" />.
 
 ```mdx
 <Joker id="mime" />, <Tarot id="hierophant" />, <Planet id="jupiter" />,
 <Spectral id="cryptid" />, <Voucher id="overstock" />, <Enhancement id="steel" />,
-<Seal id="red" />, <Deck id="red_deck" /> and <Stake id="white_stake" />
+<Seal id="red" />, <Deck id="red_deck" />, <Stake id="white_stake" />,
+<Tag id="double_tag" /> and <Booster id="mega_buffoon_pack" />
 ```
+
+Booster packs come in a few pictures each. The pack's name gives the first one; to pick another, use its id from the **Cards** tab, like <Booster id="arcana_normal_3" card />.
 
 | Option | Example | What it does |
 | --- | --- | --- |
@@ -162,7 +165,7 @@ Keeping your own wording: <Joker id="oops_all_6s">Oops all 6's</Joker> and <Taro
 <Joker id="oops_all_6s">Oops all 6's</Joker> and <Tarot id="hierophant">hiero</Tarot>
 ```
 
-**Multiplayer mod cards** have ids starting with `mp_`: <Joker id="mp_pizza" />, <Joker id="mp_defensive_joker" />, and the Multiplayer stakes like <Stake id="mp_plastic" /> and <Stake id="mp_antimatter" />. Ruleset versions of vanilla cards are separate, for example <Joker id="mp_ticket" /> is the Standard ruleset's Golden Ticket.
+**Multiplayer mod cards** have ids starting with `mp_`: <Joker id="mp_pizza" />, <Joker id="mp_defensive_joker" />, and the Multiplayer stakes like <Stake id="mp_plastic" /> and <Stake id="mp_antimatter" />. Ruleset versions of vanilla cards are separate, for example <Joker id="mp_ticket" /> is the Standard ruleset's Golden Ticket, and <Enhancement id="mp_glass" /> is the reworked Glass Card (X1.5 Mult instead of X2) from the Standard, Classic and WSOB rulesets. The Sandbox ruleset's Glass is <Enhancement id="mp_glass_sandbox" />. The same goes for the Sandbox tags, like <Tag id="mp_juggle_sandbox" />.
 
 A misspelled id is listed as a problem and blocks publishing, so a broken card can never go live.
 
@@ -182,6 +185,26 @@ A misspelled id is listed as a problem and blocks publishing, so a broken card c
 ```
 
 `title` is optional. For full tier lists, use a [tier list](#tier-lists) instead.
+
+On a narrow screen, cards that don't fit move to a new line. Add `singleRow` to keep them on one line: the cards then shrink to fit instead. Handy for a joker lineup, where the order matters.
+
+<CardRow singleRow>
+  <Joker id="blueprint" card />
+  <Joker id="brainstorm" card />
+  <Joker id="mime" card />
+  <Joker id="baron" card />
+  <Joker id="dna" card />
+</CardRow>
+
+```mdx
+<CardRow singleRow>
+  <Joker id="blueprint" card />
+  <Joker id="brainstorm" card />
+  <Joker id="mime" card />
+  <Joker id="baron" card />
+  <Joker id="dna" card />
+</CardRow>
+```
 
 ### Centering
 

@@ -285,6 +285,16 @@ function resolveVars(
 // ---------------------------------------------------------------------------
 // Items
 
+/** A booster pack's text values: "Choose #1# of up to #2#". */
+const packVars = (config: Table) => [
+  String(config.choose ?? "?"),
+  String(config.extra ?? "?"),
+];
+
+/** Tags read their values from their own config (self.config.x / tag.config.x). */
+const tagExprs = (exprs: string | undefined) =>
+  exprs?.replace(/\b(?:self|tag)\.config\./g, "_c.config.");
+
 const RARITIES: Rarity[] = ["common", "uncommon", "rare", "legendary"];
 const KIND_BY_SET: Record<string, ItemKind> = {
   Joker: "joker",
@@ -295,6 +305,8 @@ const KIND_BY_SET: Record<string, ItemKind> = {
   Enhanced: "enhancement",
   Back: "deck",
   Stake: "stake",
+  Tag: "tag",
+  Booster: "booster",
 };
 const SHEET_BY_KIND: Record<ItemKind, string> = {
   joker: "Jokers",
@@ -306,6 +318,15 @@ const SHEET_BY_KIND: Record<ItemKind, string> = {
   seal: "Enhancers",
   deck: "Enhancers",
   stake: "chips",
+  tag: "tags",
+  booster: "boosters",
+};
+/** Sprite cells that aren't card-sized, at the game's 2x texture scale. */
+const STAKE_CELL = { w: 58, h: 58 }; // 29 × 29
+const TAG_CELL = { w: 68, h: 68 }; // 34 × 34
+const CELL_BY_KIND: Partial<Record<ItemKind, { w: number; h: number }>> = {
+  stake: STAKE_CELL,
+  tag: TAG_CELL,
 };
 
 const handLevels = new Map<string, { l_mult: number; l_chips: number }>();
@@ -344,6 +365,8 @@ const data: GameData = {
     seal: {},
     deck: {},
     stake: {},
+    tag: {},
+    booster: {},
   },
   cards: {},
   baseCard: "/game/enhancement/base.webp",
@@ -351,14 +374,20 @@ const data: GameData = {
 
 for (const [key, center] of Object.entries(centers)) {
   const kind = KIND_BY_SET[String(center.set)];
-  const desc = descriptions[String(center.set)]?.[key];
+  // Booster packs come in a few art variants (p_arcana_normal_1 … _4) that share one text.
+  const desc =
+    kind === "booster"
+      ? descriptions.Other?.[key.replace(/_\d+$/, "")]
+      : descriptions[String(center.set)]?.[key];
   if (!kind || !desc || !center.pos) continue;
   const name = String(center.name);
   const config = (center.config ?? {}) as Table;
   const id = idFromKey(key);
 
   let vars: string[];
-  if (kind === "planet") {
+  if (kind === "booster") {
+    vars = packVars(config);
+  } else if (kind === "planet") {
     const hand = String(config.hand_type);
     const lv = handLevels.get(hand);
     vars = ["1", hand, String(lv?.l_mult ?? "?"), String(lv?.l_chips ?? "?")];
@@ -440,7 +469,6 @@ for (const m of sealBlock.matchAll(
 }
 
 // Stakes: the chips from the stake select screen, in G.P_STAKES; text in descriptions.Stake.
-const STAKE_CELL = { w: 58, h: 58 }; // 29 × 29 at the game's 2x texture scale
 const stakes = parseAssignedTable(gameLua, "self.P_STAKES = {") as Record<
   string,
   Table
@@ -466,6 +494,43 @@ for (const [key, stake] of Object.entries(stakes).sort(
     id,
     pos: stake.pos as { x: number; y: number },
     cell: STAKE_CELL,
+  });
+}
+
+// Skip tags: G.P_TAGS (parsed above for names), text in descriptions.Tag, values from
+// Tag:get_uibox_table in tag.lua.
+const tagLua = text("tag.lua");
+const tagVars = collectLocVars(
+  tagLua.slice(tagLua.indexOf("function Tag:get_uibox_table")),
+);
+for (const [key, tag] of Object.entries(tags).sort(
+  ([, a], [, b]) => Number(a.order) - Number(b.order),
+)) {
+  const desc = descriptions.Tag?.[key];
+  if (!desc || !tag.pos) continue;
+  const id = key.replace(/^tag_/, "");
+  const config = (tag.config ?? {}) as Table;
+  const vars = resolveVars(
+    desc.name,
+    tagExprs(tagVars.get(String(tag.name))),
+    { config },
+    desc.text,
+  );
+  data.items.tag[id] = {
+    key,
+    name: desc.name,
+    kind: "tag",
+    text: desc.text.map((l) => parseLine(l, vars)),
+    image: `/game/tag/${id}.webp`,
+    w: 0,
+    h: 0,
+    source: "vanilla",
+  };
+  jobs.push({
+    kind: "tag",
+    id,
+    pos: tag.pos as { x: number; y: number },
+    cell: TAG_CELL,
   });
 }
 
@@ -498,7 +563,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
   for (const file of luaFiles) {
     const src = readFileSync(file, "utf8");
     for (const m of src.matchAll(
-      /SMODS\.(Atlas|Joker|Consumable|Back|Stake)\s*\(\s*\{/g,
+      /SMODS\.(Atlas|Joker|Consumable|Back|Stake|Tag|Booster)\s*\(\s*\{/g,
     )) {
       const def = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
       if (m[1] === "Atlas") {
@@ -533,9 +598,14 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     // Jokers and decks (Backs) say what they are by their type; consumables by their set.
     const set = type === "Consumable" ? String(def.set) : type;
     const kind = KIND_BY_SET[set];
-    const prefix = { Joker: "j", Back: "b", Stake: "stake" }[type] ?? "c";
+    const prefix =
+      { Joker: "j", Back: "b", Stake: "stake", Tag: "tag", Booster: "p" }[
+        type
+      ] ?? "c";
     const fullKey = `${prefix}_mp_${key}`;
-    const desc = modLoc[set]?.[fullKey];
+    // Booster pack text lives with the other non-card text.
+    const desc =
+      kind === "booster" ? modLoc.Other?.[fullKey] : modLoc[set]?.[fullKey];
     if (!kind || !desc) continue;
 
     // objects/jokers/standard/ticket.lua → "standard"; objects/jokers/pizza.lua → "multiplayer"
@@ -568,12 +638,15 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
         );
       }
     }
-    const vars = resolveVars(
-      desc.name,
-      exprs,
-      { self: ability(config), config },
-      desc.text,
-    );
+    const vars =
+      kind === "booster" && !exprs
+        ? packVars(config)
+        : resolveVars(
+            desc.name,
+            kind === "tag" ? tagExprs(exprs) : exprs,
+            { self: ability(config), config },
+            desc.text,
+          );
 
     const id = `mp_${key}`;
     const item: GameItem = {
@@ -605,8 +678,60 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
       pos: (def.pos as { x: number; y: number }) ?? { x: 0, y: 0 },
       soul: def.soul_pos as { x: number; y: number } | undefined,
       sheet: atlas ? modSheet(atlas.path) : undefined,
-      cell: atlas ? { w: atlas.px * 2, h: atlas.py * 2 } : undefined,
+      cell: atlas ? { w: atlas.px * 2, h: atlas.py * 2 } : CELL_BY_KIND[kind],
     });
+  }
+
+  // Reworked enhancements (MP.ReworkCenter("m_glass", { layers = …, config = … })): the vanilla
+  // card with new values, e.g. Glass at X1.5. One card per rework: the first is "mp_glass", others
+  // get their ruleset added ("mp_glass_sandbox"). Its source is the rework's first ruleset.
+  for (const file of luaFiles.filter((f) =>
+    relative(join(MOD_DIR, "objects"), f).startsWith(`enhancements${sep}`),
+  )) {
+    const src = readFileSync(file, "utf8");
+    let first = true;
+    for (const m of src.matchAll(
+      /MP\.ReworkCenter\(\s*["'](m_\w+)["']\s*,\s*\{/g,
+    )) {
+      const key = m[1];
+      const center = centers[key];
+      const desc = descriptions.Enhanced?.[key];
+      if (!center || !desc) continue;
+      const rework = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
+      const layers = rework.layers;
+      const layer = String(
+        (Array.isArray(layers) ? layers[0] : layers) ?? "multiplayer",
+      );
+      const config = {
+        ...((center.config ?? {}) as Table),
+        ...((rework.config ?? {}) as Table),
+      };
+      const vanillaId = idFromKey(key);
+      const id = first ? `mp_${vanillaId}` : `mp_${vanillaId}_${layer}`;
+      first = false;
+      const vars = resolveVars(
+        desc.name,
+        otherVars.get(String(center.name)) ??
+          otherVars.get(String(center.effect)),
+        { config },
+        desc.text,
+      );
+      data.items.enhancement[id] = {
+        key: `${key}_mp_${layer}`,
+        name: desc.name,
+        kind: "enhancement",
+        text: desc.text.map((l) => parseLine(l, vars)),
+        image: `/game/enhancement/${id}.webp`,
+        w: 0,
+        h: 0,
+        source: layer,
+      };
+      jobs.push({
+        kind: "enhancement",
+        id,
+        pos: center.pos as { x: number; y: number },
+      });
+    }
   }
 }
 

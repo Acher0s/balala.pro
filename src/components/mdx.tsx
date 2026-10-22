@@ -7,6 +7,7 @@ import { Calc, CalcTable, Input, Output, Section, Value } from "./calc";
 import { Center } from "./center";
 import { Column, Columns } from "./columns";
 import {
+  Booster,
   CardRow,
   Deck,
   Enhancement,
@@ -16,6 +17,7 @@ import {
   Seal,
   Spectral,
   Stake,
+  Tag,
   Tarot,
   Voucher,
 } from "./game-ref";
@@ -43,6 +45,8 @@ export function getMDXComponents(components?: MDXComponents) {
     Seal,
     Deck,
     Stake,
+    Tag,
+    Booster,
     PlayingCard,
     CardRow,
     Level,
