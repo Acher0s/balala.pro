@@ -478,7 +478,13 @@ export async function saveSiteSettings(
       );
   }
   if (problems.length) return { ok: false, error: problems.join("\n") };
-  await saveSettings({ siteName, homeIntro, announcement });
+  await saveSettings({
+    siteName,
+    homeIntro,
+    announcement,
+    guidesIntro: values.guidesIntro.trim().slice(0, 300),
+    toolsIntro: values.toolsIntro.trim().slice(0, 300),
+  });
   return { ok: true };
 }
 

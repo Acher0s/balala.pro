@@ -12,6 +12,8 @@ export default async function SiteSettingsPage() {
         siteName={settings.siteName}
         homeIntro={settings.homeIntro}
         announcement={settings.announcement}
+        guidesIntro={settings.guidesIntro}
+        toolsIntro={settings.toolsIntro}
       />
     </main>
   );

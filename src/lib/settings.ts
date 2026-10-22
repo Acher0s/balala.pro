@@ -8,6 +8,10 @@ export interface SiteSettings {
   homeIntro: string;
   /** Shown in a box at the top of the home page, in guide markup. Empty = no announcement. */
   announcement: string;
+  /** The line under the title of the Guides page. Empty hides it. */
+  guidesIntro: string;
+  /** The line under the title of the Tools page. Empty hides it. */
+  toolsIntro: string;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -15,6 +19,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   homeIntro:
     "Guides for Balatro Multiplayer, with calculators you can use right on the page.",
   announcement: "",
+  guidesIntro:
+    "Strategy guides for Balatro Multiplayer, from the basics to advanced maths.",
+  toolsIntro: "Calculators you can use while you play.",
 };
 
 /** Text from Studio → Site as a guide-markup document, so it gets the same validation and rendering. */

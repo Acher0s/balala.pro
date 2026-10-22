@@ -7,22 +7,11 @@ import {
 import { PageTile } from "@/components/page-tile";
 import type { PageKind } from "@/db/schema";
 import { groupParts, listPublished, pageUrl } from "@/lib/guides";
+import { getSettings } from "@/lib/settings";
 
-const COPY: Record<
-  PageKind,
-  { title: string; description: string; empty: string }
-> = {
-  guide: {
-    title: "Guides",
-    description:
-      "Strategy guides for Balatro Multiplayer, from the basics to advanced maths.",
-    empty: "No guides published yet.",
-  },
-  tool: {
-    title: "Tools",
-    description: "Calculators you can use while you play.",
-    empty: "No tools published yet.",
-  },
+const COPY: Record<PageKind, { title: string; empty: string }> = {
+  guide: { title: "Guides", empty: "No guides published yet." },
+  tool: { title: "Tools", empty: "No tools published yet." },
 };
 
 /**
@@ -30,7 +19,14 @@ const COPY: Record<
  * aren't listed; readers reach them from the main guide.
  */
 export async function PageOverview({ kind }: { kind: PageKind }) {
-  const { main: pages, parts } = groupParts(await listPublished(kind));
+  const [all, settings] = await Promise.all([
+    listPublished(kind),
+    getSettings(),
+  ]);
+  const { main: pages, parts } = groupParts(all);
+  // The line under the title is set in Studio → Site; empty hides it.
+  const description =
+    kind === "tool" ? settings.toolsIntro : settings.guidesIntro;
   const sections = new Map<string, typeof pages>();
   for (const p of pages)
     sections.set(p.section, [...(sections.get(p.section) ?? []), p]);
@@ -39,7 +35,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
   return (
     <DocsPage>
       <DocsTitle>{copy.title}</DocsTitle>
-      <DocsDescription>{copy.description}</DocsDescription>
+      {description && <DocsDescription>{description}</DocsDescription>}
       <DocsBody>
         {pages.length === 0 && <p>{copy.empty}</p>}
         {[...sections].map(([section, list]) => (

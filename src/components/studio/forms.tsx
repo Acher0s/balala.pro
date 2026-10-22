@@ -182,27 +182,37 @@ export function SiteSettingsForm({
   siteName,
   homeIntro,
   announcement: initialAnnouncement,
+  guidesIntro,
+  toolsIntro,
 }: {
   siteName: string;
   homeIntro: string;
   announcement: string;
+  guidesIntro: string;
+  toolsIntro: string;
 }) {
   const { pending, error, run } = useAction();
   const [saved, setSaved] = useState(false);
   const [announcement, setAnnouncement] = useState(initialAnnouncement);
   return (
+    // onSubmit, not a form action: React resets a form after an action, which would show the
+    // old values until the page reloads.
     <form
-      action={(fd) =>
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         run(
           () =>
             saveSiteSettings({
               siteName: String(fd.get("siteName")),
               homeIntro: String(fd.get("homeIntro")),
               announcement,
+              guidesIntro: String(fd.get("guidesIntro")),
+              toolsIntro: String(fd.get("toolsIntro")),
             }),
           () => setSaved(true),
-        )
-      }
+        );
+      }}
       className="flex flex-col gap-3"
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -257,6 +267,32 @@ export function SiteSettingsForm({
         />
         <span className="text-xs text-fd-muted-foreground">
           Shown at the top of the home page. Uses the same markup as guides.
+        </span>
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Guides page line
+        <input
+          name="guidesIntro"
+          defaultValue={guidesIntro}
+          placeholder="Hidden"
+          className={field}
+          onChange={() => setSaved(false)}
+        />
+        <span className="text-xs text-fd-muted-foreground">
+          Under the title of the Guides page. Leave empty to hide it.
+        </span>
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Tools page line
+        <input
+          name="toolsIntro"
+          defaultValue={toolsIntro}
+          placeholder="Hidden"
+          className={field}
+          onChange={() => setSaved(false)}
+        />
+        <span className="text-xs text-fd-muted-foreground">
+          Under the title of the Tools page. Leave empty to hide it.
         </span>
       </label>
       <ErrorText error={error} />
