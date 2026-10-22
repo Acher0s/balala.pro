@@ -236,6 +236,24 @@ describe("page icon", () => {
       await expect(compileGuide(withIcon(icon))).resolves.toBeDefined();
   });
 
+  it("fans out up to 3 cards, read as a list", async () => {
+    const { frontmatter } = await compileGuide(
+      withIcon("[joker:baron, joker:mime, stake:white_stake]"),
+    );
+    expect(frontmatter.icon).toEqual([
+      "joker:baron",
+      "joker:mime",
+      "stake:white_stake",
+    ]);
+    const single = await compileGuide(withIcon("joker:baron"));
+    expect(single.frontmatter.icon).toEqual(["joker:baron"]);
+    await expect(
+      compileGuide(
+        withIcon("[joker:baron, joker:mime, joker:idol, joker:dusk]"),
+      ),
+    ).rejects.toThrow(GuideValidationError);
+  });
+
   it("rejects anything that isn't a card", async () => {
     for (const icon of ["joker:nope", "reserved_parking", "car:hermit"])
       await expect(compileGuide(withIcon(icon))).rejects.toThrow(

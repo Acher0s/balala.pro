@@ -5,6 +5,7 @@ import {
   DocsTitle,
 } from "fumadocs-ui/layouts/notebook/page";
 import Link from "next/link";
+import { ICON_PADDING, IconFan } from "@/components/icon-fan";
 import type { PageKind } from "@/db/schema";
 import { groupParts, listPublished, pageUrl } from "@/lib/guides";
 import { findIcon } from "@/lib/mdx/compile";
@@ -48,33 +49,23 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
             {section && <h2 className="text-lg font-semibold">{section}</h2>}
             <ul className="grid gap-3 sm:grid-cols-2">
               {list.map((p) => {
-                const icon = p.frontmatter.icon
-                  ? findIcon(p.frontmatter.icon)
-                  : undefined;
+                const icons = p.frontmatter.icon
+                  .map(findIcon)
+                  .filter((item) => item !== undefined);
                 return (
                   <li key={p.id}>
                     <Link
                       href={pageUrl(kind, p.slug)}
                       className="group relative block h-full overflow-hidden rounded-xl border bg-fd-card p-4 transition-colors hover:bg-fd-accent"
                     >
-                      {/* The page's card, large and faded in the corner behind the text. */}
-                      {icon && (
-                        // biome-ignore lint/performance/noImgElement: pixel art sprite, shown as is
-                        <img
-                          src={icon.image}
-                          alt=""
-                          width={120}
-                          height={160}
-                          style={{ imageRendering: "pixelated" }}
-                          className="absolute -right-6 -bottom-10 h-40 w-[120px] -rotate-12 object-contain opacity-25 transition-opacity group-hover:opacity-50"
-                        />
-                      )}
+                      {/* The page's cards, large and faded in the corner behind the text. */}
+                      <IconFan items={icons} />
                       <span className="relative block font-semibold">
                         {p.frontmatter.title}
                       </span>
                       {p.frontmatter.description && (
                         <span
-                          className={`relative mt-1 block text-sm text-fd-muted-foreground ${icon ? "pr-16" : ""}`}
+                          className={`relative mt-1 block text-sm text-fd-muted-foreground ${ICON_PADDING[icons.length]}`}
                         >
                           {p.frontmatter.description}
                         </span>

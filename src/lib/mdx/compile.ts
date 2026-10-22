@@ -28,18 +28,33 @@ export const frontmatterSchema = z.object({
   /** BMP version the guide was last checked against, e.g. "0.5.5" */
   patch: z.union([z.string(), z.number()]).transform(String).optional(),
   tags: z.array(z.string()).default([]),
-  /** A card shown with the page in lists, written as kind:id, e.g. joker:reserved_parking */
+  /**
+   * Up to 3 cards shown with the page in lists, written as kind:id: `icon: joker:baron`, or
+   * fanned out with `icon: [joker:baron, joker:mime]`. The first is the main one, on top.
+   * Always read as a list.
+   */
   icon: z
-    .string()
+    .union([z.string(), z.array(z.string())])
     .optional()
-    .superRefine((value, ctx) => {
-      if (value && !findIcon(value))
+    .transform((value) =>
+      value === undefined ? [] : Array.isArray(value) ? value : [value],
+    )
+    .superRefine((icons, ctx) => {
+      if (icons.length > MAX_ICONS)
         ctx.addIssue({
           code: "custom",
-          message: `"${value}" isn't a card. Write it like joker:reserved_parking or tarot:hermit`,
+          message: `can have up to ${MAX_ICONS} cards`,
         });
+      for (const icon of icons)
+        if (!findIcon(icon))
+          ctx.addIssue({
+            code: "custom",
+            message: `"${icon}" isn't a card. Write it like joker:reserved_parking or tarot:hermit`,
+          });
     }),
 });
+
+export const MAX_ICONS = 3;
 
 const ICON_RE =
   /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck|stake):(.+)$/;

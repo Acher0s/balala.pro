@@ -25,7 +25,7 @@ export function safeFrontmatter(
   } catch {
     // fall through
   }
-  return { title: fallbackTitle, tags: [] };
+  return { title: fallbackTitle, tags: [], icon: [] };
 }
 
 export interface PublishedPage {

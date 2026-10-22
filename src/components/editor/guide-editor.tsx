@@ -49,6 +49,8 @@ const SAFETY_SAVE_MS = 10_000;
 /** A save that takes longer than this counts as failed (and is retried). */
 const SAVE_TIMEOUT_MS = 20_000;
 const STUDIO = "/studio";
+/** Same limit as the details block's `icon` (lib/mdx/compile.ts, which is server-only). */
+const MAX_ICONS = 3;
 
 interface EditorGuide {
   id: string;
@@ -352,18 +354,42 @@ export function GuideEditor({
     v.focus();
   }, []);
 
-  /** Writes `icon: kind:id` into the details block, replacing any icon already set. */
-  const setIcon = useCallback((entry: CatalogEntry) => {
+  /**
+   * Writes the page icon(s) into the details block: `icon: kind:id`, or a list for several.
+   * "add" keeps the icons already there (up to 3, the first stays the main one); otherwise this
+   * card replaces them.
+   */
+  const setIcon = useCallback((entry: CatalogEntry, add: boolean) => {
     const v = view.current;
     if (!v) return;
     const doc = v.state.doc.toString();
-    const line = `icon: ${entry.kind}:${entry.id}`;
+    const ref = `${entry.kind}:${entry.id}`;
     const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(doc);
+    const existing = fm ? /^icon:(.*)$/m.exec(fm[1]) : null;
+    const current = existing
+      ? existing[1]
+          .replace(/[[\]]/g, "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    let icons = [ref];
+    if (add) {
+      if (current.includes(ref)) {
+        setNotice(`${entry.name} is already a page icon`);
+        return;
+      }
+      if (current.length >= MAX_ICONS) {
+        setNotice(`A page can have up to ${MAX_ICONS} icons`);
+        return;
+      }
+      icons = [...current, ref];
+    }
+    const line = `icon: ${icons.length === 1 ? icons[0] : `[${icons.join(", ")}]`}`;
     let change: { from: number; to?: number; insert: string };
     if (!fm) change = { from: 0, insert: `---\n${line}\n---\n\n` };
     else {
       const yamlStart = fm[0].indexOf("\n") + 1;
-      const existing = /^icon:.*$/m.exec(fm[1]);
       change = existing
         ? {
             from: yamlStart + existing.index,
@@ -373,7 +399,11 @@ export function GuideEditor({
         : { from: yamlStart + fm[1].length, insert: `\n${line}` };
     }
     v.dispatch({ changes: change });
-    setNotice(`Page icon set to ${entry.name}`);
+    setNotice(
+      icons.length === 1
+        ? `Page icon set to ${entry.name}`
+        : `Added ${entry.name} to the page icons (${icons.length} of ${MAX_ICONS})`,
+    );
   }, []);
 
   const [uploading, setUploading] = useState(false);
@@ -604,8 +634,8 @@ export function GuideEditor({
               <CardPicker
                 catalog={catalog}
                 onPick={(entry, mode) =>
-                  mode === "icon"
-                    ? setIcon(entry)
+                  mode === "icon" || mode === "add-icon"
+                    ? setIcon(entry, mode === "add-icon")
                     : insert((sel) =>
                         cardMarkup(entry, {
                           selected: sel,
@@ -921,7 +951,7 @@ function HistoryPanel({
 }
 
 /** What clicking a card in the picker does. */
-type PickMode = "text" | "card" | "icon";
+type PickMode = "text" | "card" | "icon" | "add-icon";
 
 function CardPicker({
   catalog,
@@ -975,6 +1005,9 @@ function CardPicker({
           <option value="card">Inserts it as a large card image</option>
           <option value="icon">
             Sets it as the page icon (shown in lists)
+          </option>
+          <option value="add-icon">
+            Adds it to the page icons (up to {MAX_ICONS}, fanned out)
           </option>
         </select>
       </label>
