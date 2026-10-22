@@ -140,7 +140,7 @@ export function OverlayEditor({
       </label>
 
       <div
-        className="sticky top-16 z-10 aspect-video max-h-60 w-full overflow-hidden rounded-xl border"
+        className="relative aspect-video max-h-60 w-full overflow-hidden rounded-xl border"
         style={TRANSPARENT}
       >
         <span className="absolute top-2 left-3 z-10 rounded bg-black/60 px-1.5 text-xs text-white">

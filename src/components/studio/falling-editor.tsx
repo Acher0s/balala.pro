@@ -50,7 +50,7 @@ export function FallingEditor({
         Show falling cards behind the home page
       </label>
 
-      <div className="sticky top-16 z-10 h-72 overflow-hidden rounded-xl border bg-fd-background">
+      <div className="relative h-72 overflow-hidden rounded-xl border bg-fd-background">
         <span className="absolute top-2 left-3 z-10 text-xs text-fd-muted-foreground">
           Preview
         </span>
