@@ -649,6 +649,21 @@ const write = async (rel: string, png: Buffer) => {
   await sharp(png).webp({ lossless: true }).toFile(file);
 };
 
+// The edition shaders, as the game ships them; the falling cards run them in WebGL
+// (src/components/edition-shaders.ts).
+mkdirSync(join(outDir, "shaders"), { recursive: true });
+for (const name of [
+  "foil",
+  "holo",
+  "polychrome",
+  "negative",
+  "negative_shine",
+]) {
+  const file = zip.get(`resources/shaders/${name}.fs`);
+  if (!file) throw new Error(`Missing shader ${name}.fs`);
+  writeFileSync(join(outDir, "shaders", `${name}.fs`), file());
+}
+
 for (const job of jobs) {
   const src = job.sheet ?? sheet(SHEET_BY_KIND[job.kind]);
   let img = await crop(src, job.pos, job.cell);

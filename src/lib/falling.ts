@@ -45,7 +45,7 @@ export const fallingSchema = z.object({
   opacity: z.number().min(0.02).max(1),
   /** How far cards drift sideways, in pixels. */
   sway: z.number().min(0).max(120),
-  /** Smaller cards fall slower and fainter, as if further away. */
+  /** Smaller cards fall slower, as if further away. */
   depth: z.boolean(),
   /** Include the Multiplayer mod's cards. */
   modCards: z.boolean(),

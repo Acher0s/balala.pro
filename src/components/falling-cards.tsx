@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { EditionShaders } from "@/components/edition-shaders";
 import {
   type Edition,
   FALLING_KINDS,
@@ -12,13 +13,16 @@ import {
 } from "@/lib/falling";
 
 /**
- * A card as it falls: its layers (with any enhancement and seal) and edition, drawn once into
- * `canvas` when its images have loaded, then reused by every card showing it.
+ * A card as it falls: its layers (with any enhancement), seal and edition. `canvas` is all of it
+ * drawn once (editions as a still sheen); `base` is the card without seal or edition, for the
+ * animated edition shaders. Both are made when the images have loaded and reused by every card.
  */
 interface Picture {
   layers: string[];
+  seal: string | null;
   edition: Edition | null;
   canvas?: HTMLCanvasElement;
+  base?: HTMLCanvasElement;
 }
 
 /** One falling card: its picture plus random factors; the settings turn these into motion. */
@@ -35,6 +39,8 @@ interface Falling {
   z: number;
   swayPhase: number;
   swayRate: number;
+  /** Offsets this card's edition shine from others with the same picture. */
+  shinePhase: number;
 }
 
 const BASE_WIDTH = 1280;
@@ -67,10 +73,35 @@ const SHEENS: Record<Exclude<Edition, "negative">, [number, string[]]> = {
   ],
 };
 
-/** Draws a picture's layers and edition into one image, the first time all layers are loaded. */
+/** Stacks images into a new canvas the size of the first; undefined until all have loaded. */
+function stack(sources: string[]) {
+  const layers = sources.map(image);
+  if (!layers.every(loaded)) return undefined;
+  const w = layers[0].naturalWidth;
+  const h = layers[0].naturalHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return undefined;
+  ctx.imageSmoothingEnabled = false;
+  for (const img of layers) ctx.drawImage(img, 0, 0, w, h);
+  return canvas;
+}
+
+/** The card without seal or edition, for the edition shaders. */
+function renderBase(picture: Picture) {
+  picture.base ??= stack(picture.layers);
+  return picture.base;
+}
+
+/** Draws a picture's layers, seal and a still edition into one image, once all have loaded. */
 function render(picture: Picture) {
   if (picture.canvas) return picture.canvas;
-  const layers = picture.layers.map(image);
+  const layers = [
+    ...picture.layers,
+    ...(picture.seal ? [picture.seal] : []),
+  ].map(image);
   if (!layers.every(loaded)) return undefined;
   const w = layers[0].naturalWidth;
   const h = layers[0].naturalHeight;
@@ -157,14 +188,14 @@ function makePicture(
         enhancement?.image ?? pool.baseCard,
         // Stone cards have no rank or suit.
         ...(enhancement?.stone ? [] : layers),
-        ...(seal ? [seal.image] : []),
       ],
+      seal: seal?.image ?? null,
       edition: roll.edition,
     };
   }
   if (kind === "joker" && s.jokerEditions)
-    return { layers, edition: rollJokerEdition(Math.random()) };
-  return { layers, edition: null };
+    return { layers, seal: null, edition: rollJokerEdition(Math.random()) };
+  return { layers, seal: null, edition: null };
 }
 
 /** Weak devices start with fewer cards; data saver turns the effect off. */
@@ -243,8 +274,10 @@ export function FallingCards({
         pictures = [];
         blocked = new Set(s.blacklist);
         // Blacklisted cards disappear at once instead of finishing their fall.
-        cards = cards.filter((c) =>
-          c.picture.layers.every((l) => !blockedLayer(l)),
+        cards = cards.filter(
+          (c) =>
+            c.picture.layers.every((l) => !blockedLayer(l)) &&
+            !(c.picture.seal && blockedLayer(c.picture.seal)),
         );
       }
       if (pictures.length < MAX_PICTURES) {
@@ -292,11 +325,59 @@ export function FallingCards({
         z,
         swayPhase: Math.random() * Math.PI * 2,
         swayRate: 0.4 + Math.random() * 0.8,
+        shinePhase: Math.random() * 10,
       };
       // Far cards are drawn first, so near ones overlap them.
       const at = cards.findIndex((c) => c.z > z);
       cards.splice(at === -1 ? cards.length : at, 0, falling);
       for (const src of picture.layers) image(src);
+      if (picture.seal) image(picture.seal);
+    };
+
+    // The game's animated edition shaders, set up the first time an edition card shows. Weak
+    // devices (a reduced budget) and browsers without WebGL keep the still sheen.
+    let shaders: EditionShaders | null | undefined;
+    const editionShaders = () => {
+      if (shaders === undefined)
+        shaders = budget >= 1 ? EditionShaders.create() : null;
+      return shaders;
+    };
+
+    /**
+     * Draws a card with its edition animated like in the game: Foil, Holographic and
+     * Polychrome shine over the card; Negative replaces it and adds its own shine. The seal
+     * goes on top. False if the shaders can't run (yet), so the still version is drawn.
+     */
+    const drawAnimated = (
+      c: Falling,
+      edition: Edition,
+      w: number,
+      h: number,
+      now: number,
+    ) => {
+      const gl = editionShaders();
+      const base = gl && renderBase(c.picture);
+      if (!gl || !base) return false;
+      const time = now / 1000;
+      // Like the game's send_to_shader: real time / 28, plus a nudge from the card's tilt.
+      const shine =
+        time / 28 + c.shinePhase + 0.3 * Math.sin((c.rotation * Math.PI) / 180);
+      const draw = (source: CanvasImageSource) =>
+        ctx.drawImage(source, -w / 2, -h / 2, w, h);
+      if (edition === "negative") {
+        const inverted = gl.render("negative", base, shine, time);
+        if (!inverted) return false;
+        draw(inverted);
+        const glow = gl.render("negative_shine", base, shine, time);
+        if (glow) draw(glow);
+      } else {
+        const sheen = gl.render(edition, base, shine, time);
+        if (!sheen) return false;
+        draw(base);
+        draw(sheen);
+      }
+      if (c.picture.seal) draw(image(c.picture.seal));
+      return true;
     };
 
     const wanted = () =>
@@ -351,10 +432,12 @@ export function FallingCards({
         const w = s.size * c.size * c.z;
         const h = (w * picture.height) / picture.width;
         ctx.save();
-        ctx.globalAlpha = s.opacity * (s.depth ? 0.35 + 0.65 * c.z : 1);
+        ctx.globalAlpha = s.opacity;
         ctx.translate(c.x + Math.sin(c.swayPhase) * s.sway, c.y);
         ctx.rotate((c.rotation * Math.PI) / 180);
-        ctx.drawImage(picture, -w / 2, -h / 2, w, h);
+        const edition = c.picture.edition;
+        if (!edition || !drawAnimated(c, edition, w, h, now))
+          ctx.drawImage(picture, -w / 2, -h / 2, w, h);
         ctx.restore();
       }
     };

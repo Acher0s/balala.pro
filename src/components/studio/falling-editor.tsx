@@ -345,7 +345,7 @@ export function FallingEditor({
           <span>
             Depth
             <span className="block text-xs text-fd-muted-foreground">
-              Smaller cards fall slower and fainter, as if further away.
+              Smaller cards fall slower, as if further away.
             </span>
           </span>
         </label>
