@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { GameItem } from "@/data/game-types";
+import type { IconCard } from "@/lib/mdx/compile";
 
 /**
  * Per number of cards, from the main card (front) to the last (back): rotation at rest and on
@@ -28,38 +28,46 @@ export const ICON_PADDING = ["", "pr-16", "pr-28", "pr-36"];
 
 /**
  * A page's icon cards in the corner of its tile: large and faded, brightening on hover. With 2 or 3
- * cards they fan out, the first (main) card in front. The tile needs the `group` class.
+ * cards they fan out, the first (main) card in front. Each card is a stack of image layers (one for
+ * a joker, several for a playing card). The tile needs the `group` class.
  */
-export function IconFan({ items }: { items: GameItem[] }) {
-  const fan = FANS[items.length];
+export function IconFan({ cards }: { cards: IconCard[] }) {
+  const fan = FANS[cards.length];
   if (!fan?.length) return null;
   return (
     // Faded as a whole, so overlapping cards don't show through each other.
     <span
-      className={`absolute -bottom-10 h-40 w-[120px] opacity-25 transition-opacity group-hover:opacity-50 ${ANCHOR[items.length]}`}
+      className={`absolute -bottom-10 h-40 w-[120px] opacity-25 transition-opacity group-hover:opacity-50 ${ANCHOR[cards.length]}`}
     >
       {/* Back to front, so the main card is drawn last, on top. */}
-      {items
-        .map((item, i) => ({ item, pose: fan[i] }))
+      {cards
+        .map((card, i) => ({ card, pose: fan[i] }))
         .reverse()
-        .map(({ item, pose }) => (
-          // biome-ignore lint/performance/noImgElement: pixel art sprite, shown as is
-          <img
-            key={item.key}
-            src={item.image}
-            alt=""
-            width={120}
-            height={160}
+        .map(({ card, pose }) => (
+          <span
+            key={card.key}
             style={
               {
-                imageRendering: "pixelated",
                 "--x": `${pose.x}px`,
                 "--rest": `${pose.rest}deg`,
                 "--hover": `${pose.hover}deg`,
               } as CSSProperties
             }
-            className="absolute inset-0 h-full w-full origin-bottom object-contain transition-transform duration-300 [transform:translateX(var(--x))_rotate(var(--rest))] group-hover:[transform:translateX(var(--x))_rotate(var(--hover))]"
-          />
+            className="absolute inset-0 origin-bottom transition-transform duration-300 [transform:translateX(var(--x))_rotate(var(--rest))] group-hover:[transform:translateX(var(--x))_rotate(var(--hover))]"
+          >
+            {card.layers.map((src) => (
+              // biome-ignore lint/performance/noImgElement: pixel art sprite, shown as is
+              <img
+                key={src}
+                src={src}
+                alt=""
+                width={120}
+                height={160}
+                style={{ imageRendering: "pixelated" }}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+            ))}
+          </span>
         ))}
     </span>
   );

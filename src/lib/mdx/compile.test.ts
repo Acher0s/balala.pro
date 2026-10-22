@@ -254,6 +254,20 @@ describe("page icon", () => {
     ).rejects.toThrow(GuideValidationError);
   });
 
+  it("draws playing cards from layers, with an optional enhancement and seal", async () => {
+    const { resolveIcon } = await import("./compile");
+    expect(resolveIcon("card:KH")?.layers).toHaveLength(2);
+    expect(resolveIcon("card:10S:steel:red")?.layers).toHaveLength(3);
+    expect(resolveIcon("card:AS::gold")?.layers).toHaveLength(3);
+    // Stone cards have no rank or suit.
+    expect(resolveIcon("card:KH:stone")?.layers).toHaveLength(1);
+    for (const bad of ["card:ZZ", "card:KH:nope", "card:KH::nope", "card:"])
+      expect(resolveIcon(bad), bad).toBeUndefined();
+    await expect(
+      compileGuide(withIcon("[card:KH, card:QS:steel:red]")),
+    ).resolves.toBeDefined();
+  });
+
   it("rejects anything that isn't a card", async () => {
     for (const icon of ["joker:nope", "reserved_parking", "car:hermit"])
       await expect(compileGuide(withIcon(icon))).rejects.toThrow(

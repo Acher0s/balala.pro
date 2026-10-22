@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ICON_PADDING, IconFan } from "@/components/icon-fan";
 import type { PageKind } from "@/db/schema";
 import { groupParts, listPublished, pageUrl } from "@/lib/guides";
-import { findIcon } from "@/lib/mdx/compile";
+import { resolveIcon } from "@/lib/mdx/compile";
 
 const COPY: Record<
   PageKind,
@@ -50,7 +50,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
             <ul className="grid gap-3 sm:grid-cols-2">
               {list.map((p) => {
                 const icons = p.frontmatter.icon
-                  .map(findIcon)
+                  .map(resolveIcon)
                   .filter((item) => item !== undefined);
                 return (
                   <li key={p.id}>
@@ -59,7 +59,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
                       className="group relative block h-full overflow-hidden rounded-xl border bg-fd-card p-4 transition-colors hover:bg-fd-accent"
                     >
                       {/* The page's cards, large and faded in the corner behind the text. */}
-                      <IconFan items={icons} />
+                      <IconFan cards={icons} />
                       <span className="relative block font-semibold">
                         {p.frontmatter.title}
                       </span>

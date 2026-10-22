@@ -2,7 +2,13 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { GuideEditor } from "@/components/editor/guide-editor";
 import type { CatalogEntry } from "@/components/editor/snippets";
-import { listItemEntries, slugify, sourceLabel } from "@/data/game";
+import {
+  baseCardImage,
+  listItemEntries,
+  listPlayingCards,
+  slugify,
+  sourceLabel,
+} from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import { getDb, schema } from "@/db";
 import { canEditGuide, requireUser } from "@/lib/auth";
@@ -79,7 +85,20 @@ export default async function EditGuidePage({
           .sort((a, b) => a.title.localeCompare(b.title))
       : [];
 
-  const catalog: CatalogEntry[] = KINDS.flatMap((kind) =>
+  // Playing cards by code, e.g. "KH" or "10S" (as <PlayingCard card> and icon: card:… use).
+  const playingCards: CatalogEntry[] = listPlayingCards().map(([key, card]) => {
+    const [suit, rank] = key.split("_");
+    return {
+      kind: "card",
+      id: `${rank === "T" ? "10" : rank}${suit}`,
+      name: `${card.value} of ${card.suit}`,
+      image: card.image,
+      layers: [baseCardImage, card.image],
+      source: null,
+    };
+  });
+
+  const gameCards: CatalogEntry[] = KINDS.flatMap((kind) =>
     listItemEntries(kind).map(([itemId, item]) => ({
       kind,
       // Vanilla cards by readable name ("The Hierophant" → "hierophant"); mod cards by id ("mp_pizza").
@@ -109,7 +128,7 @@ export default async function EditGuidePage({
       }}
       initialSource={guide.draftSource}
       parentOptions={parentOptions}
-      catalog={catalog}
+      catalog={[...gameCards, ...playingCards]}
       revisions={revisions.map((r) => ({
         id: r.id,
         at: r.createdAt.toISOString(),

@@ -6,7 +6,7 @@ import type { MDXContent } from "mdx/types";
 import * as runtime from "react/jsx-runtime";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { findItem } from "@/data/game";
+import { baseCardImage, findItem, getPlayingCard } from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import {
   GuideValidationError,
@@ -46,10 +46,10 @@ export const frontmatterSchema = z.object({
           message: `can have up to ${MAX_ICONS} cards`,
         });
       for (const icon of icons)
-        if (!findIcon(icon))
+        if (!resolveIcon(icon))
           ctx.addIssue({
             code: "custom",
-            message: `"${icon}" isn't a card. Write it like joker:reserved_parking or tarot:hermit`,
+            message: `"${icon}" isn't a card. Write it like joker:reserved_parking, tarot:hermit or card:KH`,
           });
     }),
 });
@@ -58,11 +58,50 @@ export const MAX_ICONS = 3;
 
 const ICON_RE =
   /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck|stake):(.+)$/;
+/** card:KH, card:KH:steel (enhancement), card:KH:steel:red or card:KH::red (seal) */
+const PLAYING_CARD_ICON_RE = /^card:([^:]+)(?::([^:]*))?(?::([^:]*))?$/;
 
-/** The card an `icon` value points to, e.g. "joker:reserved_parking". */
-export function findIcon(icon: string) {
-  const m = ICON_RE.exec(icon.trim());
-  return m ? findItem(m[1] as ItemKind, m[2]) : undefined;
+/** An icon ready to draw: image layers stacked bottom to top. */
+export interface IconCard {
+  key: string;
+  layers: string[];
+}
+
+/**
+ * What an `icon` value points to: a game card ("joker:reserved_parking") or a playing card
+ * drawn like <PlayingCard> ("card:KH", "card:KH:steel:red"). Undefined if it isn't a card.
+ */
+export function resolveIcon(icon: string): IconCard | undefined {
+  const value = icon.trim();
+  const game = ICON_RE.exec(value);
+  if (game) {
+    const item = findItem(game[1] as ItemKind, game[2]);
+    return item && { key: value, layers: [item.image] };
+  }
+  const playing = PLAYING_CARD_ICON_RE.exec(value);
+  if (!playing) return undefined;
+  const [, code, enhancementId, sealId] = playing;
+  let front: ReturnType<typeof getPlayingCard>;
+  try {
+    front = getPlayingCard(code);
+  } catch {
+    return undefined;
+  }
+  const enhancement = enhancementId
+    ? findItem("enhancement", enhancementId)
+    : undefined;
+  const seal = sealId ? findItem("seal", sealId) : undefined;
+  if ((enhancementId && !enhancement) || (sealId && !seal?.overlay))
+    return undefined;
+  return {
+    key: value,
+    // Same layering as <PlayingCard>: stone cards have no rank or suit.
+    layers: [
+      enhancement?.image ?? baseCardImage,
+      ...(enhancement?.key === "m_stone" ? [] : [front.image]),
+      ...(seal?.overlay ? [seal.overlay] : []),
+    ],
+  };
 }
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>;

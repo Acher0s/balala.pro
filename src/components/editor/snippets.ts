@@ -1,11 +1,14 @@
 import type { ItemKind } from "@/data/game-types";
 
 export interface CatalogEntry {
-  kind: ItemKind;
+  /** A game card kind, or "card" for a playing card (drawn with <PlayingCard>). */
+  kind: ItemKind | "card";
   /** Id written into the guide; the card's name in slug form so the source stays readable. */
   id: string;
   name: string;
   image: string;
+  /** Playing cards: the images stacked to draw the card (base, then rank and suit). */
+  layers?: string[];
   /** "Multiplayer", "MP Standard", … for mod cards; null for vanilla. */
   source: string | null;
 }
@@ -23,7 +26,8 @@ export const TAG_BY_KIND: Record<ItemKind, string> = {
   stake: "Stake",
 };
 
-export const KIND_LABELS: Record<ItemKind, string> = {
+export const KIND_LABELS: Record<ItemKind | "card", string> = {
+  card: "Playing cards",
   joker: "Jokers",
   tarot: "Tarots",
   planet: "Planets",
@@ -43,6 +47,11 @@ export function cardMarkup(
   entry: CatalogEntry,
   { selected, asCard }: { selected?: string; asCard?: boolean },
 ) {
+  if (entry.kind === "card") {
+    // Playing cards are a picture only; keep any selected text next to it.
+    const markup = `<PlayingCard card="${entry.id}" />`;
+    return selected ? `${selected} ${markup}` : markup;
+  }
   const tag = TAG_BY_KIND[entry.kind];
   const attrs = `id="${entry.id}"${asCard ? " card" : ""}`;
   return selected

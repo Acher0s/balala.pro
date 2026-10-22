@@ -1020,13 +1020,29 @@ function CardPicker({
               title={`${e.name} (${e.source ?? e.kind})`}
               className="flex w-full flex-col items-center gap-1 rounded-lg p-1 text-center text-[11px] leading-tight hover:bg-fd-accent"
             >
-              {/* biome-ignore lint/performance/noImgElement: small sprite; smooth scaling avoids jagged pixels */}
-              <img
-                src={e.image}
-                alt=""
-                className="h-[57px] w-auto"
-                loading="lazy"
-              />
+              {e.layers ? (
+                // A playing card: its layers stacked, like on the site.
+                <span className="relative h-[57px] w-[43px]">
+                  {e.layers.map((src) => (
+                    // biome-ignore lint/performance/noImgElement: small sprite; smooth scaling avoids jagged pixels
+                    <img
+                      key={src}
+                      src={src}
+                      alt=""
+                      className="absolute inset-0 h-full w-full"
+                      loading="lazy"
+                    />
+                  ))}
+                </span>
+              ) : (
+                // biome-ignore lint/performance/noImgElement: small sprite; smooth scaling avoids jagged pixels
+                <img
+                  src={e.image}
+                  alt=""
+                  className="h-[57px] w-auto"
+                  loading="lazy"
+                />
+              )}
               {e.name}
               {e.source && (
                 <span className="rounded bg-[#ac3232] px-1 text-[9px] font-bold uppercase text-white">
