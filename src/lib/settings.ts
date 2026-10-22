@@ -6,6 +6,11 @@ import {
   categoriesSchema,
   DEFAULT_CATEGORIES,
 } from "@/lib/categories";
+import {
+  DEFAULT_FALLING,
+  type FallingSettings,
+  fallingSchema,
+} from "@/lib/falling";
 import { DEFAULT_THEME, type SiteTheme, siteThemeSchema } from "@/lib/theme";
 
 export interface SiteSettings {
@@ -125,6 +130,27 @@ export async function saveCategories(value: CategorySettings) {
   await db
     .insert(schema.siteSettings)
     .values({ key: CATEGORIES_KEY, value })
+    .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value } });
+}
+
+const FALLING_KEY = "falling";
+
+/** The home page's falling cards (Studio → Site → Home page background). */
+export async function getFalling(): Promise<FallingSettings> {
+  const db = await getDb();
+  const [row] = await db
+    .select()
+    .from(schema.siteSettings)
+    .where(eq(schema.siteSettings.key, FALLING_KEY));
+  const parsed = fallingSchema.safeParse(row?.value);
+  return parsed.success ? parsed.data : DEFAULT_FALLING;
+}
+
+export async function saveFalling(value: FallingSettings) {
+  const db = await getDb();
+  await db
+    .insert(schema.siteSettings)
+    .values({ key: FALLING_KEY, value })
     .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value } });
 }
 

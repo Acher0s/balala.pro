@@ -1,7 +1,9 @@
 import { BookOpen, Calculator, Rows3 } from "lucide-react";
 import Link from "next/link";
 import { Announcement, HomeIntro } from "@/components/announcement";
-import { getSettings } from "@/lib/settings";
+import { FallingBackground } from "@/components/falling-background";
+import { fallingPool } from "@/lib/falling-pool";
+import { getFalling, getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +30,12 @@ const SECTIONS = [
 ];
 
 export default async function HomePage() {
-  const settings = await getSettings();
+  const [settings, falling] = await Promise.all([getSettings(), getFalling()]);
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
+      {falling.enabled && (
+        <FallingBackground settings={falling} pool={fallingPool()} />
+      )}
       <div>
         <h1 className="mb-3 text-3xl font-bold">{settings.siteName}</h1>
         <HomeIntro text={settings.homeIntro} />

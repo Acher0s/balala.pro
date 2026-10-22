@@ -16,6 +16,7 @@ import {
 import { reloadCardOverrides } from "@/lib/card-overrides";
 import { categoriesSchema } from "@/lib/categories";
 import { getImportPack } from "@/lib/content-import";
+import { fallingSchema } from "@/lib/falling";
 import { toolTemplate, tutorialGuide } from "@/lib/guide-template";
 import {
   draftCacheKey,
@@ -34,6 +35,7 @@ import {
   introMarkup,
   type SiteSettings,
   saveCategories,
+  saveFalling,
   saveSettings,
   saveTheme,
   siteTextSource,
@@ -502,6 +504,18 @@ export async function saveSiteCategories(
       error: "Every category needs a name and at least one tag.",
     };
   await saveCategories(parsed.data);
+  return { ok: true };
+}
+
+/** Studio → Site → Home page background: the falling cards. */
+export async function saveFallingSettings(
+  value: unknown,
+): Promise<ActionResult> {
+  await assertUser("admin");
+  const parsed = fallingSchema.safeParse(value);
+  if (!parsed.success)
+    return { ok: false, error: "Some of these values are out of range." };
+  await saveFalling(parsed.data);
   return { ok: true };
 }
 
