@@ -1,10 +1,13 @@
+import { and, count, eq, isNotNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PreviewScrollSync } from "@/components/editor/preview-scroll-sync";
 import { GuideView } from "@/components/guide-view";
+import { PageTile } from "@/components/page-tile";
+import { getDb, schema } from "@/db";
 import { canEditGuide, requireUser } from "@/lib/auth";
 import { draftCacheKey, getGuideById } from "@/lib/guides";
-import { GuideValidationError } from "@/lib/mdx/compile";
+import { GuideValidationError, parseFrontmatter } from "@/lib/mdx/compile";
 
 export const metadata: Metadata = {
   title: "Preview",
@@ -49,8 +52,55 @@ export default async function PreviewPage({
 
   return (
     <>
+      <ListPreview guide={guide} />
       {content}
       <PreviewScrollSync />
     </>
+  );
+}
+
+/**
+ * How the draft is listed on the Guides or Tools page, above the article. It scrolls away with
+ * the article, so it only takes room at the top.
+ */
+async function ListPreview({
+  guide,
+}: {
+  guide: NonNullable<Awaited<ReturnType<typeof getGuideById>>>;
+}) {
+  let frontmatter: ReturnType<typeof parseFrontmatter>;
+  try {
+    frontmatter = parseFrontmatter(guide.draftSource);
+  } catch {
+    // The article below lists what's wrong with the details block.
+    return null;
+  }
+  const where = guide.kind === "tool" ? "Tools" : "Guides";
+  const db = await getDb();
+  const [{ parts }] = await db
+    .select({ parts: count() })
+    .from(schema.guides)
+    .where(
+      and(
+        eq(schema.guides.parentId, guide.id),
+        isNotNull(schema.guides.publishedSource),
+      ),
+    );
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 pt-6">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-fd-muted-foreground">
+        On the {where} page
+      </p>
+      {guide.parentId ? (
+        <p className="rounded-xl border border-dashed p-4 text-sm text-fd-muted-foreground">
+          This guide is a part of another guide, so it isn't listed on its own.
+          Readers reach it from the main guide.
+        </p>
+      ) : (
+        <div className="max-w-sm">
+          <PageTile frontmatter={frontmatter} parts={parts} />
+        </div>
+      )}
+    </div>
   );
 }

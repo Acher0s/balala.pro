@@ -4,11 +4,9 @@ import {
   DocsPage,
   DocsTitle,
 } from "fumadocs-ui/layouts/notebook/page";
-import Link from "next/link";
-import { ICON_PADDING, IconFan } from "@/components/icon-fan";
+import { PageTile } from "@/components/page-tile";
 import type { PageKind } from "@/db/schema";
 import { groupParts, listPublished, pageUrl } from "@/lib/guides";
-import { resolveIcon } from "@/lib/mdx/compile";
 
 const COPY: Record<
   PageKind,
@@ -48,49 +46,15 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
           <section key={section} className="not-prose mb-8 flex flex-col gap-3">
             {section && <h2 className="text-lg font-semibold">{section}</h2>}
             <ul className="grid gap-3 sm:grid-cols-2">
-              {list.map((p) => {
-                const icons = p.frontmatter.icon
-                  .map(resolveIcon)
-                  .filter((item) => item !== undefined);
-                return (
-                  <li key={p.id}>
-                    <Link
-                      href={pageUrl(kind, p.slug)}
-                      className="group relative block h-full overflow-hidden rounded-xl border bg-fd-card p-4 transition-colors hover:bg-fd-accent"
-                    >
-                      {/* The page's cards, large and faded in the corner behind the text. */}
-                      <IconFan cards={icons} />
-                      <span className="relative block font-semibold">
-                        {p.frontmatter.title}
-                      </span>
-                      {p.frontmatter.description && (
-                        <span
-                          className={`relative mt-1 block text-sm text-fd-muted-foreground ${ICON_PADDING[icons.length]}`}
-                        >
-                          {p.frontmatter.description}
-                        </span>
-                      )}
-                      {(p.frontmatter.tags.length > 0 || parts.has(p.id)) && (
-                        <span className="relative mt-3 flex flex-wrap gap-1">
-                          {parts.has(p.id) && (
-                            <span className="rounded-full bg-fd-primary px-2 py-0.5 text-xs font-medium text-fd-primary-foreground">
-                              {parts.get(p.id)?.length} parts
-                            </span>
-                          )}
-                          {p.frontmatter.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full border px-2 py-0.5 text-xs text-fd-muted-foreground"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
+              {list.map((p) => (
+                <li key={p.id}>
+                  <PageTile
+                    frontmatter={p.frontmatter}
+                    href={pageUrl(kind, p.slug)}
+                    parts={parts.get(p.id)?.length ?? 0}
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         ))}
