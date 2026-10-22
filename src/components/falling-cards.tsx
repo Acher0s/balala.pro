@@ -5,10 +5,12 @@ import { EditionShaders } from "@/components/edition-shaders";
 import {
   type Edition,
   FALLING_KINDS,
+  type FallingChances,
+  type FallingEntry,
   type FallingKind,
   type FallingPool,
   type FallingSettings,
-  rollJokerEdition,
+  rollEdition,
   rollStandardCard,
 } from "@/lib/falling";
 
@@ -37,17 +39,22 @@ interface Falling {
   spin: number;
   /** 0.45 (far) to 1 (near) with depth on; always 1 without. */
   z: number;
+  /** size × z: how big the card is drawn, and so how close it is. Bigger cards are in front. */
+  scale: number;
   swayPhase: number;
   swayRate: number;
-  /** Offsets this card's edition shine from others with the same picture. */
+  /** Offsets this card's edition shine and ambient tilt from others with the same picture. */
   shinePhase: number;
+  tiltRate: number;
 }
 
 const BASE_WIDTH = 1280;
 /** At most this many different pictures per visit: few downloads, reused over and over. */
 const MAX_PICTURES = 24;
-/** Canvas resolution cap: high-DPI screens don't need more for faded background cards. */
+/** Canvas resolution cap: high-DPI screens don't need more for background cards. */
 const MAX_DPR = 1.5;
+/** With depth fade, the furthest cards are drawn at this opacity. */
+const FARTHEST = 0.3;
 const images = new Map<string, HTMLImageElement>();
 
 /** Images load on first use and are shared by every card with the same picture. */
@@ -98,20 +105,13 @@ function renderBase(picture: Picture) {
 /** Draws a picture's layers, seal and a still edition into one image, once all have loaded. */
 function render(picture: Picture) {
   if (picture.canvas) return picture.canvas;
-  const layers = [
+  const canvas = stack([
     ...picture.layers,
     ...(picture.seal ? [picture.seal] : []),
-  ].map(image);
-  if (!layers.every(loaded)) return undefined;
-  const w = layers[0].naturalWidth;
-  const h = layers[0].naturalHeight;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return undefined;
-  ctx.imageSmoothingEnabled = false;
-  for (const img of layers) ctx.drawImage(img, 0, 0, w, h);
+  ]);
+  const ctx = canvas?.getContext("2d");
+  if (!canvas || !ctx) return undefined;
+  const { width: w, height: h } = canvas;
   if (picture.edition === "negative") {
     const data = ctx.getImageData(0, 0, w, h);
     for (let i = 0; i < data.data.length; i += 4) {
@@ -139,28 +139,64 @@ const vary = (variation: number) => 1 + (Math.random() * 2 - 1) * variation;
 const pickFrom = <T,>(list: T[], roll = Math.random()) =>
   list[Math.floor(roll * list.length)];
 
-/** A random card by the mix's weights, leaving out blacklisted (and, if off, mod) cards. */
-function pickCard(pool: FallingPool, s: FallingSettings, blocked: Set<string>) {
-  const choices = FALLING_KINDS.map((kind) => ({
-    kind,
-    cards: pool.kinds[kind].filter(
-      (c) => (s.modCards || !c.mod) && !blocked.has(c.ref),
-    ),
-    weight: s.weights[kind],
-  })).filter((c) => c.weight > 0 && c.cards.length > 0);
-  const total = choices.reduce((sum, c) => sum + c.weight, 0);
+/** A random item by weight; null if nothing has any. */
+function weighted<T>(list: { item: T; weight: number }[]) {
+  const total = list.reduce((sum, c) => sum + c.weight, 0);
   if (!total) return null;
-  let roll = Math.random() * total;
-  let pick = choices[0];
-  for (const c of choices) {
-    roll -= c.weight;
-    if (roll <= 0) {
-      pick = c;
-      break;
-    }
+  let left = Math.random() * total;
+  for (const c of list) {
+    left -= c.weight;
+    if (left < 0 && c.weight > 0) return c.item;
   }
-  return { kind: pick.kind, card: pickFrom(pick.cards) };
+  return list.findLast((c) => c.weight > 0)?.item ?? null;
 }
+
+/**
+ * How likely each card of a kind is, by the chance tables: jokers by rarity (a rarity's chance
+ * shared by its jokers, as the game picks a rarity first), playing cards by rank and suit.
+ */
+function cardWeights(
+  kind: FallingKind,
+  cards: FallingEntry[],
+  chances: FallingChances,
+) {
+  if (kind === "joker") {
+    const perRarity = new Map<string, number>();
+    for (const c of cards)
+      perRarity.set(
+        c.rarity ?? "common",
+        (perRarity.get(c.rarity ?? "common") ?? 0) + 1,
+      );
+    return cards.map((c) => {
+      const rarity = c.rarity ?? "common";
+      return {
+        item: c,
+        weight: chances.jokerRarity[rarity] / (perRarity.get(rarity) ?? 1),
+      };
+    });
+  }
+  if (kind === "card")
+    return cards.map((c) => ({
+      item: c,
+      weight:
+        (c.rank ? chances.ranks[c.rank] : 1) *
+        (c.suit ? chances.suits[c.suit] : 1),
+    }));
+  return cards.map((c) => ({ item: c, weight: 1 }));
+}
+
+/** A copy of a weight table with blacklisted ids left out (weight 0). */
+const without = <K extends string>(
+  weights: Record<K, number>,
+  prefix: string,
+  blocked: Set<string>,
+) =>
+  Object.fromEntries(
+    Object.entries<number>(weights).map(([id, w]) => [
+      id,
+      blocked.has(`${prefix}:${id}`) ? 0 : w,
+    ]),
+  ) as Record<K, number>;
 
 /**
  * Turns a card into a picture the way the game makes it: playing cards as from a Standard pack
@@ -173,16 +209,23 @@ function makePicture(
   s: FallingSettings,
   blocked: Set<string>,
 ): Picture {
+  const { chances } = s;
   if (kind === "card") {
-    const roll = rollStandardCard(Math.random);
-    const enhancements = pool.enhancements.filter((e) => !blocked.has(e.ref));
-    const seals = pool.seals.filter((e) => !blocked.has(e.ref));
-    const enhancement =
-      roll.enhancement !== null && enhancements.length
-        ? pickFrom(enhancements, roll.enhancement)
-        : null;
-    const seal =
-      roll.seal !== null && seals.length ? pickFrom(seals, roll.seal) : null;
+    const roll = rollStandardCard(Math.random, {
+      ...chances,
+      enhancements: {
+        ...chances.enhancements,
+        weights: without(chances.enhancements.weights, "enhancement", blocked),
+      },
+      seals: {
+        ...chances.seals,
+        weights: without(chances.seals.weights, "seal", blocked),
+      },
+    });
+    const enhancement = pool.enhancements.find(
+      (e) => e.id === roll.enhancement,
+    );
+    const seal = pool.seals.find((e) => e.id === roll.seal);
     return {
       layers: [
         enhancement?.image ?? pool.baseCard,
@@ -194,7 +237,11 @@ function makePicture(
     };
   }
   if (kind === "joker" && s.jokerEditions)
-    return { layers, seal: null, edition: rollJokerEdition(Math.random()) };
+    return {
+      layers,
+      seal: null,
+      edition: rollEdition(Math.random(), chances.jokerEdition),
+    };
   return { layers, seal: null, edition: null };
 }
 
@@ -209,19 +256,33 @@ function deviceBudget() {
  * Cards from the game falling and spinning behind the page, drawn on a canvas that fills its
  * parent. Settings apply live, so the Studio preview reacts while sliders move.
  *
+ * Cards are drawn solid, smaller (further) ones first, so they block each other like real cards
+ * (see-through parts like Glass excepted); the opacity setting fades the whole background.
+ * Edition shine follows the mouse over a card like in the game, and otherwise wobbles on its own
+ * like the game's cards that aren't hovered, which is all a stream overlay (`interactive` off) has.
+ *
  * Kept light for weak devices: it starts only once the browser is idle, uses at most
  * MAX_PICTURES different pictures (each drawn once, editions included), caps the canvas
  * resolution, and shows fewer cards when frames get slow. Nothing is shown with reduced motion or
- * data saver.
+ * data saver. Overlays (`freshPictures`) swap pictures now and then, as they run for hours.
  */
 export function FallingCards({
   settings,
   pool,
   className = "",
+  interactive = true,
+  freshPictures = false,
+  ignoreReducedMotion = false,
 }: {
   settings: FallingSettings;
   pool: FallingPool;
   className?: string;
+  /** Edition shine reacts to the mouse. */
+  interactive?: boolean;
+  /** Replace pictures over time instead of keeping the first MAX_PICTURES. */
+  freshPictures?: boolean;
+  /** For overlays: the stream should show the effect whatever the streamer's OS prefers. */
+  ignoreReducedMotion?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const settingsRef = useRef(settings);
@@ -229,12 +290,13 @@ export function FallingCards({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    if (ignoreReducedMotion) return;
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(query.matches);
     const onChange = () => setReducedMotion(query.matches);
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
-  }, []);
+  }, [ignoreReducedMotion]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -257,17 +319,45 @@ export function FallingCards({
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
+    // The mouse, in canvas pixels; null when it's off the page or there's none (touch, overlays).
+    let pointer: { x: number; y: number } | null = null;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      const rect = canvas.getBoundingClientRect();
+      pointer = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    const onLeave = () => {
+      pointer = null;
+    };
+    if (interactive) {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      document.documentElement.addEventListener("pointerleave", onLeave);
+    }
+
     let cards: Falling[] = [];
-    // The pictures in use this visit; rebuilt when the mix, blacklist or editions change.
+    // The pictures in use; rebuilt when the mix, chances, blacklist or editions change.
     let pictures: Picture[] = [];
     let mix = "";
     let blocked = new Set<string>();
+    let choices: {
+      item: {
+        kind: FallingKind;
+        cards: { item: FallingEntry; weight: number }[];
+      };
+      weight: number;
+    }[] = [];
+    const pickCard = () => {
+      const kind = weighted(choices);
+      const card = kind && weighted(kind.cards);
+      return kind && card ? { kind: kind.kind, card } : null;
+    };
     const nextPicture = (s: FallingSettings) => {
       const key = JSON.stringify([
         s.weights,
         s.modCards,
         s.jokerEditions,
         s.blacklist,
+        s.chances,
       ]);
       if (key !== mix) {
         mix = key;
@@ -279,9 +369,25 @@ export function FallingCards({
             c.picture.layers.every((l) => !blockedLayer(l)) &&
             !(c.picture.seal && blockedLayer(c.picture.seal)),
         );
+        choices = FALLING_KINDS.map((kind) => {
+          const list = pool.kinds[kind].filter(
+            (c) => (s.modCards || !c.mod) && !blocked.has(c.ref),
+          );
+          const weights = cardWeights(kind, list, s.chances);
+          const any = weights.some((w) => w.weight > 0);
+          return {
+            item: { kind, cards: weights },
+            weight: any ? s.weights[kind] : 0,
+          };
+        });
       }
-      if (pictures.length < MAX_PICTURES) {
-        const pick = pickCard(pool, s, blocked);
+      // Overlays swap one picture in eight spawns, so a long stream keeps seeing new cards.
+      const swap =
+        freshPictures &&
+        pictures.length >= MAX_PICTURES &&
+        Math.random() < 1 / 8;
+      if (pictures.length < MAX_PICTURES || swap) {
+        const pick = pickCard();
         if (!pick) return null;
         const picture = makePicture(
           pick.kind,
@@ -290,7 +396,9 @@ export function FallingCards({
           s,
           blocked,
         );
-        pictures.push(picture);
+        if (swap)
+          pictures[Math.floor(Math.random() * pictures.length)] = picture;
+        else pictures.push(picture);
         return picture;
       }
       return pickFrom(pictures);
@@ -312,6 +420,7 @@ export function FallingCards({
       const picture = nextPicture(s);
       if (!picture) return;
       const z = s.depth ? 0.45 + Math.random() * 0.55 : 1;
+      const size = Math.max(0.2, vary(s.sizeVariation));
       const falling: Falling = {
         picture,
         x: Math.random() * width,
@@ -319,16 +428,18 @@ export function FallingCards({
         y: anywhere ? Math.random() * height : -s.size * 1.5,
         rotation: Math.random() * 360,
         speed: Math.max(0.1, vary(s.speedVariation)),
-        size: Math.max(0.2, vary(s.sizeVariation)),
+        size,
         spin:
           (Math.random() < 0.5 ? -1 : 1) * Math.max(0, vary(s.spinVariation)),
         z,
+        scale: size * z,
         swayPhase: Math.random() * Math.PI * 2,
         swayRate: 0.4 + Math.random() * 0.8,
         shinePhase: Math.random() * 10,
+        tiltRate: 1.56 + Math.random(),
       };
-      // Far cards are drawn first, so near ones overlap them.
-      const at = cards.findIndex((c) => c.z > z);
+      // Smaller cards are further away: drawn first, so bigger ones cover them.
+      const at = cards.findIndex((c) => c.scale > falling.scale);
       cards.splice(at === -1 ? cards.length : at, 0, falling);
       for (const src of picture.layers) image(src);
       if (picture.seal) image(picture.seal);
@@ -344,6 +455,32 @@ export function FallingCards({
     };
 
     /**
+     * How far the edition shine is shifted, like the game's tilt_var.amt (card.lua): with the
+     * mouse over the card, by where it is on the card; otherwise a slow wobble of its own, as
+     * the game does for cards that aren't hovered (ambient_tilt).
+     */
+    const tilt = (
+      c: Falling,
+      cx: number,
+      cy: number,
+      w: number,
+      h: number,
+      time: number,
+    ) => {
+      if (pointer) {
+        const angle = (-c.rotation * Math.PI) / 180;
+        const dx = pointer.x - cx;
+        const dy = pointer.y - cy;
+        const lx = dx * Math.cos(angle) - dy * Math.sin(angle);
+        const ly = dx * Math.sin(angle) + dy * Math.cos(angle);
+        if (Math.abs(lx) < w / 2 && Math.abs(ly) < h / 2)
+          return Math.abs(lx / w + 0.5 + ly / h + 0.5 - 1) * 0.3;
+      }
+      const angle = time * c.tiltRate + c.shinePhase;
+      return 0.2 * (0.5 + Math.cos(angle)) * 0.3;
+    };
+
+    /**
      * Draws a card with its edition animated like in the game: Foil, Holographic and
      * Polychrome shine over the card; Negative replaces it and adds its own shine. The seal
      * goes on top. False if the shaders can't run (yet), so the still version is drawn.
@@ -353,15 +490,12 @@ export function FallingCards({
       edition: Edition,
       w: number,
       h: number,
-      now: number,
+      shine: number,
+      time: number,
     ) => {
       const gl = editionShaders();
       const base = gl && renderBase(c.picture);
       if (!gl || !base) return false;
-      const time = now / 1000;
-      // Like the game's send_to_shader: real time / 28, plus a nudge from the card's tilt.
-      const shine =
-        time / 28 + c.shinePhase + 0.3 * Math.sin((c.rotation * Math.PI) / 180);
       const draw = (source: CanvasImageSource) =>
         ctx.drawImage(source, -w / 2, -h / 2, w, h);
       if (edition === "negative") {
@@ -413,30 +547,50 @@ export function FallingCards({
         for (let i = 0; i < wanted(); i++) spawn(true);
         started = true;
       }
+      // The whole background fades as one, so overlapping cards never show through each other.
+      const opacity = String(s.opacity);
+      if (canvas.style.opacity !== opacity) canvas.style.opacity = opacity;
 
       ctx.clearRect(0, 0, width, height);
       ctx.imageSmoothingEnabled = false;
       for (let i = cards.length - 1; i >= 0; i--) {
         const c = cards[i];
-        const w = s.size * c.size * c.z;
-        c.y += s.speed * c.speed * c.z * dt;
+        const w = s.size * c.scale;
+        // With depth, closer (bigger) cards fall faster.
+        c.y += s.speed * c.speed * (s.depth ? c.scale : 1) * dt;
         c.rotation += s.spin * c.spin * dt;
         c.swayPhase += c.swayRate * dt;
         if (c.y - w * 2 > height) cards.splice(i, 1);
       }
       for (let i = cards.length; i < wanted(); i++) spawn(false);
 
+      const time = now / 1000;
+      const nearest = 1 + s.sizeVariation;
       for (const c of cards) {
         const picture = render(c.picture);
         if (!picture) continue;
-        const w = s.size * c.size * c.z;
+        const w = s.size * c.scale;
         const h = (w * picture.height) / picture.width;
+        const x = c.x + Math.sin(c.swayPhase) * s.sway;
         ctx.save();
-        ctx.globalAlpha = s.opacity;
-        ctx.translate(c.x + Math.sin(c.swayPhase) * s.sway, c.y);
+        ctx.translate(x, c.y);
         ctx.rotate((c.rotation * Math.PI) / 180);
+        const fade =
+          s.depth && s.depthFade
+            ? FARTHEST + (1 - FARTHEST) * Math.min(1, c.scale / nearest)
+            : 1;
+        if (fade < 1) {
+          // A faded card still hides what's behind it: clear its shape, then draw it fainter.
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.drawImage(picture, -w / 2, -h / 2, w, h);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.globalAlpha = fade;
+        }
         const edition = c.picture.edition;
-        if (!edition || !drawAnimated(c, edition, w, h, now))
+        // Like the game's send_to_shader: real time / 28, plus the tilt.
+        const shine =
+          edition && time / 28 + c.shinePhase + tilt(c, x, c.y, w, h, time);
+        if (!edition || !drawAnimated(c, edition, w, h, shine || 0, time))
           ctx.drawImage(picture, -w / 2, -h / 2, w, h);
         ctx.restore();
       }
@@ -459,8 +613,10 @@ export function FallingCards({
       else window.clearTimeout(idle);
       cancelAnimationFrame(frame);
       observer.disconnect();
+      window.removeEventListener("pointermove", onMove);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
     };
-  }, [pool, reducedMotion]);
+  }, [pool, reducedMotion, interactive, freshPictures]);
 
   if (reducedMotion) return null;
   return (

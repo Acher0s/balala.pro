@@ -194,3 +194,32 @@ export const media = pgTable("media", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Stream overlays (browser sources) that signed-in users make, e.g. the falling card background.
+ * The id is the secret in the overlay's link, so it's long and random; resetting the link gives
+ * the overlay a new id.
+ */
+export const overlays = pgTable(
+  "overlays",
+  {
+    id: text("id").primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Which overlay this is; "cards" is the falling card background. */
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    /** The overlay's settings, e.g. FallingSettings for "cards". */
+    settings: jsonb("settings").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("overlays_owner_idx").on(t.ownerId)],
+);
+
+export type OverlayRow = typeof overlays.$inferSelect;

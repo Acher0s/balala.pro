@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FALLING, FALLING_KINDS, fallingSchema } from "./falling";
+import {
+  DEFAULT_CHANCES,
+  DEFAULT_FALLING,
+  FALLING_KINDS,
+  fallingSchema,
+  pickWeighted,
+  rollEdition,
+  rollStandardCard,
+} from "./falling";
 
 describe("falling cards settings", () => {
   it("has valid defaults, off until an admin turns it on", () => {
@@ -13,6 +21,21 @@ describe("falling cards settings", () => {
     ).toBe(false);
     expect(
       fallingSchema.safeParse({ ...DEFAULT_FALLING, opacity: 0 }).success,
+    ).toBe(false);
+  });
+
+  it("fills in game odds for settings saved before chances existed", () => {
+    const { chances, depthFade, ...old } = DEFAULT_FALLING;
+    expect(fallingSchema.parse(old)).toEqual(DEFAULT_FALLING);
+  });
+
+  it("rejects edition chances over 100%", () => {
+    const chances = {
+      ...DEFAULT_CHANCES,
+      jokerEdition: { foil: 60, holo: 30, polychrome: 20, negative: 0 },
+    };
+    expect(
+      fallingSchema.safeParse({ ...DEFAULT_FALLING, chances }).success,
     ).toBe(false);
   });
 
@@ -36,20 +59,20 @@ describe("card rolls (the game's odds)", () => {
     );
   };
 
-  it("gives jokers shop editions: Negative and Polychrome 0.3%, Holo 1.4%, Foil 2%", async () => {
-    const { rollJokerEdition } = await import("./falling");
-    expect(shares(rollJokerEdition)).toEqual({
-      negative: 0.3,
-      polychrome: 0.3,
-      holo: 1.4,
-      foil: 2,
-      none: 96,
-    });
+  it("gives jokers shop editions: Negative and Polychrome 0.3%, Holo 1.4%, Foil 2%", () => {
+    expect(shares((r) => rollEdition(r, DEFAULT_CHANCES.jokerEdition))).toEqual(
+      {
+        negative: 0.3,
+        polychrome: 0.3,
+        holo: 1.4,
+        foil: 2,
+        none: 96,
+      },
+    );
   });
 
-  it("gives playing cards Standard pack editions: Polychrome 1.2%, Holo 2.8%, Foil 4%", async () => {
-    const { rollEdition } = await import("./falling");
-    expect(shares((r) => rollEdition(r, 2, false))).toEqual({
+  it("gives playing cards Standard pack editions: Polychrome 1.2%, Holo 2.8%, Foil 4%", () => {
+    expect(shares((r) => rollEdition(r, DEFAULT_CHANCES.cardEdition))).toEqual({
       polychrome: 1.2,
       holo: 2.8,
       foil: 4,
@@ -57,8 +80,15 @@ describe("card rolls (the game's odds)", () => {
     });
   });
 
-  it("enhances 40% of playing cards and seals 20%", async () => {
-    const { rollStandardCard } = await import("./falling");
+  it("picks by relative weight, skipping weights of 0", () => {
+    expect(shares((r) => pickWeighted({ a: 3, b: 0, c: 1 }, r))).toEqual({
+      a: 75,
+      c: 25,
+    });
+    expect(pickWeighted({ a: 0, b: 0 }, 0.5)).toBeNull();
+  });
+
+  it("enhances 40% of playing cards and seals 20%", () => {
     let enhanced = 0;
     let sealed = 0;
     const n = 20_000;
