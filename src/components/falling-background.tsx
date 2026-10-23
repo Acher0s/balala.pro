@@ -18,7 +18,9 @@ export function FallingBackground({
   pool: FallingPool;
 }) {
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10">
+    // The largest viewport height (lvh), so phones showing or hiding their address bar while
+    // scrolling don't resize (and so clear) the canvas.
+    <div className="pointer-events-none fixed top-0 left-0 -z-10 h-lvh w-full">
       <FallingCards settings={settings} pool={pool} />
     </div>
   );

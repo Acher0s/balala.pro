@@ -67,6 +67,10 @@ export class EditionShaders {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl", {
       premultipliedAlpha: false,
+      // Each frame copies this canvas into the 2D one several times. Without this, some
+      // (mostly mobile) browsers hand back an earlier render, so cards showed each other's
+      // pictures and flickered.
+      preserveDrawingBuffer: true,
       antialias: false,
       depth: false,
     });

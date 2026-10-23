@@ -309,6 +309,13 @@ export function FallingCards({
     let height = 0;
     const resize = () => {
       const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+      // Resizing clears the canvas, so only do it when the size really changed.
+      if (
+        canvas.clientWidth === width &&
+        canvas.clientHeight === height &&
+        canvas.width === Math.round(width * dpr)
+      )
+        return;
       width = canvas.clientWidth;
       height = canvas.clientHeight;
       canvas.width = Math.round(width * dpr);
@@ -424,9 +431,11 @@ export function FallingCards({
       const falling: Falling = {
         picture,
         x: Math.random() * width,
-        // Every card comes in from above. The first ones are spread out up there, so they arrive
-        // one after another instead of all at once.
-        y: -s.size * 1.5 - (spreadOut ? Math.random() * height : 0),
+        // Every card comes in from above. The first ones are spread out just above the screen,
+        // the nearest already peeking in, so they arrive one after another right away.
+        y: spreadOut
+          ? -s.size * 0.6 - Math.random() * height * 0.6
+          : -s.size * 1.5,
         rotation: Math.random() * 360,
         speed: Math.max(0.1, vary(s.speedVariation)),
         size,
@@ -603,12 +612,12 @@ export function FallingCards({
             last = performance.now();
             frame = requestAnimationFrame(tick);
           },
-          { timeout: 2000 },
+          { timeout: 400 },
         )
       : window.setTimeout(() => {
           last = performance.now();
           frame = requestAnimationFrame(tick);
-        }, 300);
+        }, 100);
     return () => {
       if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
