@@ -57,7 +57,7 @@ export const frontmatterSchema = z.object({
 export const MAX_ICONS = 3;
 
 const ICON_RE =
-  /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck|stake|tag|booster):(.+)$/;
+  /^(joker|tarot|planet|spectral|voucher|enhancement|seal|deck|stake|tag|booster|sticker):(.+)$/;
 /** card:KH, card:KH:steel (enhancement), card:KH:steel:red or card:KH::red (seal) */
 const PLAYING_CARD_ICON_RE = /^card:([^:]+)(?::([^:]*))?(?::([^:]*))?$/;
 

@@ -26,6 +26,7 @@ export const TAG_BY_KIND: Record<ItemKind, string> = {
   stake: "Stake",
   tag: "Tag",
   booster: "Booster",
+  sticker: "Sticker",
 };
 
 export const KIND_LABELS: Record<ItemKind | "card", string> = {
@@ -41,15 +42,21 @@ export const KIND_LABELS: Record<ItemKind | "card", string> = {
   stake: "Stakes",
   tag: "Tags",
   booster: "Booster packs",
+  sticker: "Stickers",
 };
 
 /**
  * Markup for a card reference. With `selected` text, the reference keeps that text
- * as written: <Joker id="mime">mime setup</Joker>.
+ * as written: <Joker id="mime">mime setup</Joker>. Jokers can get stickers:
+ * <Joker id="mime" stickers="eternal rental" />.
  */
 export function cardMarkup(
   entry: CatalogEntry,
-  { selected, asCard }: { selected?: string; asCard?: boolean },
+  {
+    selected,
+    asCard,
+    stickers = [],
+  }: { selected?: string; asCard?: boolean; stickers?: string[] },
 ) {
   if (entry.kind === "card") {
     // Playing cards are a picture only; keep any selected text next to it.
@@ -57,7 +64,8 @@ export function cardMarkup(
     return selected ? `${selected} ${markup}` : markup;
   }
   const tag = TAG_BY_KIND[entry.kind];
-  const attrs = `id="${entry.id}"${asCard ? " card" : ""}`;
+  const withStickers = entry.kind === "joker" && stickers.length > 0;
+  const attrs = `id="${entry.id}"${asCard ? " card" : ""}${withStickers ? ` stickers="${stickers.join(" ")}"` : ""}`;
   return selected
     ? `<${tag} ${attrs}>${selected}</${tag}>`
     : `<${tag} ${attrs} />`;

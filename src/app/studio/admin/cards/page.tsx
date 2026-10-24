@@ -21,6 +21,7 @@ const KINDS: ItemKind[] = [
   "stake",
   "tag",
   "booster",
+  "sticker",
 ];
 
 export default async function CardsPage() {

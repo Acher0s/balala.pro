@@ -20,7 +20,8 @@ export type ItemKind =
   | "deck"
   | "stake"
   | "tag"
-  | "booster";
+  | "booster"
+  | "sticker";
 
 export type Rarity = "common" | "uncommon" | "rare" | "legendary";
 
@@ -37,8 +38,10 @@ export interface GameItem {
   /** Native sprite size in pixels (the game's 2x textures). */
   w: number;
   h: number;
-  /** Seals only: the full-card-sized layer that sits on top of a playing card. */
+  /** Seals and stickers: the full-card-sized layer that sits on top of a card. */
   overlay?: string;
+  /** Stickers: the colour of their badge under a card's text, as in the game (#rrggbb). */
+  colour?: string;
   /** "vanilla", or the ruleset a Multiplayer mod card belongs to ("multiplayer", "standard", "sandbox", …). */
   source: string;
 }

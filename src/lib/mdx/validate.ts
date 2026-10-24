@@ -27,6 +27,7 @@ const CARD_TAGS: Record<string, ItemKind> = {
   Stake: "stake",
   Tag: "tag",
   Booster: "booster",
+  Sticker: "sticker",
 };
 
 export const ALLOWED_COMPONENTS = new Set([
@@ -244,6 +245,13 @@ function checkComponent(
       problems.push(`${at}: <${name}> needs an id, e.g. id="mime"`);
     else if (!findItem(kind, p.id))
       problems.push(`${at}: unknown ${kind} "${p.id}"`);
+    for (const sticker of String(p.stickers ?? "")
+      .split(/[\s,]+/)
+      .filter(Boolean))
+      if (!findItem("sticker", sticker))
+        problems.push(
+          `${at}: unknown sticker "${sticker}" (e.g. eternal, perishable, rental)`,
+        );
     return;
   }
   switch (name) {

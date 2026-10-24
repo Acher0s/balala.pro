@@ -44,6 +44,7 @@ const KIND_COLOUR: Record<ItemKind, string> = {
   stake: "#8a9ba8",
   tag: "#8a9ba8",
   booster: "#8a9ba8",
+  sticker: "#8a9ba8",
 };
 
 const RARITY_COLOUR = {
@@ -53,8 +54,9 @@ const RARITY_COLOUR = {
   legendary: "#b26cbb",
 };
 
-export function colourOf(item: Pick<GameItem, "rarity" | "kind">) {
-  return item.rarity ? RARITY_COLOUR[item.rarity] : KIND_COLOUR[item.kind];
+export function colourOf(item: Pick<GameItem, "rarity" | "kind" | "colour">) {
+  if (item.rarity) return RARITY_COLOUR[item.rarity];
+  return item.colour ?? KIND_COLOUR[item.kind];
 }
 
 function Segment({ s }: { s: TextSegment }) {

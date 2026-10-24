@@ -17373,6 +17373,491 @@
     "source": "multiplayer",
     "cost": 16
    }
+  },
+  "sticker": {
+   "eternal": {
+    "key": "eternal",
+    "name": "Eternal",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Can't be sold"
+      }
+     ],
+     [
+      {
+       "t": "or destroyed"
+      }
+     ]
+    ],
+    "image": "/game/sticker/eternal.webp",
+    "overlay": "/game/sticker/eternal-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla",
+    "colour": "#c75985"
+   },
+   "perishable": {
+    "key": "perishable",
+    "name": "Perishable",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Debuffed after"
+      }
+     ],
+     [
+      {
+       "t": "5",
+       "c": "attention"
+      },
+      {
+       "t": " rounds"
+      }
+     ],
+     [
+      {
+       "t": "(",
+       "c": "inactive"
+      },
+      {
+       "t": "5",
+       "c": "attention"
+      },
+      {
+       "t": " remaining)",
+       "c": "inactive"
+      }
+     ]
+    ],
+    "image": "/game/sticker/perishable.webp",
+    "overlay": "/game/sticker/perishable-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla",
+    "colour": "#4f5da1"
+   },
+   "rental": {
+    "key": "rental",
+    "name": "Rental",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Lose "
+      },
+      {
+       "t": "$3",
+       "c": "money"
+      },
+      {
+       "t": " at"
+      }
+     ],
+     [
+      {
+       "t": "end of round"
+      }
+     ]
+    ],
+    "image": "/game/sticker/rental.webp",
+    "overlay": "/game/sticker/rental-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla",
+    "colour": "#b18f43"
+   },
+   "white": {
+    "key": "white_sticker",
+    "name": "White Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "White",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/white.webp",
+    "overlay": "/game/sticker/white-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "red": {
+    "key": "red_sticker",
+    "name": "Red Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Red",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/red.webp",
+    "overlay": "/game/sticker/red-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "green": {
+    "key": "green_sticker",
+    "name": "Green Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Green",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/green.webp",
+    "overlay": "/game/sticker/green-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "black": {
+    "key": "black_sticker",
+    "name": "Black Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Black",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/black.webp",
+    "overlay": "/game/sticker/black-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "blue": {
+    "key": "blue_sticker",
+    "name": "Blue Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Blue",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/blue.webp",
+    "overlay": "/game/sticker/blue-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "purple": {
+    "key": "purple_sticker",
+    "name": "Purple Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Purple",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/purple.webp",
+    "overlay": "/game/sticker/purple-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "orange": {
+    "key": "orange_sticker",
+    "name": "Orange Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Orange",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/orange.webp",
+    "overlay": "/game/sticker/orange-overlay.webp",
+    "w": 38,
+    "h": 38,
+    "source": "vanilla"
+   },
+   "gold": {
+    "key": "gold_sticker",
+    "name": "Gold Sticker",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Used this Joker"
+      }
+     ],
+     [
+      {
+       "t": "to win on "
+      },
+      {
+       "t": "Gold",
+       "c": "attention"
+      }
+     ],
+     [
+      {
+       "t": "Stake",
+       "c": "attention"
+      },
+      {
+       "t": " difficulty"
+      }
+     ]
+    ],
+    "image": "/game/sticker/gold.webp",
+    "overlay": "/game/sticker/gold-overlay.webp",
+    "w": 42,
+    "h": 42,
+    "source": "vanilla"
+   },
+   "mp_persistent": {
+    "key": "mp_sticker_persistent",
+    "name": "Persistent",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Can't be destroyed"
+      }
+     ],
+     [
+      {
+       "t": "Costs "
+      },
+      {
+       "t": "$",
+       "c": "red"
+      },
+      {
+       "t": " to sell"
+      }
+     ],
+     [
+      {
+       "t": "Cost increases by"
+      }
+     ],
+     [
+      {
+       "t": "$3",
+       "c": "red"
+      },
+      {
+       "t": " at end of round"
+      }
+     ]
+    ],
+    "image": "/game/sticker/mp_persistent.webp",
+    "w": 38,
+    "h": 38,
+    "source": "multiplayer",
+    "overlay": "/game/sticker/mp_persistent-overlay.webp",
+    "colour": "#5541cc"
+   },
+   "mp_unreliable": {
+    "key": "mp_sticker_unreliable",
+    "name": "Unreliable",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "Doesn't trigger on"
+      }
+     ],
+     [
+      {
+       "t": "final hand",
+       "c": "attention"
+      }
+     ]
+    ],
+    "image": "/game/sticker/mp_unreliable.webp",
+    "w": 38,
+    "h": 38,
+    "source": "multiplayer",
+    "overlay": "/game/sticker/mp_unreliable-overlay.webp",
+    "colour": "#7ca39a"
+   },
+   "mp_draining": {
+    "key": "mp_sticker_draining",
+    "name": "Draining",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "X0.75",
+       "x": "mult",
+       "c": "white"
+      },
+      {
+       "t": " Mult"
+      }
+     ]
+    ],
+    "image": "/game/sticker/mp_draining.webp",
+    "w": 38,
+    "h": 38,
+    "source": "multiplayer",
+    "overlay": "/game/sticker/mp_draining-overlay.webp",
+    "colour": "#a13333"
+   },
+   "mp_balanced": {
+    "key": "mp_sticker_balanced",
+    "name": "Balanced",
+    "kind": "sticker",
+    "text": [
+     [
+      {
+       "t": "This card has been rebalanced"
+      }
+     ]
+    ],
+    "image": "/game/sticker/mp_balanced.webp",
+    "w": 38,
+    "h": 38,
+    "source": "multiplayer",
+    "overlay": "/game/sticker/mp_balanced-overlay.webp",
+    "colour": "#ac3232"
+   }
   }
  },
  "cards": {

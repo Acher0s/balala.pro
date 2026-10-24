@@ -307,6 +307,7 @@ const KIND_BY_SET: Record<string, ItemKind> = {
   Stake: "stake",
   Tag: "tag",
   Booster: "booster",
+  Sticker: "sticker",
 };
 const SHEET_BY_KIND: Record<ItemKind, string> = {
   joker: "Jokers",
@@ -320,6 +321,7 @@ const SHEET_BY_KIND: Record<ItemKind, string> = {
   stake: "chips",
   tag: "tags",
   booster: "boosters",
+  sticker: "stickers",
 };
 /** Sprite cells that aren't card-sized, at the game's 2x texture scale. */
 const STAKE_CELL = { w: 58, h: 58 }; // 29 × 29
@@ -367,6 +369,7 @@ const data: GameData = {
     stake: {},
     tag: {},
     booster: {},
+    sticker: {},
   },
   cards: {},
   baseCard: "/game/enhancement/base.webp",
@@ -534,6 +537,63 @@ for (const [key, tag] of Object.entries(tags).sort(
   });
 }
 
+// Stickers: Eternal, Perishable and Rental (G.shared_sticker_*) and the stake win stickers
+// (G.shared_stickers), all on the stickers sheet; text in descriptions.Other.
+const globalsLua = text("globals.lua");
+const hexColour = (src: string, name: string) => {
+  const m = new RegExp(`\\b${name}\\s*=\\s*HEX\\(['"](\\w{6})`).exec(src);
+  return m ? `#${m[1].toLowerCase()}` : undefined;
+};
+const gameNumber = (name: string) =>
+  Number(new RegExp(`\\b${name}\\s*=\\s*(\\d+)`).exec(gameLua)?.[1] ?? "0");
+const stickerSprites: [string, string, { x: number; y: number }][] = [];
+for (const m of gameLua.matchAll(
+  /shared_sticker_(\w+)\s*=\s*Sprite\([^)]*?\{x\s*=\s*(\d+),\s*y\s*=\s*(\d+)\}\)/g,
+)) {
+  stickerSprites.push([m[1], m[1], { x: Number(m[2]), y: Number(m[3]) }]);
+}
+const stakeStickers = gameLua.slice(
+  gameLua.indexOf("self.shared_stickers = {"),
+  gameLua.indexOf("self.shared_seals"),
+);
+for (const m of stakeStickers.matchAll(
+  /(\w+)\s*=\s*Sprite\([^)]*?\{x\s*=\s*(\d+),\s*y\s*=\s*(\d+)\}\)/g,
+)) {
+  const colour = m[1].toLowerCase();
+  stickerSprites.push([
+    colour,
+    `${colour}_sticker`,
+    { x: Number(m[2]), y: Number(m[3]) },
+  ]);
+}
+const stickerVars: Record<string, string[]> = {
+  // A new Perishable joker: debuffed after this many rounds, all of them remaining.
+  perishable: [
+    String(gameNumber("perishable_rounds")),
+    String(gameNumber("perishable_rounds")),
+  ],
+  rental: [String(gameNumber("rental_rate"))],
+};
+for (const [id, descKey, pos] of stickerSprites) {
+  const desc = descriptions.Other?.[descKey];
+  if (!desc) continue;
+  data.items.sticker[id] = {
+    key: descKey,
+    name: desc.name,
+    kind: "sticker",
+    text: desc.text.map((l) => parseLine(l, stickerVars[id] ?? [])),
+    image: `/game/sticker/${id}.webp`,
+    overlay: `/game/sticker/${id}-overlay.webp`,
+    w: 0,
+    h: 0,
+    source: "vanilla",
+    // Run stickers have a badge (G.C.ETERNAL …); stake win stickers don't.
+    colour:
+      descKey === id ? hexColour(globalsLua, id.toUpperCase()) : undefined,
+  };
+  jobs.push({ kind: "sticker", id, pos });
+}
+
 // ---------------------------------------------------------------------------
 // Multiplayer mod (read from the installed mod, if present)
 
@@ -563,7 +623,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
   for (const file of luaFiles) {
     const src = readFileSync(file, "utf8");
     for (const m of src.matchAll(
-      /SMODS\.(Atlas|Joker|Consumable|Back|Stake|Tag|Booster)\s*\(\s*\{/g,
+      /SMODS\.(Atlas|Joker|Consumable|Back|Stake|Tag|Booster|Sticker)\s*\(\s*\{/g,
     )) {
       const def = parseLuaTable(src, src.indexOf("{", m.index)) as Table;
       if (m[1] === "Atlas") {
@@ -583,6 +643,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     }
   }
 
+  const modCore = readFileSync(join(MOD_DIR, "core.lua"), "utf8");
   const modSheets = new Map<string, Buffer>();
   const modSheet = (path: string) => {
     let buf = modSheets.get(path);
@@ -602,10 +663,13 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
       { Joker: "j", Back: "b", Stake: "stake", Tag: "tag", Booster: "p" }[
         type
       ] ?? "c";
-    const fullKey = `${prefix}_mp_${key}`;
-    // Booster pack text lives with the other non-card text.
+    // Stickers are keyed "sticker_persistent" and named "mp_sticker_persistent".
+    const fullKey = type === "Sticker" ? `mp_${key}` : `${prefix}_mp_${key}`;
+    // Booster pack and sticker text lives with the other non-card text.
     const desc =
-      kind === "booster" ? modLoc.Other?.[fullKey] : modLoc[set]?.[fullKey];
+      kind === "booster" || kind === "sticker"
+        ? modLoc.Other?.[fullKey]
+        : modLoc[set]?.[fullKey];
     if (!kind || !desc) continue;
 
     // objects/jokers/standard/ticket.lua → "standard"; objects/jokers/pizza.lua → "multiplayer"
@@ -648,7 +712,7 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
             desc.text,
           );
 
-    const id = `mp_${key}`;
+    const id = `mp_${type === "Sticker" ? key.replace(/^sticker_/, "") : key}`;
     const item: GameItem = {
       key: fullKey,
       name: desc.name,
@@ -661,6 +725,17 @@ if (existsSync(join(MOD_DIR, "Multiplayer.json"))) {
     };
     if (kind === "joker" && typeof def.rarity === "number")
       item.rarity = RARITIES[def.rarity - 1];
+    if (kind === "sticker") {
+      item.overlay = `/game/sticker/${id}-overlay.webp`;
+      // HEX("5541CC"), or the mod's own colour (G.C.MULTIPLAYER).
+      const badge = String((def.badge_colour as { expr?: string })?.expr ?? "");
+      const hex = /HEX\(["'](\w{6})/.exec(badge)?.[1];
+      item.colour = hex
+        ? `#${hex.toLowerCase()}`
+        : badge.includes("MULTIPLAYER")
+          ? hexColour(modCore, "MULTIPLAYER")
+          : undefined;
+    }
     if (typeof def.cost === "number") item.cost = def.cost;
     data.items[kind][id] = item;
 
@@ -822,10 +897,18 @@ for (const job of jobs) {
       .png()
       .toBuffer();
   }
-  if (job.kind === "seal") {
-    // Seals are drawn on top of a card, so their sheet cell is mostly empty:
-    // keep the full cell for <PlayingCard> and trim it for showing the seal on its own.
-    await write(`seal/${job.id}-overlay.webp`, img);
+  if (job.kind === "sticker") {
+    // A mod sticker can point at an empty cell (Extra Credit has no art yet): leave it out.
+    const { channels } = await sharp(img).stats();
+    if (channels[3]?.max === 0) {
+      delete data.items.sticker[job.id];
+      continue;
+    }
+  }
+  if (job.kind === "seal" || job.kind === "sticker") {
+    // Seals and stickers are drawn on top of a card, so their sheet cell is mostly empty:
+    // keep the full cell to lay over a card and trim it for showing it on its own.
+    await write(`${job.kind}/${job.id}-overlay.webp`, img);
     img = await sharp(img).trim().png().toBuffer();
   }
   const { width, height } = await sharp(img).metadata();

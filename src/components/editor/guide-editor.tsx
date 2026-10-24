@@ -633,13 +633,14 @@ export function GuideEditor({
             {tab === "cards" && (
               <CardPicker
                 catalog={catalog}
-                onPick={(entry, mode) =>
+                onPick={(entry, mode, stickers) =>
                   mode === "icon" || mode === "add-icon"
                     ? setIcon(entry, mode === "add-icon")
                     : insert((sel) =>
                         cardMarkup(entry, {
                           selected: sel,
                           asCard: mode === "card",
+                          stickers,
                         }),
                       )
                 }
@@ -958,11 +959,14 @@ function CardPicker({
   onPick,
 }: {
   catalog: CatalogEntry[];
-  onPick: (e: CatalogEntry, mode: PickMode) => void;
+  /** `stickers`: ids of the stickers to put on a joker, e.g. ["eternal", "rental"]. */
+  onPick: (e: CatalogEntry, mode: PickMode, stickers: string[]) => void;
 }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<CatalogEntry["kind"] | "all">("all");
   const [mode, setMode] = useState<PickMode>("text");
+  const [stickers, setStickers] = useState<string[]>([]);
+  const stickerCards = catalog.filter((e) => e.kind === "sticker");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1011,12 +1015,47 @@ function CardPicker({
           </option>
         </select>
       </label>
+      {(mode === "text" || mode === "card") && stickerCards.length > 0 && (
+        <fieldset className="flex flex-col gap-1 text-xs">
+          <legend className="mb-1">Stickers on jokers</legend>
+          <span className="flex flex-wrap gap-1">
+            {stickerCards.map((s) => {
+              const on = stickers.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-pressed={on}
+                  title={s.source ? `${s.name} (${s.source})` : s.name}
+                  onClick={() =>
+                    setStickers(
+                      on
+                        ? stickers.filter((x) => x !== s.id)
+                        : [...stickers, s.id],
+                    )
+                  }
+                  className={`flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-1 ${on ? "border-fd-primary bg-fd-primary/15" : "hover:bg-fd-accent"}`}
+                >
+                  {/* biome-ignore lint/performance/noImgElement: tiny sprite */}
+                  <img src={s.image} alt="" className="size-4" loading="lazy" />
+                  {s.name.replace(/ Sticker$/, "")}
+                </button>
+              );
+            })}
+          </span>
+          {stickers.length > 0 && (
+            <span className="text-fd-muted-foreground">
+              Jokers you click now get these stickers.
+            </span>
+          )}
+        </fieldset>
+      )}
       <ul className="grid grid-cols-3 gap-2">
         {results.map((e) => (
           <li key={`${e.kind}:${e.id}`}>
             <button
               type="button"
-              onClick={() => onPick(e, mode)}
+              onClick={() => onPick(e, mode, stickers)}
               title={`${e.name} (${e.source ?? e.kind})`}
               className="flex w-full flex-col items-center gap-1 rounded-lg p-1 text-center text-[11px] leading-tight hover:bg-fd-accent"
             >

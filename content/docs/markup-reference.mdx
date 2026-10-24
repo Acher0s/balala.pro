@@ -152,6 +152,22 @@ Mention a card and readers can hover it to see its picture and in-game effect. T
 
 Booster packs come in a few pictures each. The pack's name gives the first one; to pick another, use its id from the **Cards** tab, like <Booster id="arcana_normal_3" card />.
 
+**Stickers** go on jokers like in the game, with `stickers`. Readers see them on the card and in its hover box:
+
+<CardRow>
+  <Joker id="blueprint" card stickers="eternal" />
+  <Joker id="mime" card stickers="perishable rental" />
+  <Joker id="baron" card stickers="gold" />
+</CardRow>
+
+```mdx
+<Joker id="blueprint" card stickers="eternal" />
+<Joker id="mime" card stickers="perishable rental" />
+<Joker id="baron" card stickers="gold" />
+```
+
+The stickers are `eternal`, `perishable` and `rental`; the stake win stickers `white`, `red`, `green`, `black`, `blue`, `purple`, `orange` and `gold`; and the Multiplayer stickers `mp_persistent`, `mp_unreliable`, `mp_draining` and `mp_balanced`. Separate several with spaces. A sticker on its own is <Sticker id="eternal" />. In the editor's **Cards** tab, pick stickers under **Stickers on jokers** and the jokers you insert get them.
+
 | Option | Example | What it does |
 | --- | --- | --- |
 | `id` | `id="oops_all_6s"` | The card's name in lowercase with underscores, or its game id (`oops`) |
