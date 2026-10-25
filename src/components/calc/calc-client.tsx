@@ -457,10 +457,15 @@ function BandBar({
           <div
             key={b.label}
             title={`${b.label}: ${pct(share[i])} (rolls ${start.toFixed(3)} – ${from.toFixed(3)})`}
-            className="flex items-center justify-center overflow-hidden text-xs font-semibold whitespace-nowrap text-white transition-[flex-grow] duration-300 [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
-            style={{ flexGrow: share[i], background: b.colour }}
+            // Exactly its share wide: the label is cut off rather than making the band wider.
+            className="flex min-w-0 shrink-0 items-center justify-center overflow-hidden px-1 text-xs font-semibold text-ellipsis whitespace-nowrap text-white transition-[width] duration-300 [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
+            style={{ width: `${share[i] * 100}%`, background: b.colour }}
           >
-            {share[i] >= 0.1 ? `${b.label} ${pct(share[i])}` : ""}
+            {share[i] >= 0.1 ? (
+              <span className="truncate">{`${b.label} ${pct(share[i])}`}</span>
+            ) : (
+              ""
+            )}
           </div>
         );
       })}
@@ -470,7 +475,7 @@ function BandBar({
 
 /**
  * Splits 100% into bands by weight, like the game splitting one random roll between card types:
- * a bar of bands, and the chance of each with its change from the starting values (`compare`).
+ * a bar of bands and the chance of each, with a faded bar of the starting values (`compare`).
  */
 export function BandsView({
   label,
@@ -486,13 +491,8 @@ export function BandsView({
   const now = shares(bands, values);
   const before = shares(bands, baseline);
   const shown = bands
-    .map((b, i) => ({
-      b,
-      now: now[i],
-      diff: now[i] - before[i],
-      was: before[i],
-    }))
-    .filter((x) => x.now > 0 || (compare && x.was > 0));
+    .map((b, i) => ({ b, now: now[i] }))
+    .filter((x) => x.now > 0);
 
   return (
     <div className="col-span-full flex flex-col gap-2">
@@ -509,7 +509,7 @@ export function BandsView({
       )}
       <BandBar bands={bands} share={now} />
       <div className="mt-1 grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-2">
-        {shown.map(({ b, now, diff }) => (
+        {shown.map(({ b, now }) => (
           <div key={b.label} className="rounded-lg bg-fd-secondary/50 p-2.5">
             <span className="flex items-center gap-1.5 text-xs text-fd-muted-foreground">
               <span
@@ -522,21 +522,6 @@ export function BandsView({
             <output className="block text-xl font-bold tabular-nums">
               {pct(now)}
             </output>
-            {compare && (
-              <span
-                className={`text-xs tabular-nums ${
-                  Math.abs(diff) < 0.0005
-                    ? "text-fd-muted-foreground"
-                    : diff > 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                }`}
-              >
-                {Math.abs(diff) < 0.0005
-                  ? "no change"
-                  : `${diff > 0 ? "+" : "−"}${(Math.abs(diff) * 100).toFixed(1)} pts`}
-              </span>
-            )}
           </div>
         ))}
       </div>

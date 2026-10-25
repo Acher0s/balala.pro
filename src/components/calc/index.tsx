@@ -375,7 +375,7 @@ const BAND_COLOURS = [
 /**
  * Splits 100% between bands by their weights, like the game splitting one random roll between
  * card types, as a bar and a chance per band. With `compare`, a faded bar above shows the
- * starting values and each band says how much it changed.
+ * starting values.
  *
  *   <Bands compare="Without vouchers">
  *     <Band label="Joker" value="20" colour="attention" />
