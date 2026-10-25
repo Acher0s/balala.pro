@@ -1,0 +1,58 @@
+---
+title: Shop slot odds
+description: What each shop slot can turn into with your vouchers and deck.
+tags: [tool, shop]
+icon: [voucher:tarot_merchant, voucher:planet_tycoon]
+---
+
+Every card slot in the shop rolls one random number, and that number decides what the slot becomes: a Joker, Tarot, Planet, playing card or Spectral. Each type owns part of the roll, so a voucher that makes one type more likely takes its share from all the others.
+
+Click the vouchers you've bought. A Tycoon needs its Merchant, so buying one buys both.
+
+<Calc id="shop-slot-odds" title="Shop slot odds">
+  <Section title="Vouchers">
+    <Toggles summary="Bought">
+      <Toggle name="tm" card="voucher:tarot_merchant" forced="deck = 3" forcedHint="From Zodiac Deck" />
+      <Toggle name="tt" card="voucher:tarot_tycoon" requires="tm" />
+      <Toggle name="pm" card="voucher:planet_merchant" forced="deck = 3" forcedHint="From Zodiac Deck" />
+      <Toggle name="pt" card="voucher:planet_tycoon" requires="pm" />
+      <Toggle name="mt" card="voucher:magic_trick" />
+      <Toggle name="il" card="voucher:illusion" requires="mt" />
+    </Toggles>
+  </Section>
+  <Section title="Deck">
+    <Input name="deck" label="Deck" default={1} options={[{ label: 'Any other deck', value: 1 }, { label: 'Ghost Deck', value: 2 }, { label: 'Zodiac Deck', value: 3 }]} hint="Ghost Deck adds Spectral cards to the shop; Zodiac Deck starts with both Merchants." />
+  </Section>
+  <Section title="Each shop slot">
+    <Bands compare="Base shop" label="Your shop">
+      <Band label="Joker" value="20" colour="attention" />
+      <Band label="Tarot" value="if(tt, 32, if(tm, 9.6, 4))" colour="tarot" />
+      <Band label="Planet" value="if(pt, 32, if(pm, 9.6, 4))" colour="planet" />
+      <Band label="Playing card" value="if(mt, if(il, 2.4, 4), 0)" colour="inactive" />
+      <Band label="Enhanced card" value="if(il, 1.6, 0)" colour="gold" />
+      <Band label="Spectral" value="if(deck = 2, 2, 0)" colour="spectral" />
+    </Bands>
+    <Show when="or(tm, pm)">
+      The game calls Merchant **2X** and Tycoon **4X**, but they really make that type 2.4 and 8 times as common.
+    </Show>
+    <Show when="il">
+      With Illusion, 40% of the playing cards in the shop are enhanced, and 20% of them get an edition.
+    </Show>
+  </Section>
+</Calc>
+
+## How it works
+
+Every slot's roll is split into bands in a fixed order: Joker, Tarot, Planet, playing card, Spectral. Each band is as wide as its type's rate, out of the total of all rates:
+
+| | Joker | Tarot | Planet | Playing card | Spectral |
+| --- | --- | --- | --- | --- | --- |
+| Base | 20 | 4 | 4 | 0 | 0 |
+| Merchant | | 9.6 | 9.6 | | |
+| Tycoon | | 32 | 32 | | |
+| Magic Trick | | | | 4 | |
+| Ghost Deck | | | | | 2 |
+
+A Tycoon replaces its Merchant's rate instead of adding to it. A new voucher only changes cards that appear after you buy it: rerolls and the next shop, not what's already on the shelf.
+
+Tags that put a free Joker in the shop (like the Uncommon and Rare Tags) fill that slot before the roll, so it always gets that Joker. Booster packs and vouchers have their own slots and don't use these odds.

@@ -1,0 +1,11 @@
+{
+  "title": "Shop tools",
+  "section": "Shop",
+  "pages": [
+    {
+      "kind": "tool",
+      "slug": "shop-slot-odds",
+      "file": "tools/shop-slot-odds.mdx"
+    }
+  ]
+}

@@ -166,6 +166,29 @@ Second column
 `,
   },
   {
+    label: "Card toggles",
+    text: `<Toggles summary="Bought">
+  <Toggle name="tm" card="voucher:tarot_merchant" />
+  <Toggle name="tt" card="voucher:tarot_tycoon" requires="tm" />
+</Toggles>
+`,
+  },
+  {
+    label: "Bands chart",
+    text: `<Bands compare="At the start">
+  <Band label="Joker" value="20" colour="attention" />
+  <Band label="Tarot" value="if(tt, 32, if(tm, 9.6, 4))" colour="tarot" />
+</Bands>
+`,
+  },
+  {
+    label: "Show when",
+    text: `<Show when="tm">
+Only shown while tm is on.
+</Show>
+`,
+  },
+  {
     label: "Formula table",
     text: `<CalcTable
   caption="Table title"

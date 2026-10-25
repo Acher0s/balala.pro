@@ -46,6 +46,11 @@ export const ALLOWED_COMPONENTS = new Set([
   "Section",
   "Value",
   "CalcTable",
+  "Toggle",
+  "Toggles",
+  "Bands",
+  "Band",
+  "Show",
   "Callout",
   "Cards",
   "Card",
@@ -304,6 +309,38 @@ function checkComponent(
         if (typeof ip.default !== "number")
           problems.push(`${line(input)}: <Input> needs a numeric default={…}`);
       }
+      const toggles = descendants(node, "Toggle").map((t) => ({
+        node: t,
+        p: props(t, [], at),
+      }));
+      for (const { node: t, p: tp } of toggles) {
+        if (typeof tp.name !== "string")
+          problems.push(`${line(t)}: <Toggle> needs a name`);
+        else if (names.includes(tp.name))
+          problems.push(`${line(t)}: duplicate input "${tp.name}"`);
+        else names.push(tp.name);
+        const card = /^(\w+):(.+)$/.exec(String(tp.card ?? ""));
+        if (!card || !findItem(card[1] as ItemKind, card[2]))
+          problems.push(
+            `${line(t)}: <Toggle> needs a card, e.g. card="voucher:tarot_merchant"`,
+          );
+      }
+      for (const { node: t, p: tp } of toggles) {
+        if (
+          tp.requires !== undefined &&
+          !toggles.some((o) => o.p.name === tp.requires)
+        )
+          problems.push(
+            `${line(t)}: <Toggle requires="${tp.requires}"> must name another toggle in this calculator`,
+          );
+        if (tp.forced !== undefined)
+          checkFormula(
+            tp.forced,
+            names,
+            `${line(t)}: <Toggle forced>`,
+            problems,
+          );
+      }
       for (const output of descendants(node, "Output")) {
         checkFormula(
           props(output, [], at).value,
@@ -312,6 +349,20 @@ function checkComponent(
           problems,
         );
       }
+      for (const band of descendants(node, "Band"))
+        checkFormula(
+          props(band, [], at).value,
+          names,
+          `${line(band)}: <Band>`,
+          problems,
+        );
+      for (const show of descendants(node, "Show"))
+        checkFormula(
+          props(show, [], at).when,
+          names,
+          `${line(show)}: <Show when>`,
+          problems,
+        );
       return;
     }
     case "CalcTable": {

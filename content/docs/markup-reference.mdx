@@ -504,6 +504,59 @@ Formulas work like spreadsheet formulas.
 | `choose(n, a, b, …)` | The `n`-th value: `choose(2, 10, 20, 30)` is 20. Handy with a dropdown (like CHOOSE in spreadsheets) |
 | `and(a, b)`, `or(a, b)`, `not(a)` | Logic: 1 or 0 |
 
+### Card toggles, bands and conditional notes
+
+For calculators about vouchers and other cards you either have or don't, like the shop odds tool:
+
+<Calc title="Tarot odds">
+  <Section title="Vouchers">
+    <Toggles summary="Bought">
+      <Toggle name="tm" card="voucher:tarot_merchant" />
+      <Toggle name="tt" card="voucher:tarot_tycoon" requires="tm" />
+    </Toggles>
+  </Section>
+  <Section title="Each shop slot">
+    <Bands compare="Base shop" label="Your shop">
+      <Band label="Joker" value="20" colour="attention" />
+      <Band label="Tarot" value="if(tt, 32, if(tm, 9.6, 4))" colour="tarot" />
+      <Band label="Planet" value="4" colour="planet" />
+    </Bands>
+    <Show when="tt">
+      Tarot Tycoon replaces Tarot Merchant's rate; they don't add up.
+    </Show>
+  </Section>
+</Calc>
+
+```mdx
+<Toggles summary="Bought">
+  <Toggle name="tm" card="voucher:tarot_merchant" />
+  <Toggle name="tt" card="voucher:tarot_tycoon" requires="tm" />
+</Toggles>
+<Bands compare="Base shop" label="Your shop">
+  <Band label="Joker" value="20" colour="attention" />
+  <Band label="Tarot" value="if(tt, 32, if(tm, 9.6, 4))" colour="tarot" />
+  <Band label="Planet" value="4" colour="planet" />
+</Bands>
+<Show when="tt">
+  Tarot Tycoon replaces Tarot Merchant's rate; they don't add up.
+</Show>
+```
+
+**`<Toggle>`** is an input that's 1 when on and 0 when off, shown as the card's picture (`card` works like a page icon). Readers click it to switch it.
+
+| Option | Example | What it does |
+| --- | --- | --- |
+| `requires` | `requires="tm"` | Turning this on turns that toggle on too, and turning that off turns this off. A toggle right after the one it requires gets an arrow in between |
+| `forced` | `forced="deck = 3"` | While the formula is true, the toggle counts as on and can't be changed |
+| `forcedHint` | `forcedHint="From Zodiac Deck"` | Says why it's locked on |
+| `label`, `hint`, `default` | `default={1}` | Its own name instead of the card's, a line below it, and starting on |
+
+Put toggles in **`<Toggles>`** to lay them out in a row. With `summary`, a line below lists the ones that are on.
+
+**`<Bands>`** splits 100% between its `<Band>`s by their weights, like the game splitting one random roll between card types. Each band has a `label`, a weight formula as `value` and a `colour`: a game colour (`attention`, `tarot`, `planet`, `spectral`, `gold`, `inactive`, `mult`, `chips` and so on) or a hex colour like `#ff9a00`. With `compare`, a faded bar above shows the bands with every input at its starting value, and each band shows how much it changed. Hover a band to see its range of the roll.
+
+**`<Show when="…">`** shows what's inside only while its formula is true.
+
 ### Tables from a formula
 
 <CalcTable caption="Interest by money and cap" value="min(floor(money / 5), cap)" rows={{ name: 'money', label: 'Money', from: 0, to: 40, step: 10 }} cols={{ name: 'cap', label: 'Cap', from: 5, to: 20, step: 5 }} format="money" decimals={0} />

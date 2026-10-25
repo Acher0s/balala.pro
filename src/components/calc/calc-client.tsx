@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Lock } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -13,9 +14,42 @@ import { compile } from "@/lib/formula";
 
 type Values = Record<string, number>;
 
+/**
+ * How a <Toggle> relates to the others: turning it on also turns on the one it `requires`
+ * (a Tycoon needs its Merchant); turning that one off turns this off. While its `forced` formula
+ * is true it counts as on and can't be changed (Zodiac Deck starts with both Merchants).
+ */
+export interface ToggleRule {
+  name: string;
+  requires?: string;
+  forced?: string;
+}
+
 interface CalcState {
+  /** What formulas see: the inputs, with forced toggles on. */
   values: Values;
+  /** The same for the starting values, for comparing against (<Bands compare>). */
+  baseline: Values;
+  /** Toggles that are on because their `forced` formula is true. */
+  forcedOn: Set<string>;
   setValue: (name: string, value: number) => void;
+  setToggle: (name: string, on: boolean) => void;
+}
+
+/** Inputs as the formulas see them: every toggle whose `forced` formula holds counts as on. */
+function withForced(values: Values, rules: ToggleRule[]) {
+  const forcedOn = new Set<string>();
+  for (const rule of rules) {
+    if (!rule.forced) continue;
+    try {
+      if (compile(rule.forced).evaluate(values)) forcedOn.add(rule.name);
+    } catch {
+      // A formula that can't be worked out yet (an empty field) forces nothing.
+    }
+  }
+  const out = { ...values };
+  for (const name of forcedOn) out[name] = 1;
+  return { values: out, forcedOn };
 }
 
 const CalcContext = createContext<CalcState | null>(null);
@@ -35,11 +69,13 @@ export function CalcProvider({
   id,
   title,
   defaults,
+  toggles = [],
   children,
 }: {
   id?: string;
   title?: string;
   defaults: Values;
+  toggles?: ToggleRule[];
   children: ReactNode;
 }) {
   const [values, setValues] = useState<Values>(defaults);
@@ -59,16 +95,46 @@ export function CalcProvider({
       setValues((v) => ({ ...v, ...restored }));
   }, [id, defaults]);
 
-  const state = useMemo<CalcState>(
-    () => ({
-      values,
+  const state = useMemo<CalcState>(() => {
+    const current = withForced(values, toggles);
+    return {
+      values: current.values,
+      baseline: withForced(defaults, toggles).values,
+      forcedOn: current.forcedOn,
       setValue: (name, value) => {
         setValues((v) => ({ ...v, [name]: value }));
         setCopied(false);
       },
-    }),
-    [values],
-  );
+      setToggle: (name, on) => {
+        setValues((v) => {
+          const next = { ...v, [name]: on ? 1 : 0 };
+          if (on) {
+            // Turn on what it needs, and what that needs.
+            const seen = new Set([name]);
+            let need = toggles.find((t) => t.name === name)?.requires;
+            while (need && !seen.has(need)) {
+              seen.add(need);
+              next[need] = 1;
+              need = toggles.find((t) => t.name === need)?.requires;
+            }
+          } else {
+            // Turn off everything that needs it, and what needs those.
+            let changed = true;
+            while (changed) {
+              changed = false;
+              for (const t of toggles)
+                if (t.requires && next[t.name] && !next[t.requires]) {
+                  next[t.name] = 0;
+                  changed = true;
+                }
+            }
+          }
+          return next;
+        });
+        setCopied(false);
+      },
+    };
+  }, [values, defaults, toggles]);
 
   function shareUrl() {
     const url = new URL(window.location.href);
@@ -247,4 +313,253 @@ export function Output({ label, value, format, decimals, hint }: OutputProps) {
       {hint && <span className="text-xs text-fd-muted-foreground">{hint}</span>}
     </div>
   );
+}
+
+/**
+ * A card that's either on or off (1 or 0 in formulas), e.g. a voucher you've bought. Off it's
+ * greyed out like an unbought voucher in the game; on it's in full colour with a ring and a
+ * check mark. Forced-on toggles show a lock and say why.
+ */
+export function ToggleTile({
+  name,
+  label,
+  image,
+  forcedHint,
+  hint,
+}: {
+  name: string;
+  label: string;
+  image: string;
+  forcedHint?: string;
+  hint?: string;
+}) {
+  const { values, forcedOn, setToggle } = useCalc("Toggle");
+  const on = Boolean(values[name]);
+  const locked = forcedOn.has(name);
+  const title = locked
+    ? forcedHint
+    : on
+      ? `${label}: on. Click to turn off.`
+      : `${label}: off. Click to turn on.`;
+
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={locked}
+      title={title}
+      onClick={() => setToggle(name, !on)}
+      // On: the game's orange (attention) border and check, so it reads at a glance whatever
+      // the card's colours; off: a dashed outline and a faded, grey card.
+      className={`relative flex w-24 flex-col items-center gap-1 rounded-lg border-2 p-1.5 text-center text-xs leading-tight transition ${
+        on
+          ? "border-[#ff9a00] bg-[#ff9a00]/15 font-semibold"
+          : "border-dashed text-fd-muted-foreground hover:border-fd-muted-foreground hover:bg-fd-accent"
+      } ${locked ? "cursor-default" : ""}`}
+    >
+      {/* biome-ignore lint/performance/noImgElement: small pixel-art card */}
+      <img
+        src={image}
+        alt=""
+        className={`h-[95px] w-[71px] transition ${on ? "" : "opacity-35 grayscale"}`}
+        style={{ imageRendering: "pixelated" }}
+      />
+      {on && (
+        <span
+          aria-hidden
+          className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[#ff9a00] text-white shadow"
+        >
+          {locked ? (
+            <Lock className="size-3" />
+          ) : (
+            <Check className="size-3.5" />
+          )}
+        </span>
+      )}
+      <span>{label}</span>
+      {locked && forcedHint && (
+        <span className="text-[10px] font-normal text-fd-muted-foreground">
+          {forcedHint}
+        </span>
+      )}
+      {hint && !locked && (
+        <span className="text-[10px] font-normal text-fd-muted-foreground">
+          {hint}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** "Bought: Tarot Merchant, Magic Trick", listing the toggles that are on. */
+export function ToggleSummary({
+  prefix,
+  toggles,
+}: {
+  prefix: string;
+  toggles: { name: string; label: string }[];
+}) {
+  const { values } = useCalc("Toggles");
+  const on = toggles.filter((t) => values[t.name]).map((t) => t.label);
+  return (
+    <p className="text-sm">
+      <span className="font-medium">{prefix}:</span>{" "}
+      <span className={on.length ? "" : "text-fd-muted-foreground"}>
+        {on.length ? on.join(", ") : "nothing"}
+      </span>
+    </p>
+  );
+}
+
+export interface BandProps {
+  label: string;
+  /** A formula for this band's weight; bands share 0 to 100% in proportion. */
+  value: string;
+  /** A game colour name (tarot, planet, spectral, attention, inactive…) or a #hex colour. */
+  colour: string;
+}
+
+function shares(bands: BandProps[], values: Values) {
+  const weights = bands.map((b) => {
+    try {
+      const v = compile(b.value).evaluate(values);
+      return Number.isFinite(v) && v > 0 ? v : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  return weights.map((w) => (total ? w / total : 0));
+}
+
+const pct = (x: number) => `${(x * 100).toFixed(1).replace(/\.0$/, "")}%`;
+
+/** One bar of bands, each as wide as its share; the roll range shows on hover. */
+function BandBar({
+  bands,
+  share,
+  faded,
+}: {
+  bands: BandProps[];
+  share: number[];
+  faded?: boolean;
+}) {
+  let from = 0;
+  return (
+    <div
+      className={`flex h-9 overflow-hidden rounded-lg border ${faded ? "opacity-50" : ""}`}
+    >
+      {bands.map((b, i) => {
+        const start = from;
+        from += share[i];
+        if (!share[i]) return null;
+        return (
+          <div
+            key={b.label}
+            title={`${b.label}: ${pct(share[i])} (rolls ${start.toFixed(3)} – ${from.toFixed(3)})`}
+            className="flex items-center justify-center overflow-hidden text-xs font-semibold whitespace-nowrap text-white transition-[flex-grow] duration-300 [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
+            style={{ flexGrow: share[i], background: b.colour }}
+          >
+            {share[i] >= 0.1 ? `${b.label} ${pct(share[i])}` : ""}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Splits 100% into bands by weight, like the game splitting one random roll between card types:
+ * a bar of bands, and the chance of each with its change from the starting values (`compare`).
+ */
+export function BandsView({
+  label,
+  compare,
+  bands,
+}: {
+  label?: string;
+  /** Label for a faded bar of the starting values above the current one. */
+  compare?: string;
+  bands: BandProps[];
+}) {
+  const { values, baseline } = useCalc("Bands");
+  const now = shares(bands, values);
+  const before = shares(bands, baseline);
+  const shown = bands
+    .map((b, i) => ({
+      b,
+      now: now[i],
+      diff: now[i] - before[i],
+      was: before[i],
+    }))
+    .filter((x) => x.now > 0 || (compare && x.was > 0));
+
+  return (
+    <div className="col-span-full flex flex-col gap-2">
+      {compare && (
+        <>
+          <span className="text-xs text-fd-muted-foreground">{compare}</span>
+          <BandBar bands={bands} share={before} faded />
+        </>
+      )}
+      {(label || compare) && (
+        <span className="text-xs text-fd-muted-foreground">
+          {label ?? "Now"}
+        </span>
+      )}
+      <BandBar bands={bands} share={now} />
+      <div className="mt-1 grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-2">
+        {shown.map(({ b, now, diff }) => (
+          <div key={b.label} className="rounded-lg bg-fd-secondary/50 p-2.5">
+            <span className="flex items-center gap-1.5 text-xs text-fd-muted-foreground">
+              <span
+                aria-hidden
+                className="size-2.5 rounded-sm"
+                style={{ background: b.colour }}
+              />
+              {b.label}
+            </span>
+            <output className="block text-xl font-bold tabular-nums">
+              {pct(now)}
+            </output>
+            {compare && (
+              <span
+                className={`text-xs tabular-nums ${
+                  Math.abs(diff) < 0.0005
+                    ? "text-fd-muted-foreground"
+                    : diff > 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                {Math.abs(diff) < 0.0005
+                  ? "no change"
+                  : `${diff > 0 ? "+" : "−"}${(Math.abs(diff) * 100).toFixed(1)} pts`}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Shows its content only while `when` is true, e.g. a note that only matters with a voucher. */
+export function Show({
+  when,
+  children,
+}: {
+  when: string;
+  children: ReactNode;
+}) {
+  const { values } = useCalc("Show");
+  let visible = false;
+  try {
+    visible = Boolean(compile(when).evaluate(values));
+  } catch {
+    visible = false;
+  }
+  return visible ? (
+    <div className="col-span-full text-sm">{children}</div>
+  ) : null;
 }
