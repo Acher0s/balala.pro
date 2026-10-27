@@ -41,6 +41,8 @@ export interface PublishedPage {
   frontmatter: Frontmatter;
   /** The owner's display name, shown as the author when the page doesn't name one. */
   ownerName: string | null;
+  /** The owner, who (with admins) may edit it. */
+  authorId: string | null;
 }
 
 function toPublished(g: Guide, ownerName: string | null = null): PublishedPage {
@@ -55,6 +57,7 @@ function toPublished(g: Guide, ownerName: string | null = null): PublishedPage {
     publishedAt: g.publishedAt,
     frontmatter: safeFrontmatter(g.publishedSource, g.slug),
     ownerName,
+    authorId: g.authorId,
   };
 }
 

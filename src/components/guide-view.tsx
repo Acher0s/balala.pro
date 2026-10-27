@@ -5,6 +5,7 @@ import {
   DocsTitle,
   type FooterProps,
 } from "fumadocs-ui/layouts/notebook/page";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { GuideMeta } from "@/components/guide-meta";
 import { getMDXComponents } from "@/components/mdx";
@@ -19,6 +20,7 @@ export async function GuideView({
   articleOnly = false,
   pager = {},
   partOf = null,
+  editUrl,
 }: {
   cacheKey: string;
   source: string;
@@ -30,6 +32,8 @@ export async function GuideView({
   pager?: FooterProps["items"];
   /** The main guide this page is a part of, linked above the title. */
   partOf?: { title: string; url: string } | null;
+  /** The Studio editor, for someone who may edit the page: shown as an Edit button. */
+  editUrl?: string;
 }) {
   await ensureCardOverrides();
   const { frontmatter, Body, toc } = await compileGuideCached(
@@ -82,12 +86,21 @@ export async function GuideView({
           {frontmatter.description}
         </DocsDescription>
       )}
-      <div className="border-b pb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-6">
         <GuideMeta
           author={frontmatter.author}
           patch={frontmatter.patch}
           tags={frontmatter.tags}
         />
+        {editUrl && (
+          <Link
+            href={editUrl}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-fd-accent"
+          >
+            <Pencil aria-hidden className="size-3.5" />
+            Edit
+          </Link>
+        )}
       </div>
       <DocsBody>
         <Body components={getMDXComponents()} />
