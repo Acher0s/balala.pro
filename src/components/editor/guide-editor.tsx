@@ -633,7 +633,7 @@ export function GuideEditor({
             {tab === "cards" && (
               <CardPicker
                 catalog={catalog}
-                onPick={(entry, mode, stickers) =>
+                onPick={(entry, mode, { stickers, edition }) =>
                   mode === "icon" || mode === "add-icon"
                     ? setIcon(entry, mode === "add-icon")
                     : insert((sel) =>
@@ -641,6 +641,7 @@ export function GuideEditor({
                           selected: sel,
                           asCard: mode === "card",
                           stickers,
+                          edition,
                         }),
                       )
                 }
@@ -959,13 +960,21 @@ function CardPicker({
   onPick,
 }: {
   catalog: CatalogEntry[];
-  /** `stickers`: ids of the stickers to put on a joker, e.g. ["eternal", "rental"]. */
-  onPick: (e: CatalogEntry, mode: PickMode, stickers: string[]) => void;
+  /**
+   * `stickers`: ids of the stickers to put on a joker, e.g. ["eternal", "rental"];
+   * `edition`: the edition to give cards that can have one ("" for none).
+   */
+  onPick: (
+    e: CatalogEntry,
+    mode: PickMode,
+    extras: { stickers: string[]; edition: string },
+  ) => void;
 }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<CatalogEntry["kind"] | "all">("all");
   const [mode, setMode] = useState<PickMode>("text");
   const [stickers, setStickers] = useState<string[]>([]);
+  const [edition, setEdition] = useState("");
   const stickerCards = catalog.filter((e) => e.kind === "sticker");
 
   const results = useMemo(() => {
@@ -1050,12 +1059,28 @@ function CardPicker({
           )}
         </fieldset>
       )}
+      {(mode === "text" || mode === "card") && (
+        <label className="flex flex-col gap-1 text-xs">
+          Edition on jokers, consumables and playing cards
+          <select
+            value={edition}
+            onChange={(e) => setEdition(e.target.value)}
+            className={field}
+          >
+            <option value="">None</option>
+            <option value="foil">Foil</option>
+            <option value="holo">Holographic</option>
+            <option value="polychrome">Polychrome</option>
+            <option value="negative">Negative</option>
+          </select>
+        </label>
+      )}
       <ul className="grid grid-cols-3 gap-2">
         {results.map((e) => (
           <li key={`${e.kind}:${e.id}`}>
             <button
               type="button"
-              onClick={() => onPick(e, mode, stickers)}
+              onClick={() => onPick(e, mode, { stickers, edition })}
               title={`${e.name} (${e.source ?? e.kind})`}
               className="flex w-full flex-col items-center gap-1 rounded-lg p-1 text-center text-[11px] leading-tight hover:bg-fd-accent"
             >

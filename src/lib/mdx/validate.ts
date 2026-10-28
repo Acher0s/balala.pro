@@ -11,7 +11,7 @@
  */
 import type { Node as EsNode, Expression, Program } from "estree";
 import { isSkillLevel, LEVELS } from "@/components/level/levels";
-import { findItem, getPlayingCard } from "@/data/game";
+import { EDITION_IDS, findItem, getPlayingCard } from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import { assertKnownVariables, compile as compileFormula } from "@/lib/formula";
 
@@ -257,6 +257,7 @@ function checkComponent(
         problems.push(
           `${at}: unknown sticker "${sticker}" (e.g. eternal, perishable, rental)`,
         );
+    checkEdition(p.edition, at, problems);
     return;
   }
   switch (name) {
@@ -296,6 +297,7 @@ function checkComponent(
         problems.push(`${at}: unknown enhancement "${p.enhancement}"`);
       if (p.seal && !findItem("seal", String(p.seal)))
         problems.push(`${at}: unknown seal "${p.seal}"`);
+      checkEdition(p.edition, at, problems);
       return;
     case "Calc": {
       const names: string[] = [];
@@ -457,4 +459,15 @@ export function remarkValidateGuide(options: ValidateOptions = {}) {
     walk(tree, problems, false, options);
     if (problems.length) throw new GuideValidationError(problems);
   };
+}
+
+/** An `edition` prop must be one the game has. */
+function checkEdition(edition: unknown, at: string, problems: string[]) {
+  if (
+    edition !== undefined &&
+    !(EDITION_IDS as readonly unknown[]).includes(edition)
+  )
+    problems.push(
+      `${at}: unknown edition "${edition}". Use one of: ${EDITION_IDS.join(", ")}`,
+    );
 }

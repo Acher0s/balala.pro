@@ -168,6 +168,24 @@ Booster packs come in a few pictures each. The pack's name gives the first one; 
 
 The stickers are `eternal`, `perishable` and `rental`; the stake win stickers `white`, `red`, `green`, `black`, `blue`, `purple`, `orange` and `gold`; and the Multiplayer stickers `mp_persistent`, `mp_unreliable`, `mp_draining` and `mp_balanced`. Separate several with spaces. A sticker on its own is <Sticker id="eternal" />. In the editor's **Cards** tab, pick stickers under **Stickers on jokers** and the jokers you insert get them.
 
+**Editions** shine like in the game, with the game's own animations: `edition` is `foil`, `holo`, `polychrome` or `negative`. It works on jokers, consumables and playing cards, as a large card or inline like <Joker id="baron" edition="polychrome" />. The shine follows your mouse over the card, and the hover box says what the edition does.
+
+<CardRow>
+  <Joker id="blueprint" card edition="foil" />
+  <Joker id="mime" card edition="holo" />
+  <Joker id="baron" card edition="polychrome" />
+  <Joker id="dna" card edition="negative" stickers="eternal" />
+  <PlayingCard card="KH" enhancement="steel" seal="red" edition="polychrome" />
+</CardRow>
+
+```mdx
+<Joker id="blueprint" card edition="foil" />
+<Joker id="dna" card edition="negative" stickers="eternal" />
+<PlayingCard card="KH" enhancement="steel" seal="red" edition="polychrome" />
+```
+
+In the editor's **Cards** tab, pick one under **Edition** and the cards you insert get it.
+
 | Option | Example | What it does |
 | --- | --- | --- |
 | `id` | `id="oops_all_6s"` | The card's name in lowercase with underscores, or its game id (`oops`) |

@@ -45,10 +45,19 @@ export const KIND_LABELS: Record<ItemKind | "card", string> = {
   sticker: "Stickers",
 };
 
+/** Kinds that can have an edition in the game: jokers, consumables and playing cards. */
+export const EDITION_KINDS: CatalogEntry["kind"][] = [
+  "joker",
+  "tarot",
+  "planet",
+  "spectral",
+  "card",
+];
+
 /**
  * Markup for a card reference. With `selected` text, the reference keeps that text
- * as written: <Joker id="mime">mime setup</Joker>. Jokers can get stickers:
- * <Joker id="mime" stickers="eternal rental" />.
+ * as written: <Joker id="mime">mime setup</Joker>. Jokers can get stickers and cards that can
+ * have one an edition: <Joker id="mime" edition="foil" stickers="eternal rental" />.
  */
 export function cardMarkup(
   entry: CatalogEntry,
@@ -56,16 +65,26 @@ export function cardMarkup(
     selected,
     asCard,
     stickers = [],
-  }: { selected?: string; asCard?: boolean; stickers?: string[] },
+    edition,
+  }: {
+    selected?: string;
+    asCard?: boolean;
+    stickers?: string[];
+    edition?: string;
+  },
 ) {
+  const editionAttr =
+    edition && EDITION_KINDS.includes(entry.kind)
+      ? ` edition="${edition}"`
+      : "";
   if (entry.kind === "card") {
     // Playing cards are a picture only; keep any selected text next to it.
-    const markup = `<PlayingCard card="${entry.id}" />`;
+    const markup = `<PlayingCard card="${entry.id}"${editionAttr} />`;
     return selected ? `${selected} ${markup}` : markup;
   }
   const tag = TAG_BY_KIND[entry.kind];
   const withStickers = entry.kind === "joker" && stickers.length > 0;
-  const attrs = `id="${entry.id}"${asCard ? " card" : ""}${withStickers ? ` stickers="${stickers.join(" ")}"` : ""}`;
+  const attrs = `id="${entry.id}"${asCard ? " card" : ""}${editionAttr}${withStickers ? ` stickers="${stickers.join(" ")}"` : ""}`;
   return selected
     ? `<${tag} ${attrs}>${selected}</${tag}>`
     : `<${tag} ${attrs} />`;

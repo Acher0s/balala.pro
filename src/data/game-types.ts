@@ -61,4 +61,13 @@ export interface GameData {
   cards: Record<string, PlayingCardData>;
   /** The blank card the fronts are drawn on. */
   baseCard: string;
+  /**
+   * Editions' names and effect text, keyed foil, holo, polychrome, negative, plus
+   * negative_consumable (Negative's text on a tarot, planet or spectral).
+   */
+  editions: Record<string, { name: string; text: EffectLine[] }>;
 }
+
+/** The editions a card can have, as written in guides: <Joker id="mime" edition="foil" />. */
+export const EDITION_IDS = ["foil", "holo", "polychrome", "negative"] as const;
+export type EditionId = (typeof EDITION_IDS)[number];

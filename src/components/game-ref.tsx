@@ -1,14 +1,31 @@
 import type { ReactNode } from "react";
-import { colourOf, EffectText } from "@/components/effect-text";
+import { EditionCard } from "@/components/edition-card";
+import { COLOURS, colourOf, EffectText } from "@/components/effect-text";
 import { FitRow } from "@/components/fit-row";
 import {
   baseCardImage,
+  type EditionId,
   type GameItem,
+  getEdition,
   getItem,
   getPlayingCard,
   type ItemKind,
   sourceLabel,
 } from "@/data/game";
+
+/** An edition on a card: which one, and its name and text for the hover card. */
+interface EditionInfo extends ReturnType<typeof getEdition> {
+  id: EditionId;
+}
+
+/** An `edition` prop ("foil", "holo", "polychrome", "negative"); unknown ones throw. */
+function resolveEdition(
+  id: string | undefined,
+  kind: ItemKind | "card",
+): EditionInfo | undefined {
+  if (!id) return undefined;
+  return { id: id as EditionId, ...getEdition(id, kind) };
+}
 
 function badge(item: GameItem) {
   const parts: string[] = [item.rarity ?? item.kind];
@@ -58,21 +75,37 @@ const hoverScale = (item: GameItem) => (item.w < 100 ? 2 : 1);
 
 /**
  * A card's sprite with stickers laid over it, the way the game draws them: each sticker is a
- * full-card layer on top. Sized like the sprite underneath (by `scale` or `className`).
+ * full-card layer on top. With an edition it's animated with the game's shaders, stickers on top.
+ * Sized like the sprite underneath (by `scale` or `className`).
  */
 function CardPicture({
   item,
   stickers,
+  edition,
   alt,
   scale,
   className,
 }: {
   item: GameItem;
   stickers: GameItem[];
+  edition?: EditionInfo;
   alt: string;
   scale?: number;
   className?: string;
 }) {
+  if (edition)
+    return (
+      <EditionCard
+        layers={[item.image]}
+        overlays={stickers.flatMap((s) => (s.overlay ? [s.overlay] : []))}
+        edition={edition.id}
+        alt={alt}
+        width={scale === undefined ? undefined : item.w * scale}
+        height={scale === undefined ? undefined : item.h * scale}
+        className={className}
+        pixelated={scale !== undefined}
+      />
+    );
   if (stickers.length === 0)
     return <Sprite item={item} alt={alt} scale={scale} className={className} />;
   return (
@@ -101,15 +134,39 @@ function resolveStickers(names: string | undefined): GameItem[] {
     .map((name) => getItem("sticker", name));
 }
 
+/** The edition badge colour: the game's dark_edition blue. */
+const EDITION_COLOUR = COLOURS.dark_edition;
+
 export function HoverCard({
   item,
   stickers = [],
+  edition,
 }: {
   item: GameItem;
   stickers?: GameItem[];
+  edition?: EditionInfo;
 }) {
   const colour = colourOf(item);
   const source = sourceLabel(item.source);
+  // Extra boxes beside the card, as in the game: the edition first, then each sticker.
+  const extras = [
+    ...(edition
+      ? [
+          {
+            key: `edition:${edition.id}`,
+            name: edition.name,
+            text: edition.text,
+            colour: EDITION_COLOUR,
+          },
+        ]
+      : []),
+    ...stickers.map((s) => ({
+      key: s.key,
+      name: s.name,
+      text: s.text,
+      colour: s.colour ?? "#6b7f84",
+    })),
+  ];
   return (
     <span
       role="tooltip"
@@ -124,6 +181,7 @@ export function HoverCard({
         <CardPicture
           item={item}
           stickers={stickers}
+          edition={edition}
           alt=""
           scale={hoverScale(item)}
         />
@@ -134,7 +192,7 @@ export function HoverCard({
         )}
         <span className="text-base font-bold text-white">{item.name}</span>
         <EffectText lines={item.text} />
-        {/* Like the game: the card's badge, then one per sticker that has one (Eternal, Rental…). */}
+        {/* Like the game: the card's badge, its edition's, then one per sticker that has one. */}
         <span className="flex flex-wrap justify-center gap-1">
           <span
             className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white"
@@ -142,6 +200,14 @@ export function HoverCard({
           >
             {badge(item)}
           </span>
+          {edition && (
+            <span
+              className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white"
+              style={{ background: EDITION_COLOUR }}
+            >
+              {edition.name}
+            </span>
+          )}
           {stickers
             .filter((s) => s.colour)
             .map((s) => (
@@ -155,17 +221,17 @@ export function HoverCard({
             ))}
         </span>
       </span>
-      {/* What each sticker does, in boxes beside the card's like the game (stacked on phones). */}
-      {stickers.length > 0 && (
+      {/* What the edition and stickers do, in boxes beside the card's (stacked on phones). */}
+      {extras.length > 0 && (
         <span className="flex w-64 flex-col gap-2 sm:w-48">
-          {stickers.map((s) => (
+          {extras.map((x) => (
             <span
-              key={s.key}
+              key={x.key}
               className="flex flex-col items-center gap-1 rounded-xl border-2 bg-[#3a5055] p-2 shadow-xl"
-              style={{ borderColor: s.colour ?? "#6b7f84" }}
+              style={{ borderColor: x.colour }}
             >
-              <span className="text-sm font-bold text-white">{s.name}</span>
-              <EffectText lines={s.text} />
+              <span className="text-sm font-bold text-white">{x.name}</span>
+              <EffectText lines={x.text} />
             </span>
           ))}
         </span>
@@ -183,6 +249,8 @@ interface RefProps {
   card?: boolean;
   /** Stickers on the card, as in the game: stickers="eternal rental". */
   stickers?: string;
+  /** An edition, animated like in the game: foil, holo, polychrome or negative. */
+  edition?: string;
   /** Text to show instead of the item's name, e.g. <Tarot id="hierophant">hiero</Tarot>. */
   children?: ReactNode;
 }
@@ -193,12 +261,18 @@ function GameRef({
   plural,
   card,
   stickers: stickerNames,
+  edition: editionId,
   children,
 }: RefProps & { kind: ItemKind }) {
   const item = getItem(kind, id);
   const colour = colourOf(item);
   const stickers = resolveStickers(stickerNames);
-  const label = [item.name, ...stickers.map((s) => s.name)].join(", ");
+  const edition = resolveEdition(editionId, kind);
+  const label = [
+    item.name,
+    ...(edition ? [edition.name] : []),
+    ...stickers.map((s) => s.name),
+  ].join(", ");
 
   if (card) {
     return (
@@ -210,6 +284,7 @@ function GameRef({
           <CardPicture
             item={item}
             stickers={stickers}
+            edition={edition}
             alt={label}
             scale={hoverScale(item)}
           />
@@ -217,7 +292,7 @@ function GameRef({
         <span className="text-center text-xs font-semibold leading-tight">
           {children ?? item.name}
         </span>
-        <HoverCard item={item} stickers={stickers} />
+        <HoverCard item={item} stickers={stickers} edition={edition} />
       </span>
     );
   }
@@ -232,6 +307,7 @@ function GameRef({
         <CardPicture
           item={item}
           stickers={stickers}
+          edition={edition}
           alt=""
           className="inline-block h-[1.4em] w-auto self-center"
         />
@@ -242,7 +318,7 @@ function GameRef({
           </>
         )}
       </button>
-      <HoverCard item={item} stickers={stickers} />
+      <HoverCard item={item} stickers={stickers} edition={edition} />
     </span>
   );
 }
@@ -300,24 +376,48 @@ export function CardRow({
 }
 
 /**
- * A playing card drawn the way the game layers it:
- * <PlayingCard card="KH" enhancement="steel" seal="red" />
+ * A playing card drawn the way the game layers it, optionally with an animated edition:
+ * <PlayingCard card="KH" enhancement="steel" seal="red" edition="foil" />
  */
 export function PlayingCard({
   card,
   enhancement,
   seal,
+  edition: editionId,
 }: {
   card: string;
   enhancement?: string;
   seal?: string;
+  edition?: string;
 }) {
   const front = getPlayingCard(card);
   const enh = enhancement ? getItem("enhancement", enhancement) : undefined;
   const sl = seal ? getItem("seal", seal) : undefined;
-  const label = [`${front.value} of ${front.suit}`, enh?.name, sl?.name]
+  const edition = resolveEdition(editionId, "card");
+  const label = [
+    `${front.value} of ${front.suit}`,
+    enh?.name,
+    edition?.name,
+    sl?.name,
+  ]
     .filter(Boolean)
     .join(", ");
+  if (edition)
+    return (
+      <span className="not-prose inline-block align-top">
+        <EditionCard
+          layers={[
+            enh?.image ?? baseCardImage,
+            ...(enh?.key === "m_stone" ? [] : [front.image]),
+          ]}
+          overlays={sl?.overlay ? [sl.overlay] : []}
+          edition={edition.id}
+          alt={label}
+          width={142}
+          height={190}
+        />
+      </span>
+    );
   // Every layer is a full 142×190 card cell, stacked at native size so pixels stay crisp.
   const layer = (image: string) => (
     <span className="absolute inset-0">

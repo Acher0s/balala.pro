@@ -373,6 +373,7 @@ const data: GameData = {
   },
   cards: {},
   baseCard: "/game/enhancement/base.webp",
+  editions: {},
 };
 
 for (const [key, center] of Object.entries(centers)) {
@@ -929,6 +930,21 @@ for (const [key, card] of Object.entries(playingCards)) {
     suit: String(card.suit),
     value: String(card.value),
     image: `/game/card/${key}.webp`,
+  };
+}
+
+// Editions (P_CENTERS set "Edition"): their text and value (config.extra), for cards shown with
+// an edition in guides. Their looks come from the game's shaders (public/game/shaders).
+for (const [key, desc] of Object.entries(descriptions.Edition ?? {})) {
+  if (key === "e_base") continue;
+  const id = key.replace(/^e_/, "");
+  const config = (centers[key.replace(/_consumable$/, "")]?.config ??
+    {}) as Table;
+  const value =
+    typeof config.extra === "number" ? formatNumber(config.extra) : "?";
+  data.editions[id] = {
+    name: desc.name,
+    text: desc.text.map((l) => parseLine(l, [value])),
   };
 }
 

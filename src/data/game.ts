@@ -4,15 +4,23 @@
  */
 import { parseEffectLine } from "@/lib/effect-text";
 import generated from "./game.generated.json";
-import type {
-  GameData,
-  GameItem,
-  ItemKind,
-  PlayingCardData,
+import {
+  EDITION_IDS,
+  type GameData,
+  type GameItem,
+  type ItemKind,
+  type PlayingCardData,
 } from "./game-types";
 import { type ItemOverride, overrides } from "./overrides";
 
-export type { GameItem, ItemKind, Rarity, TextSegment } from "./game-types";
+export type {
+  EditionId,
+  GameItem,
+  ItemKind,
+  Rarity,
+  TextSegment,
+} from "./game-types";
+export { EDITION_IDS };
 
 const data = generated as GameData;
 
@@ -148,6 +156,26 @@ export function getPlayingCard(card: string): PlayingCardData {
 
 export const baseCardImage = data.baseCard;
 export const gameVersion = data.version;
+
+/**
+ * An edition's name and text as the game shows them. Negative on a consumable gives a consumable
+ * slot instead of a Joker slot. Unknown editions throw, so a typo fails the build.
+ */
+export function getEdition(id: string, kind?: ItemKind | "card") {
+  const consumable =
+    kind === "tarot" || kind === "planet" || kind === "spectral";
+  const key = id === "negative" && consumable ? "negative_consumable" : id;
+  const edition =
+    (EDITION_IDS as readonly string[]).includes(id) &&
+    Object.hasOwn(data.editions, key)
+      ? data.editions[key]
+      : undefined;
+  if (!edition)
+    throw new Error(
+      `Unknown edition "${id}". Use one of: ${EDITION_IDS.join(", ")}.`,
+    );
+  return edition;
+}
 
 /** The item with exactly this id (no name matching), or undefined. */
 export function getItemExact(kind: ItemKind, id: string): GameItem | undefined {
