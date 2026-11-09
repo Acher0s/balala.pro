@@ -35,6 +35,7 @@ import {
   Voucher,
 } from "./game-ref";
 import { GuideImage } from "./guide-image";
+import { IdolWeights } from "./idol";
 import { Level } from "./level";
 import { TierList } from "./tierlist/tier-list-embed";
 import { Tool } from "./tool-embed";
@@ -64,6 +65,7 @@ export function getMDXComponents(components?: MDXComponents) {
     PlayingCard,
     CardRow,
     Level,
+    IdolWeights,
     Center,
     Columns,
     Column,

@@ -1,0 +1,11 @@
+{
+  "title": "Joker tools",
+  "section": "Jokers",
+  "pages": [
+    {
+      "kind": "tool",
+      "slug": "idol-weights",
+      "file": "tools/idol-weights.mdx"
+    }
+  ]
+}
