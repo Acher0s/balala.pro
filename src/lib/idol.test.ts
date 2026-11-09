@@ -95,3 +95,31 @@ describe("Idol weights (The Order)", () => {
     expect(idolWeights([])).toEqual({ entries: [], stones: 0, total: 0 });
   });
 });
+
+describe("Idol deck links", () => {
+  it("round-trips a deck, grouping identical cards", async () => {
+    const { encodeIdolDeck, decodeIdolDeck } = await import("./idol");
+    const deck = [
+      ...copies(4, card("King", "Hearts")),
+      card("King", "Spades", { enhancement: "wild" }),
+      card("Ace", "Hearts", {
+        enhancement: "glass",
+        seal: "red",
+        edition: "polychrome",
+      }),
+      card("10", "Diamonds", { enhancement: "stone" }),
+    ];
+    const text = encodeIdolDeck(deck);
+    expect(text).toBe("KH*4-KSw-AHgRp-TDt");
+    expect(decodeIdolDeck(text)).toEqual(deck);
+  });
+
+  it("skips tokens it doesn't understand", async () => {
+    const { decodeIdolDeck } = await import("./idol");
+    expect(decodeIdolDeck("KH-zz-1X-AS*2")).toEqual([
+      card("King", "Hearts"),
+      card("Ace", "Spades"),
+      card("Ace", "Spades"),
+    ]);
+  });
+});

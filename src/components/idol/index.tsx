@@ -28,7 +28,11 @@ export function IdolWeights() {
       const s = listItemEntries("seal").find(([sid]) => sid === id)?.[1];
       return s?.overlay ? [{ id, name: s.name, image: s.overlay }] : [];
     }),
-    editions: EDITION_IDS.map((id) => ({ id, name: getEdition(id).name })),
+    // Playing cards can be Foil, Holographic or Polychrome, never Negative.
+    editions: EDITION_IDS.filter((id) => id !== "negative").map((id) => ({
+      id,
+      name: getEdition(id).name,
+    })),
   };
   return <IdolCalculator art={art} />;
 }
