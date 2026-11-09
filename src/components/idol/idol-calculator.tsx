@@ -249,14 +249,29 @@ function explain(e: IdolEntry, art: IdolArt): Step[] {
  * then click or drag cards into the deck (or start from a preset); click a card in the deck to
  * take it out, and a row to see how its weight is worked out. The deck is sorted the way The
  * Order sorts it before the Idol rolls, and kept in the page's link (?deck=…) for sharing.
+ *
+ * `initialDeck` starts it with a deck (link text, like ?deck=…). `deckOnly` shows just that deck,
+ * for a guide pointing at a setup: no adding or removing cards, and the page's link is left alone.
  */
-export function IdolCalculator({ art }: { art: IdolArt }) {
+export function IdolCalculator({
+  art,
+  initialDeck = "",
+  deckOnly = false,
+}: {
+  art: IdolArt;
+  initialDeck?: string;
+  deckOnly?: boolean;
+}) {
   const suit = useRotation(SUIT_PICKER);
   const enhancement = useRotation([undefined, ...art.enhancements]);
   const seal = useRotation([undefined, ...art.seals]);
   const edition = useRotation([undefined, ...art.editions]);
-  const [deck, setDeck] = useState<DeckCard[]>([]);
-  const [nextId, setNextId] = useState(1);
+  const [deck, setDeck] = useState<DeckCard[]>(() =>
+    decodeIdolDeck(initialDeck).map((c, i) => ({ ...c, id: i + 1 })),
+  );
+  const [nextId, setNextId] = useState(
+    () => decodeIdolDeck(initialDeck).length + 1,
+  );
   const [dropping, setDropping] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
@@ -274,9 +289,10 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
   };
   const remove = (id: number) => setDeck((d) => d.filter((c) => c.id !== id));
 
-  // The deck from a shared link, once, in the browser.
+  // The deck from a shared link, once, in the browser (a deck shown in a guide keeps its own).
   // biome-ignore lint/correctness/useExhaustiveDependencies: only on the first render
   useEffect(() => {
+    if (deckOnly) return;
     const text = new URLSearchParams(window.location.search).get(DECK_PARAM);
     if (text) {
       const cards = decodeIdolDeck(text);
@@ -287,13 +303,13 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
   }, []);
   // Every change goes into the link, so the address bar can be shared as it is.
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || deckOnly) return;
     const url = new URL(window.location.href);
     if (deck.length) url.searchParams.set(DECK_PARAM, encodeIdolDeck(deck));
     else url.searchParams.delete(DECK_PARAM);
     window.history.replaceState(null, "", url);
     setCopied(false);
-  }, [deck, loaded]);
+  }, [deck, loaded, deckOnly]);
 
   const make = (rank: IdolCard["rank"]): IdolCard => ({
     rank,
@@ -326,67 +342,92 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
   };
   const smallButton =
     "rounded-md border px-2 py-1 text-xs hover:bg-fd-accent disabled:opacity-50";
+  /** A copy in the deck: removable while building a deck, just a picture when showing one. */
+  const copy = (c: DeckCard) =>
+    deckOnly ? (
+      <span key={c.id} title={describe(c, art)}>
+        <MiniCard card={c} art={art} width={36} />
+      </span>
+    ) : (
+      <button
+        key={c.id}
+        type="button"
+        title={`Remove ${describe(c, art)}`}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          remove(c.id);
+        }}
+        className="rounded hover:opacity-60"
+      >
+        <MiniCard card={c} art={art} width={36} />
+      </button>
+    );
 
   return (
     <div className="not-prose my-6 flex flex-col gap-4">
-      <section className="flex flex-col gap-3 rounded-xl border bg-fd-card p-4">
-        <h4 className="font-semibold">Add cards</h4>
-        <div className="flex flex-wrap gap-3">
-          <Rotator
-            label="Suit"
-            value={`${SUIT_SYMBOL[suit.value]} ${suit.value}`}
-            onStep={suit.step}
-          />
-          <Rotator
-            label="Enhancement"
-            value={`${enhancement.value?.name ?? "None"}${plus(bonusOf.enhancement(enhancement.value?.id))}`}
-            onStep={enhancement.step}
-          />
-          <Rotator
-            label="Seal"
-            value={`${seal.value?.name ?? "None"}${plus(bonusOf.seal(seal.value?.id))}`}
-            onStep={seal.step}
-          />
-          <Rotator
-            label="Edition"
-            value={`${edition.value?.name ?? "None"}${plus(bonusOf.edition(edition.value?.id))}`}
-            onStep={edition.step}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {IDOL_RANKS.map((rank) => {
-            const c = make(rank);
-            return (
-              <button
-                key={rank}
-                type="button"
-                draggable
-                title={`Add ${describe(c, art)}`}
-                onClick={() => add(c)}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData(
-                    "application/x-idol-card",
-                    JSON.stringify(c),
-                  );
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
-                className="cursor-grab rounded-md transition-transform hover:-translate-y-1 active:cursor-grabbing"
-              >
-                <MiniCard card={c} art={art} width={71} />
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-fd-muted-foreground">
-          Click or drag a card into your deck.
-        </p>
-        <BonusLegend art={art} />
-      </section>
+      {!deckOnly && (
+        <section className="flex flex-col gap-3 rounded-xl border bg-fd-card p-4">
+          <h4 className="font-semibold">Add cards</h4>
+          <div className="flex flex-wrap gap-3">
+            <Rotator
+              label="Suit"
+              value={`${SUIT_SYMBOL[suit.value]} ${suit.value}`}
+              onStep={suit.step}
+            />
+            <Rotator
+              label="Enhancement"
+              value={`${enhancement.value?.name ?? "None"}${plus(bonusOf.enhancement(enhancement.value?.id))}`}
+              onStep={enhancement.step}
+            />
+            <Rotator
+              label="Seal"
+              value={`${seal.value?.name ?? "None"}${plus(bonusOf.seal(seal.value?.id))}`}
+              onStep={seal.step}
+            />
+            <Rotator
+              label="Edition"
+              value={`${edition.value?.name ?? "None"}${plus(bonusOf.edition(edition.value?.id))}`}
+              onStep={edition.step}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {IDOL_RANKS.map((rank) => {
+              const c = make(rank);
+              return (
+                <button
+                  key={rank}
+                  type="button"
+                  draggable
+                  title={`Add ${describe(c, art)}`}
+                  onClick={() => add(c)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(
+                      "application/x-idol-card",
+                      JSON.stringify(c),
+                    );
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className="cursor-grab rounded-md transition-transform hover:-translate-y-1 active:cursor-grabbing"
+                >
+                  <MiniCard card={c} art={art} width={71} />
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-fd-muted-foreground">
+            Click or drag a card into your deck.
+          </p>
+          <BonusLegend art={art} />
+        </section>
+      )}
 
       <section
-        aria-label="Your deck"
+        aria-label={deckOnly ? "Deck" : "Your deck"}
         onDragOver={(e) => {
-          if (e.dataTransfer.types.includes("application/x-idol-card")) {
+          if (
+            !deckOnly &&
+            e.dataTransfer.types.includes("application/x-idol-card")
+          ) {
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
             setDropping(true);
@@ -394,55 +435,64 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
         }}
         onDragLeave={() => setDropping(false)}
         onDrop={(e) => {
+          if (deckOnly) return;
           e.preventDefault();
           setDropping(false);
           const raw = e.dataTransfer.getData("application/x-idol-card");
           if (raw) add(JSON.parse(raw) as IdolCard);
         }}
         className={`flex flex-col gap-3 rounded-xl border-2 bg-fd-card p-4 transition-colors ${
-          dropping ? "border-fd-primary bg-fd-primary/5" : "border-dashed"
+          deckOnly
+            ? "border-solid border-fd-border"
+            : dropping
+              ? "border-fd-primary bg-fd-primary/5"
+              : "border-dashed"
         }`}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h4 className="font-semibold">
-            Your deck{" "}
+            {deckOnly ? "Deck" : "Your deck"}{" "}
             <span className="text-sm font-normal text-fd-muted-foreground">
               {deck.length} {deck.length === 1 ? "card" : "cards"}
               {stones.length > 0 &&
                 ` (${stones.length} Stone, which the Idol ignores)`}
             </span>
           </h4>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-fd-muted-foreground">Start from</span>
-            {IDOL_PRESETS.map((p) => (
+          {!deckOnly && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-fd-muted-foreground">
+                Start from
+              </span>
+              {IDOL_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={smallButton}
+                  onClick={() => {
+                    replace(p.deck());
+                    setOpen(new Set());
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
               <button
-                key={p.id}
                 type="button"
                 className={smallButton}
-                onClick={() => {
-                  replace(p.deck());
-                  setOpen(new Set());
+                disabled={deck.length === 0}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    setCopied(true);
+                  } catch {
+                    // Clipboard blocked: the address bar holds the same link.
+                  }
                 }}
               >
-                {p.label}
+                {copied ? "Link copied" : "Copy link"}
               </button>
-            ))}
-            <button
-              type="button"
-              className={smallButton}
-              disabled={deck.length === 0}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(window.location.href);
-                  setCopied(true);
-                } catch {
-                  // Clipboard blocked: the address bar holds the same link.
-                }
-              }}
-            >
-              {copied ? "Link copied" : "Copy link"}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {deck.length === 0 ? (
@@ -457,7 +507,9 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
                   <th className="py-2 pr-3 font-medium">Card</th>
                   <th className="py-2 pr-3 font-medium">Tier</th>
                   <th className="py-2 pr-3 font-medium">Weight</th>
-                  <th className="py-2 font-medium">Copies (click to remove)</th>
+                  <th className="py-2 font-medium">
+                    {deckOnly ? "Copies" : "Copies (click to remove)"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -513,20 +565,7 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
                         </td>
                         <td className="py-1.5">
                           <div className="flex flex-wrap gap-1">
-                            {copiesOf(e).map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                title={`Remove ${describe(c, art)}`}
-                                onClick={(ev) => {
-                                  ev.stopPropagation();
-                                  remove(c.id);
-                                }}
-                                className="rounded hover:opacity-60"
-                              >
-                                <MiniCard card={c} art={art} width={36} />
-                              </button>
-                            ))}
+                            {copiesOf(e).map(copy)}
                           </div>
                         </td>
                       </tr>
@@ -551,17 +590,7 @@ export function IdolCalculator({ art }: { art: IdolArt }) {
                     </td>
                     <td className="py-1.5">
                       <div className="flex flex-wrap gap-1">
-                        {stones.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            title={`Remove ${describe(c, art)}`}
-                            onClick={() => remove(c.id)}
-                            className="rounded hover:opacity-60"
-                          >
-                            <MiniCard card={c} art={art} width={36} />
-                          </button>
-                        ))}
+                        {stones.map(copy)}
                       </div>
                     </td>
                   </tr>

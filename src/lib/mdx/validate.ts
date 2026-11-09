@@ -14,6 +14,7 @@ import { isSkillLevel, LEVELS } from "@/components/level/levels";
 import { EDITION_IDS, findItem, getPlayingCard } from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import { assertKnownVariables, compile as compileFormula } from "@/lib/formula";
+import { idolDeckProblems } from "@/lib/idol";
 
 const CARD_TAGS: Record<string, ItemKind> = {
   Joker: "joker",
@@ -288,6 +289,20 @@ function checkComponent(
           `${at}: <Level of="…"> must be one of: ${LEVELS.join(", ")}`,
         );
       return;
+    case "IdolWeights": {
+      if (p.deck !== undefined) {
+        const bad = idolDeckProblems(String(p.deck));
+        if (bad.length)
+          problems.push(
+            `${at}: <IdolWeights deck> has parts that aren't cards: ${bad.map((b) => `"${b}"`).join(", ")}. Copy the deck from the tool's link (?deck=…)`,
+          );
+      }
+      if (p.deckOnly && !p.deck)
+        problems.push(
+          `${at}: <IdolWeights deckOnly> needs a deck to show, e.g. deck="KH*4-KSw"`,
+        );
+      return;
+    }
     case "PlayingCard":
       try {
         getPlayingCard(String(p.card));

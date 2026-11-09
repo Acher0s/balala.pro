@@ -123,3 +123,11 @@ describe("Idol deck links", () => {
     ]);
   });
 });
+
+describe("Idol deck link checks", () => {
+  it("points out tokens that aren't cards", async () => {
+    const { idolDeckProblems } = await import("./idol");
+    expect(idolDeckProblems("KH*4-KSw-AHgRp")).toEqual([]);
+    expect(idolDeckProblems("KH-KX-AHz-")).toEqual(["KX", "AHz", ""]);
+  });
+});

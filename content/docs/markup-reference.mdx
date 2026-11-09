@@ -612,6 +612,18 @@ A published tool can be shown inside a guide. It always shows the tool's latest 
 
 `id` is the tool's web address name (the part after `/tools/`). The easiest way is **Blocks → Embed a tool** in the editor. Tools can't embed other tools.
 
+## Idol weights
+
+`<IdolWeights />` is the Idol sorting weight calculator: readers build a deck and see how The Order weighs each card before The Idol picks one. To point at a particular setup in a guide, give it a `deck` and `deckOnly`. Readers then see just that deck, sorted and weighted, and can open each row to see how its weight adds up, but can't change it:
+
+<IdolWeights deck="KH*4-KSw-AHgRp" deckOnly />
+
+```mdx
+<IdolWeights deck="KH*4-KSw-AHgRp" deckOnly />
+```
+
+To get the `deck` text, build the deck in the calculator and copy the part after `?deck=` from its link. Without `deckOnly`, the calculator starts with that deck and readers can change it.
+
 ## Tier lists
 
 Anyone can make a tier list at [/tierlists/new](/tierlists/new). Published tier lists can be embedded in guides and tools:

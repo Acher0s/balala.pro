@@ -528,3 +528,12 @@ export function decodeIdolDeck(text: string): IdolCard[] {
   }
   return deck;
 }
+
+/** Parts of a deck's link text that aren't a card, e.g. a typo in a guide: ["KX", "AHz"]. */
+export function idolDeckProblems(text: string): string[] {
+  const letters = { ...ENHANCEMENT_CODES, ...SEAL_CODES, ...EDITION_CODES };
+  return text.split("-").filter((part) => {
+    const m = /^(10|[2-9TJQKA])([SHCD])([a-zA-Z]*)(?:\*(\d{1,3}))?$/.exec(part);
+    return !m || [...m[3]].some((l) => !Object.hasOwn(letters, l));
+  });
+}

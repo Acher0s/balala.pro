@@ -12,9 +12,18 @@ const SEAL_ORDER = ["red", "blue", "gold", "purple"];
 
 /**
  * The Idol Sorting Weight Calculator: build a deck and see how The Order weighs and sorts each
- * card before the Idol picks its target. <IdolWeights />
+ * card before the Idol picks its target. <IdolWeights /> to build one; in a guide,
+ * <IdolWeights deck="KH*4-KSw-AHgRp" deckOnly /> shows just that deck.
  */
-export function IdolWeights() {
+export function IdolWeights({
+  deck,
+  deckOnly,
+}: {
+  /** A deck to start with, as in the tool's link: deck="KH*4-KSw-AHgRp". */
+  deck?: string;
+  /** Show only that deck, for a guide highlighting a setup. */
+  deckOnly?: boolean;
+} = {}) {
   const art: IdolArt = {
     base: baseCardImage,
     fronts: Object.fromEntries(
@@ -34,5 +43,5 @@ export function IdolWeights() {
       name: getEdition(id).name,
     })),
   };
-  return <IdolCalculator art={art} />;
+  return <IdolCalculator art={art} initialDeck={deck} deckOnly={deckOnly} />;
 }
