@@ -223,3 +223,31 @@ export const overlays = pgTable(
 );
 
 export type OverlayRow = typeof overlays.$inferSelect;
+
+/** A link on a creator's card, e.g. { label: "YouTube", url: "https://youtube.com/@…" }. */
+export interface CreatorLink {
+  label: string;
+  url: string;
+}
+
+/**
+ * Creators featured on the Creators page, managed by admins in Studio. Their Twitch stream shows
+ * at the top of the page while they're live in the Balatro category.
+ */
+export const creators = pgTable("creators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  /** Twitch login (the part after twitch.tv/), for the live stream and the profile picture. */
+  twitch: text("twitch"),
+  bio: text("bio").notNull().default(""),
+  /** A picture to use instead of the Twitch profile picture. */
+  avatarUrl: text("avatar_url"),
+  links: jsonb("links").$type<CreatorLink[]>().notNull().default([]),
+  /** Order on the page, lowest first. */
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type CreatorRow = typeof creators.$inferSelect;

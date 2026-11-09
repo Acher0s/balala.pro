@@ -10,7 +10,7 @@ import type { User } from "@/db/schema";
 
 /**
  * Shared header for the public site:
- *   site name · Guides  Tools  Tier lists  Overlays (Studio  Documentation)          [search] account ☀
+ *   site name · Guides  Tools  Tier lists  Overlays  Creators (Studio  Documentation)          [search] account ☀
  * On phones the sections move into the menu.
  */
 export function baseOptions(
@@ -23,6 +23,7 @@ export function baseOptions(
     { text: "Tools", url: "/tools" },
     { text: "Tier lists", url: "/tierlists" },
     { text: "Overlays", url: "/overlays" },
+    { text: "Creators", url: "/creators" },
     ...(isWriter
       ? [
           { text: "Studio", url: "/studio" },
