@@ -288,3 +288,28 @@ describe("stakes", () => {
     ).rejects.toThrow(GuideValidationError);
   });
 });
+
+describe("<IdolWeights> options", () => {
+  it("accepts a deck shown on its own, with hidden columns and no breakdowns", async () => {
+    expect(
+      await problems(
+        '<IdolWeights deck="KH*4-KSw" deckOnly hideColumn="tier copies" disableExpand />',
+      ),
+    ).toEqual([]);
+  });
+
+  it("flags unknown or all columns hidden, bad decks and deckOnly without a deck", async () => {
+    expect(await problems('<IdolWeights hideColumn="tier score" />')).toEqual([
+      expect.stringContaining('not "score"'),
+    ]);
+    expect(
+      await problems('<IdolWeights hideColumn="card, tier, weight, copies" />'),
+    ).toEqual([expect.stringContaining("hides every column")]);
+    expect(await problems('<IdolWeights deck="KX" />')).toEqual([
+      expect.stringContaining('"KX"'),
+    ]);
+    expect(await problems("<IdolWeights deckOnly />")).toEqual([
+      expect.stringContaining("needs a deck"),
+    ]);
+  });
+});

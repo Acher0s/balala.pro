@@ -8,10 +8,12 @@ import {
   decodeIdolDeck,
   encodeIdolDeck,
   IDOL_BONUS,
+  IDOL_COLUMNS,
   IDOL_PRESETS,
   IDOL_RANKS,
   IDOL_WEIGHTS,
   type IdolCard,
+  type IdolColumn,
   type IdolEntry,
   type IdolSuit,
   idolWeights,
@@ -252,15 +254,20 @@ function explain(e: IdolEntry, art: IdolArt): Step[] {
  *
  * `initialDeck` starts it with a deck (link text, like ?deck=…). `deckOnly` shows just that deck,
  * for a guide pointing at a setup: no adding or removing cards, and the page's link is left alone.
+ * `hideColumns` leaves columns of the table out; `disableExpand` turns off the breakdowns.
  */
 export function IdolCalculator({
   art,
   initialDeck = "",
   deckOnly = false,
+  hideColumns = [],
+  disableExpand = false,
 }: {
   art: IdolArt;
   initialDeck?: string;
   deckOnly?: boolean;
+  hideColumns?: IdolColumn[];
+  disableExpand?: boolean;
 }) {
   const suit = useRotation(SUIT_PICKER);
   const enhancement = useRotation([undefined, ...art.enhancements]);
@@ -340,6 +347,8 @@ export function IdolCalculator({
     seal: (id?: string) => (id ? (IDOL_BONUS.seals[id] ?? 0) : 0),
     edition: (id?: string) => (id ? (IDOL_BONUS.editions[id] ?? 0) : 0),
   };
+  const shown = IDOL_COLUMNS.filter((c) => !hideColumns.includes(c));
+  const lastColumn = shown[shown.length - 1];
   const smallButton =
     "rounded-md border px-2 py-1 text-xs hover:bg-fd-accent disabled:opacity-50";
   /** A copy in the deck: removable while building a deck, just a picture when showing one. */
@@ -504,74 +513,91 @@ export function IdolCalculator({
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-fd-muted-foreground">
-                  <th className="py-2 pr-3 font-medium">Card</th>
-                  <th className="py-2 pr-3 font-medium">Tier</th>
-                  <th className="py-2 pr-3 font-medium">Weight</th>
-                  <th className="py-2 font-medium">
-                    {deckOnly ? "Copies" : "Copies (click to remove)"}
-                  </th>
+                  {shown.map((col) => (
+                    <th
+                      key={col}
+                      className={`py-2 font-medium ${col === lastColumn ? "" : "pr-3"}`}
+                    >
+                      {col === "copies" && !deckOnly
+                        ? "Copies (click to remove)"
+                        : COLUMN_LABELS[col]}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {result.entries.map((e) => {
                   const key = `${e.rank}_${e.suit}`;
-                  const expanded = open.has(key);
+                  const expanded = !disableExpand && open.has(key);
                   const steps = expanded ? explain(e, art) : [];
+                  const cells: Record<IdolColumn, React.ReactNode> = {
+                    card: (
+                      <>
+                        {rankLabel(e.rank)}
+                        <span
+                          className={
+                            e.suit === "Hearts" || e.suit === "Diamonds"
+                              ? "text-red-500"
+                              : ""
+                          }
+                        >
+                          {SUIT_SYMBOL[e.suit]}
+                        </span>
+                      </>
+                    ),
+                    tier: (
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-xs font-bold ${
+                          e.tier === "A"
+                            ? "bg-[#ff9a00] text-white"
+                            : "bg-fd-secondary text-fd-muted-foreground"
+                        }`}
+                      >
+                        {e.tier}
+                      </span>
+                    ),
+                    weight: fmt(e.score),
+                    copies: (
+                      <div className="flex flex-wrap gap-1">
+                        {copiesOf(e).map(copy)}
+                      </div>
+                    ),
+                  };
                   return (
                     <Fragment key={key}>
                       <tr
-                        onClick={() => toggle(key)}
-                        className={`cursor-pointer hover:bg-fd-accent/50 ${expanded ? "" : "border-b last:border-0"}`}
+                        onClick={disableExpand ? undefined : () => toggle(key)}
+                        className={`${disableExpand ? "" : "cursor-pointer hover:bg-fd-accent/50"} ${expanded ? "" : "border-b last:border-0"}`}
                       >
-                        <td className="py-1.5 pr-3 font-medium whitespace-nowrap">
-                          <button
-                            type="button"
-                            aria-expanded={expanded}
-                            aria-label={`How ${e.rank} of ${e.suit} is weighted`}
-                            className="mr-1 align-middle text-fd-muted-foreground"
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              toggle(key);
-                            }}
+                        {shown.map((col, i) => (
+                          <td
+                            key={col}
+                            className={`py-1.5 ${col === lastColumn ? "" : "pr-3"} ${col === "card" ? "font-medium whitespace-nowrap" : ""} ${col === "weight" ? "tabular-nums" : ""}`}
                           >
-                            <ChevronDown
-                              className={`inline size-4 transition-transform ${expanded ? "" : "-rotate-90"}`}
-                            />
-                          </button>
-                          {rankLabel(e.rank)}
-                          <span
-                            className={
-                              e.suit === "Hearts" || e.suit === "Diamonds"
-                                ? "text-red-500"
-                                : ""
-                            }
-                          >
-                            {SUIT_SYMBOL[e.suit]}
-                          </span>
-                        </td>
-                        <td className="py-1.5 pr-3">
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-xs font-bold ${
-                              e.tier === "A"
-                                ? "bg-[#ff9a00] text-white"
-                                : "bg-fd-secondary text-fd-muted-foreground"
-                            }`}
-                          >
-                            {e.tier}
-                          </span>
-                        </td>
-                        <td className="py-1.5 pr-3 tabular-nums">
-                          {fmt(e.score)}
-                        </td>
-                        <td className="py-1.5">
-                          <div className="flex flex-wrap gap-1">
-                            {copiesOf(e).map(copy)}
-                          </div>
-                        </td>
+                            {/* The expand arrow sits at the start of the first column shown. */}
+                            {i === 0 && !disableExpand && (
+                              <button
+                                type="button"
+                                aria-expanded={expanded}
+                                aria-label={`How ${e.rank} of ${e.suit} is weighted`}
+                                className="mr-1 align-middle text-fd-muted-foreground"
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  toggle(key);
+                                }}
+                              >
+                                <ChevronDown
+                                  className={`inline size-4 transition-transform ${expanded ? "" : "-rotate-90"}`}
+                                />
+                              </button>
+                            )}
+                            {cells[col]}
+                          </td>
+                        ))}
                       </tr>
                       {expanded && (
                         <tr className="border-b last:border-0">
-                          <td colSpan={4} className="pb-3">
+                          <td colSpan={shown.length} className="pb-3">
                             <Breakdown entry={e} steps={steps} />
                           </td>
                         </tr>
@@ -581,18 +607,24 @@ export function IdolCalculator({
                 })}
                 {stones.length > 0 && (
                   <tr>
-                    <td className="py-1.5 pr-3 text-fd-muted-foreground">
-                      Stone
-                    </td>
-                    <td className="py-1.5 pr-3 text-fd-muted-foreground">—</td>
-                    <td className="py-1.5 pr-3 text-fd-muted-foreground">
-                      Ignored
-                    </td>
-                    <td className="py-1.5">
-                      <div className="flex flex-wrap gap-1">
-                        {stones.map(copy)}
-                      </div>
-                    </td>
+                    {shown.map((col) => (
+                      <td
+                        key={col}
+                        className={`py-1.5 ${col === lastColumn ? "" : "pr-3"} ${col === "copies" ? "" : "text-fd-muted-foreground"}`}
+                      >
+                        {col === "card" ? (
+                          "Stone"
+                        ) : col === "tier" ? (
+                          "—"
+                        ) : col === "weight" ? (
+                          "Ignored"
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {stones.map(copy)}
+                          </div>
+                        )}
+                      </td>
+                    ))}
                   </tr>
                 )}
               </tbody>
@@ -605,6 +637,13 @@ export function IdolCalculator({
 }
 
 const DECK_PARAM = "deck";
+
+const COLUMN_LABELS: Record<IdolColumn, string> = {
+  card: "Card",
+  tier: "Tier",
+  weight: "Weight",
+  copies: "Copies",
+};
 
 /** How a card's weight adds up, one line per term, as in the game's formula. */
 function Breakdown({ entry, steps }: { entry: IdolEntry; steps: Step[] }) {

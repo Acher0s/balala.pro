@@ -537,3 +537,14 @@ export function idolDeckProblems(text: string): string[] {
     return !m || [...m[3]].some((l) => !Object.hasOwn(letters, l));
   });
 }
+
+/** The columns of the deck table, which a guide can hide (<IdolWeights hideColumn="tier">). */
+export const IDOL_COLUMNS = ["card", "tier", "weight", "copies"] as const;
+export type IdolColumn = (typeof IDOL_COLUMNS)[number];
+
+/** Column names from a hideColumn prop ("tier weight" or "tier, weight"), lower case. */
+export const idolColumnList = (text: string | undefined) =>
+  (text ?? "")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((c) => c.toLowerCase());

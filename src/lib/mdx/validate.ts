@@ -14,7 +14,7 @@ import { isSkillLevel, LEVELS } from "@/components/level/levels";
 import { EDITION_IDS, findItem, getPlayingCard } from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import { assertKnownVariables, compile as compileFormula } from "@/lib/formula";
-import { idolDeckProblems } from "@/lib/idol";
+import { IDOL_COLUMNS, idolColumnList, idolDeckProblems } from "@/lib/idol";
 
 const CARD_TAGS: Record<string, ItemKind> = {
   Joker: "joker",
@@ -301,6 +301,20 @@ function checkComponent(
         problems.push(
           `${at}: <IdolWeights deckOnly> needs a deck to show, e.g. deck="KH*4-KSw"`,
         );
+      if (p.hideColumn !== undefined) {
+        const hidden = idolColumnList(String(p.hideColumn));
+        const unknown = hidden.filter(
+          (c) => !(IDOL_COLUMNS as readonly string[]).includes(c),
+        );
+        if (unknown.length)
+          problems.push(
+            `${at}: <IdolWeights hideColumn> can hide ${IDOL_COLUMNS.join(", ")}; not ${unknown.map((c) => `"${c}"`).join(", ")}`,
+          );
+        else if (IDOL_COLUMNS.every((c) => hidden.includes(c)))
+          problems.push(
+            `${at}: <IdolWeights hideColumn> hides every column; leave at least one`,
+          );
+      }
       return;
     }
     case "PlayingCard":
