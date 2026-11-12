@@ -865,16 +865,6 @@ for (const name of [
   writeFileSync(join(outDir, "shaders", `${name}.fs`), file());
 }
 
-// Whole sprite sheets at 1x, for the Log Parser's deck view, which draws cards from them
-// (src/components/log-parser/bmp/legacy/deck-view.tsx). The game has no editions sheet (the BMP
-// site drew its own), so that view shows cards without their edition.
-mkdirSync(join(outDir, "atlases"), { recursive: true });
-for (const name of ["Jokers", "Enhancers", "8BitDeck"]) {
-  const file = zip.get(`resources/textures/1x/${name}.png`);
-  if (!file) throw new Error(`Missing sprite sheet 1x/${name}.png`);
-  writeFileSync(join(outDir, "atlases", `${name}.png`), file());
-}
-
 for (const job of jobs) {
   const src = job.sheet ?? sheet(SHEET_BY_KIND[job.kind]);
   let img = await crop(src, job.pos, job.cell);

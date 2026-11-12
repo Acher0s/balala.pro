@@ -37,7 +37,6 @@ import {
 import { GuideImage } from "./guide-image";
 import { IdolWeights } from "./idol";
 import { Level } from "./level";
-import { LogParser } from "./log-parser";
 import { TierList } from "./tierlist/tier-list-embed";
 import { Tool } from "./tool-embed";
 
@@ -67,7 +66,6 @@ export function getMDXComponents(components?: MDXComponents) {
     CardRow,
     Level,
     IdolWeights,
-    LogParser,
     Center,
     Columns,
     Column,

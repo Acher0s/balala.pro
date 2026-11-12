@@ -14,6 +14,7 @@ import {
   pageUrl,
 } from "@/lib/guides";
 import { getCategories, getSettings } from "@/lib/settings";
+import { SITE_TOOLS } from "@/lib/site-tools";
 
 const COPY: Record<PageKind, { title: string; empty: string }> = {
   guide: { title: "Guides", empty: "No guides published yet." },
@@ -45,13 +46,17 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
           categories,
         ).map((g) => ({ name: g.name, pages: g.pages.map((x) => x.page) }))
       : [{ name: "", pages }];
+  // The site's own tools (like the log parser) join the list: with categories, as a last group.
+  const siteTools = kind === "tool" ? SITE_TOOLS : [];
+  const siteToolsGroup =
+    siteTools.length > 0 && categories.categories.length > 0;
 
   return (
     <DocsPage>
       <DocsTitle>{copy.title}</DocsTitle>
       {description && <DocsDescription>{description}</DocsDescription>}
       <DocsBody>
-        {pages.length === 0 && <p>{copy.empty}</p>}
+        {pages.length === 0 && siteTools.length === 0 && <p>{copy.empty}</p>}
         {groups.map((group) => (
           <section
             key={group.name || "_"}
@@ -71,9 +76,27 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
                   />
                 </li>
               ))}
+              {!siteToolsGroup &&
+                siteTools.map((t) => (
+                  <li key={t.href}>
+                    <PageTile frontmatter={t.frontmatter} href={t.href} />
+                  </li>
+                ))}
             </ul>
           </section>
         ))}
+        {siteToolsGroup && (
+          <section className="not-prose mb-8 flex flex-col gap-3">
+            <h2 className="text-lg font-semibold">More tools</h2>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {siteTools.map((t) => (
+                <li key={t.href}>
+                  <PageTile frontmatter={t.frontmatter} href={t.href} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </DocsBody>
     </DocsPage>
   );

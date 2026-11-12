@@ -1,5 +1,5 @@
-import { listItemEntries } from "@/data/game";
-import type { CardArt } from "./bmp/card-art";
+import { baseCardImage, listItemEntries, listPlayingCards } from "@/data/game";
+import type { CardArt, PlayingCardArt } from "./bmp/card-art";
 import { LogParser as LogParserClient } from "./log-parser";
 
 /** Game key ("j_mime", "v_overstock_norm") → name and picture, from this site's game data. */
@@ -10,11 +10,35 @@ function artFor(kind: "joker" | "voucher") {
   return out;
 }
 
-/** The 0.5.x Log Parser, for a tool page: <LogParser /> */
+/** Playing card fronts, enhancements and seals, keyed as the game (and the logs) name them. */
+function playingCardArt(): PlayingCardArt {
+  return {
+    base: baseCardImage,
+    fronts: Object.fromEntries(
+      listPlayingCards().map(([key, card]) => [key, card.image]),
+    ),
+    enhancements: Object.fromEntries(
+      listItemEntries("enhancement")
+        .filter(([, e]) => e.source === "vanilla")
+        .map(([, e]) => [e.key, e.image]),
+    ),
+    seals: Object.fromEntries(
+      listItemEntries("seal").flatMap(([, s]) =>
+        s.overlay ? [[s.key, s.overlay]] : [],
+      ),
+    ),
+  };
+}
+
+/** The 0.5.x Log Parser (on its own page, /log-parser). */
 export function LogParser() {
   return (
     <LogParserClient
-      art={{ jokers: artFor("joker"), vouchers: artFor("voucher") }}
+      art={{
+        jokers: artFor("joker"),
+        vouchers: artFor("voucher"),
+        playingCards: playingCardArt(),
+      }}
     />
   );
 }

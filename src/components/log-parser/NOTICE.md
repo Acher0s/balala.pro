@@ -20,11 +20,12 @@ Changes made here, each noted at the top of the file:
 
 - Import paths point at the files above, at `ui.tsx` (stand-ins for the BMP site's shadcn
   components and `next/image`) and at `card-art.ts` (stand-in for `@/shared/jokers` and
-  `@/shared/vouchers`, filled from this site's game data).
+  `@/shared/vouchers`, and the playing card art, filled from this site's game data).
 - `legacy/log-source-parser.ts` unzips packed data with `gunzipLimited`, which stops at 32 MB,
   instead of `gunzipSync`, against zip bombs in a log.
-- `legacy/deck-view.tsx` reads the sprite sheets from `/game/atlases/` (copied from the game by
-  `npm run import-game`), `legacy/legacy-game-view.tsx` uses full picture addresses.
+- `legacy/deck-view.tsx` draws each card with `../deck-card-face.tsx` (this site's card art,
+  with editions animated by the game's shaders) instead of the game's sprite sheets;
+  `legacy/legacy-game-view.tsx` uses full picture addresses.
 - `legacy/log-source-parser.test.ts` runs on vitest instead of bun:test.
 
 The page around it (`log-parser.tsx`, `parser.worker.ts`, `index.tsx`) is this site's own: files
