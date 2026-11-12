@@ -106,25 +106,38 @@ const describe = (card: IdolCard, art: IdolArt) =>
     .filter(Boolean)
     .join(", ");
 
-/** One "‹ value ›" control of the top bar; clicking the value also steps forward. */
+/**
+ * One "‹ value ›" control of the top bar; clicking the value also steps forward. With `onReset`,
+ * a "None" button below sets it back to the first option. `tall` fills the height the other
+ * controls take with their reset button (for the suit, which has none).
+ */
 function Rotator({
   label,
   value,
   onStep,
+  onReset,
+  isReset,
+  tall = false,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   onStep: (by: 1 | -1) => void;
+  onReset?: () => void;
+  /** Already at the first option, so resetting would do nothing. */
+  isReset?: boolean;
+  tall?: boolean;
 }) {
   const button =
     "rounded-md p-1 text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground";
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-fd-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1 rounded-lg border bg-fd-background p-0.5">
+      <div
+        className={`flex items-center gap-1 rounded-lg border bg-fd-background p-0.5 ${tall ? "flex-1" : ""}`}
+      >
         <button
           type="button"
-          className={button}
+          className={`${button} self-stretch`}
           aria-label={`Previous ${label.toLowerCase()}`}
           onClick={() => onStep(-1)}
         >
@@ -132,31 +145,43 @@ function Rotator({
         </button>
         <button
           type="button"
-          className="min-w-24 flex-1 rounded-md px-1 py-0.5 text-center text-sm font-medium hover:bg-fd-accent"
+          className={`min-w-24 flex-1 self-stretch rounded-md px-1 py-0.5 text-center font-medium hover:bg-fd-accent ${tall ? "" : "text-sm"}`}
           onClick={() => onStep(1)}
         >
           {value}
         </button>
         <button
           type="button"
-          className={button}
+          className={`${button} self-stretch`}
           aria-label={`Next ${label.toLowerCase()}`}
           onClick={() => onStep(1)}
         >
           <ChevronRight className="size-4" />
         </button>
       </div>
+      {onReset && (
+        <button
+          type="button"
+          disabled={isReset}
+          onClick={onReset}
+          className="rounded-md border px-2 py-0.5 text-xs text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          Set to None
+        </button>
+      )}
     </div>
   );
 }
 
-/** Steps through a list, wrapping around. */
+/** Steps through a list, wrapping around; `reset` goes back to the first option. */
 function useRotation<T>(options: T[]) {
   const [index, setIndex] = useState(0);
   return {
     value: options[index],
+    isFirst: index === 0,
     step: (by: 1 | -1) =>
       setIndex((i) => (i + by + options.length) % options.length),
+    reset: () => setIndex(0),
   };
 }
 
@@ -380,23 +405,44 @@ export function IdolCalculator({
           <div className="flex flex-wrap gap-3">
             <Rotator
               label="Suit"
-              value={`${SUIT_SYMBOL[suit.value]} ${suit.value}`}
+              tall
+              value={
+                <span className="flex flex-col items-center leading-none">
+                  <span
+                    aria-hidden
+                    className={`text-3xl ${
+                      suit.value === "Hearts" || suit.value === "Diamonds"
+                        ? "text-red-500"
+                        : ""
+                    }`}
+                  >
+                    {SUIT_SYMBOL[suit.value]}
+                  </span>
+                  <span className="mt-0.5 text-xs">{suit.value}</span>
+                </span>
+              }
               onStep={suit.step}
             />
             <Rotator
               label="Enhancement"
               value={`${enhancement.value?.name ?? "None"}${plus(bonusOf.enhancement(enhancement.value?.id))}`}
               onStep={enhancement.step}
+              onReset={enhancement.reset}
+              isReset={enhancement.isFirst}
             />
             <Rotator
               label="Seal"
               value={`${seal.value?.name ?? "None"}${plus(bonusOf.seal(seal.value?.id))}`}
               onStep={seal.step}
+              onReset={seal.reset}
+              isReset={seal.isFirst}
             />
             <Rotator
               label="Edition"
               value={`${edition.value?.name ?? "None"}${plus(bonusOf.edition(edition.value?.id))}`}
               onStep={edition.step}
+              onReset={edition.reset}
+              isReset={edition.isFirst}
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
