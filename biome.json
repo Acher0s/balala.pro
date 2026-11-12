@@ -13,13 +13,26 @@
       "!.next",
       "!dist",
       "!build",
-      "!.source"
+      "!.source",
+      "!src/components/log-parser/bmp/legacy",
+      "!src/components/log-parser/bmp/idol-track.tsx",
+      "!src/components/log-parser/bmp/info-tooltip-label.tsx",
+      "!src/components/log-parser/bmp/idol-geometry.ts",
+      "!src/components/log-parser/bmp/types.ts",
+      "!src/components/log-parser/bmp/card-ref.ts",
+      "!src/components/log-parser/bmp/ruleset-info.ts",
+      "!src/components/log-parser/bmp/decks.ts"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   },
   "linter": {
     "enabled": true,

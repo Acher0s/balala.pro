@@ -1,0 +1,11 @@
+{
+  "title": "Multiplayer tools",
+  "section": "Multiplayer",
+  "pages": [
+    {
+      "kind": "tool",
+      "slug": "log-parser",
+      "file": "tools/log-parser.mdx"
+    }
+  ]
+}

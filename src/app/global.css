@@ -2,6 +2,16 @@
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 
+/* The Log Parser, copied from the BMP site, uses shadcn's colour names; they follow our theme. */
+@theme inline {
+  --color-background: var(--color-fd-background);
+  --color-foreground: var(--color-fd-foreground);
+  --color-muted: var(--color-fd-muted);
+  --color-muted-foreground: var(--color-fd-muted-foreground);
+  --color-border: var(--color-fd-border);
+  --color-card: var(--color-fd-card);
+}
+
 html {
   scrollbar-gutter: stable;
 }

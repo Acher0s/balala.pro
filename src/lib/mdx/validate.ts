@@ -37,6 +37,7 @@ export const ALLOWED_COMPONENTS = new Set([
   "CardRow",
   "Level",
   "IdolWeights",
+  "LogParser",
   "Center",
   "Columns",
   "Column",
