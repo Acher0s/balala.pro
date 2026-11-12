@@ -195,8 +195,6 @@ const RANK_PLURAL: Record<string, string> = {
   Ace: "Aces",
 };
 const ranks = (rank: string) => RANK_PLURAL[rank] ?? `${rank}s`;
-/** "+0.5" for a bonus, nothing for 0. */
-const plus = (x: number) => (x ? ` +${fmt(x)}` : "");
 
 /** One line of a weight's breakdown: what it is, how it's worked out, and what it adds. */
 interface Step {
@@ -367,11 +365,6 @@ export function IdolCalculator({
       return next;
     });
 
-  const bonusOf = {
-    enhancement: (id?: string) => (id ? (IDOL_BONUS.enhancements[id] ?? 0) : 0),
-    seal: (id?: string) => (id ? (IDOL_BONUS.seals[id] ?? 0) : 0),
-    edition: (id?: string) => (id ? (IDOL_BONUS.editions[id] ?? 0) : 0),
-  };
   const shown = IDOL_COLUMNS.filter((c) => !hideColumns.includes(c));
   const lastColumn = shown[shown.length - 1];
   const smallButton =
@@ -425,21 +418,21 @@ export function IdolCalculator({
             />
             <Rotator
               label="Enhancement"
-              value={`${enhancement.value?.name ?? "None"}${plus(bonusOf.enhancement(enhancement.value?.id))}`}
+              value={enhancement.value?.name ?? "None"}
               onStep={enhancement.step}
               onReset={enhancement.reset}
               isReset={enhancement.isFirst}
             />
             <Rotator
               label="Seal"
-              value={`${seal.value?.name ?? "None"}${plus(bonusOf.seal(seal.value?.id))}`}
+              value={seal.value?.name ?? "None"}
               onStep={seal.step}
               onReset={seal.reset}
               isReset={seal.isFirst}
             />
             <Rotator
               label="Edition"
-              value={`${edition.value?.name ?? "None"}${plus(bonusOf.edition(edition.value?.id))}`}
+              value={edition.value?.name ?? "None"}
               onStep={edition.step}
               onReset={edition.reset}
               isReset={edition.isFirst}
