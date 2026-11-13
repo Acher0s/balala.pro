@@ -6,6 +6,7 @@ import {
   HeaderTabs,
   NoSearch,
 } from "@/components/header-parts";
+import { SiteLogo } from "@/components/site-logo";
 import type { User } from "@/db/schema";
 
 /**
@@ -64,7 +65,7 @@ export function baseOptions(
   return {
     nav: {
       // nowrap: the header has little room at medium widths, and a wrapped name looks broken.
-      title: <span className="whitespace-nowrap">{siteName}</span>,
+      title: <SiteLogo siteName={siteName} />,
       children: <HeaderTabs tabs={tabs} />,
     },
     // The layout's own search box sits in the middle; ours is on the right (HeaderSearch).
