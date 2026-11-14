@@ -389,16 +389,9 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Note>
-        Every card the shop rolls, in order, across shops and rerolls: two per
-        shop (more with Overstock), one more set per reroll. Buffoon Packs,
-        Riff-raff and Judgement take jokers from the same queues, so opening one
-        moves the shop's jokers on, and a card you already have (or that's on
-        screen) is skipped.
-      </Note>
       <div className="flex flex-col gap-2 rounded-xl border bg-fd-card p-3 text-sm">
         <span className="text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground">
-          Vouchers
+          Unlocked Vouchers
         </span>
         <div className="flex flex-wrap gap-x-4 gap-y-3">
           {VOUCHER_PAIRS.map(([base, upgrade]) => (
@@ -439,8 +432,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
           ))}
         </div>
         <span className="text-fd-muted-foreground">
-          Click the vouchers you've bought, and set the shop slot you bought
-          them at. An upgrade needs its base, so buying one buys both.
+          Click the vouchers you've unlocked.
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -630,14 +622,6 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
           </label>
         )}
       </div>
-      <Note>
-        {rarity === 4
-          ? "The Soul's legendaries, in order."
-          : "Every joker of this rarity the shop and Buffoon Packs give, in order, with the stickers it gets. Under The Order a joker that rolls a sticker comes from a separate queue, so hiding those shows the stickerless queue on its own: the one Judgement, Riff-raff and the Uncommon/Rare Tags take from."}{" "}
-        Hone and Glow Up make Foil, Holographic and Polychrome more likely (not
-        Negative), so some jokers gain an edition, but which joker comes next
-        doesn't change.
-      </Note>
       <CardList onMore={() => setCount((c) => c + STEP)}>
         {shown.map(({ j, index }) => (
           <ItemCard
@@ -687,16 +671,6 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
           />
         )}
       </div>
-      <Note>
-        {source === "standard" &&
-          `Cards shown in Standard Packs, one after another across packs.${settings.deck === "orange" ? " On Orange Deck the first ten are the Giga Standard Pack it opens at the start." : ""} Hone and Glow Up make editions more likely here; the cards, seals and enhancements stay the same.`}
-        {source === "magic" &&
-          "The playing cards the shop rolls with Magic Trick, in order: plain cards, with no enhancement or edition. Hone and Glow Up don't change them."}
-        {source === "illusion" &&
-          "The playing cards the shop rolls with Magic Trick and Illusion from the first slot, and the shop slot each one is in. Illusion rolls on every shop slot, so these depend on the whole shop (see the Shop tab for vouchers bought later). Its editions are guaranteed rolls, so Hone and Glow Up don't change them."}
-        {source === "certificate" &&
-          "The card each Certificate adds, in order, with its seal. Hone and Glow Up don't change them."}
-      </Note>
       <CardList onMore={() => setCount((c) => c + STEP)}>
         {list.map((c, i) => (
           <PlayingCardCard

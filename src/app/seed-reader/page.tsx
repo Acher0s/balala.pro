@@ -13,9 +13,7 @@ export default function SeedReaderPage() {
     <main className="flex w-full flex-col gap-2 px-4 py-10 sm:px-6 lg:px-10">
       <h1 className="text-3xl font-bold">{SEED_READER.frontmatter.title}</h1>
       <p className="max-w-3xl text-fd-muted-foreground">
-        Type a seed to see what it rolls in a ranked Multiplayer match with The
-        Order: every shop slot, and each queue on its own. Each queue reads from
-        the start of the game, as if nothing else had drawn from it.
+        BMP seed reader! Pick your ruleset, deck & stake and read the seed.
       </p>
       <SeedReader />
     </main>
