@@ -1,6 +1,8 @@
 /**
- * The Idol's target card under The Order (the Multiplayer mod's compatibility/TheOrder.lua,
- * reset_idol_card): which (rank, suit) the reel puts first, and how likely each is.
+ * The Idol's target card under The Order: which (rank, suit) the reel puts first, and how likely
+ * each is. Follows Multiplayer 1.0.x (BalatroMultiplayerAPI v1.0.5, api/the_order/
+ * idol_scoring.lua). Its weights are the same as the 0.5.6 dev build's compatibility/TheOrder.lua,
+ * but not 0.5.5's, and 1.0.x adds the Sock and Buskin / Hack bonus.
  *
  * The deck is grouped by rank and suit (Stone cards don't count). Each group gets a tier and a
  * score, and the groups are sorted: tier A first, then by score, then by rank and suit. The roll
@@ -80,7 +82,19 @@ export const IDOL_WEIGHTS = {
   /** Face and low ranks: per card over the baseline (face cards × 1.1). */
   W_GEN: 0.05,
   FACE_MULT: 1.1,
+  /**
+   * With Sock and Buskin (face cards) or Hack (2 to 5), a group with at least this many
+   * effective copies gets +1 per copy, counting at most RETRIGGER_MAX, as if each had a red seal.
+   */
+  RETRIGGER_MIN: 3,
+  RETRIGGER_MAX: 5,
 };
+
+/** Jokers the Idol's scoring looks at: retriggers make face or low groups worth more. */
+export interface IdolJokers {
+  sockAndBuskin?: boolean;
+  hack?: boolean;
+}
 
 const bonus = (table: Record<string, number>, id: string | undefined) =>
   id !== undefined && Object.hasOwn(table, id) ? table[id] : 0.0;
@@ -134,7 +148,10 @@ export interface IdolScore {
   lowBaseline: number;
   low: number;
   qualities: IdolQuality[];
-  /** Sum of the seal, edition and enhancement bonuses, before the multiplier. */
+  /** Sock and Buskin / Hack bonus (part of qualityRaw), and which joker gives it. */
+  retrigger: number;
+  retriggerJoker?: "sockAndBuskin" | "hack";
+  /** Sum of the seal, edition and enhancement bonuses and the retrigger bonus, before the multiplier. */
   qualityRaw: number;
   qualityMultiplier: number;
   /** After the multiplier. */
@@ -188,7 +205,10 @@ export interface IdolResult {
 
 const roundToNearest05 = (x: number) => Math.floor(x * 20 + 0.5) / 20;
 
-export function idolWeights(deck: IdolCard[]): IdolResult {
+export function idolWeights(
+  deck: IdolCard[],
+  jokers: IdolJokers = {},
+): IdolResult {
   // Step 1: group by (rank, suit), in deck order.
   interface Group {
     rank: IdolRank;
@@ -301,6 +321,17 @@ export function idolWeights(deck: IdolCard[]): IdolResult {
       editionScore =
         editionScore + editionWeight(card) + enhancementWeight(card);
     }
+    // Sock and Buskin retriggers face cards and Hack 2 to 5: with enough copies, +1 per copy.
+    const retriggerJoker = FACE.has(g.rank)
+      ? jokers.sockAndBuskin && "sockAndBuskin"
+      : LOW.has(g.rank)
+        ? jokers.hack && "hack"
+        : undefined;
+    let retrigger = 0;
+    if (retriggerJoker && effectiveCount >= IDOL_WEIGHTS.RETRIGGER_MIN) {
+      retrigger = Math.min(effectiveCount, IDOL_WEIGHTS.RETRIGGER_MAX);
+      sealScore = sealScore + retrigger;
+    }
     let score: number;
     let tier: 1 | 0;
     const parts: IdolScore = {
@@ -323,6 +354,8 @@ export function idolWeights(deck: IdolCard[]): IdolResult {
       lowBaseline: LOW.has(g.rank) ? lowBaseline : 0,
       low,
       qualities: qualitiesOf(g.cards),
+      retrigger,
+      retriggerJoker: retrigger ? retriggerJoker || undefined : undefined,
       qualityRaw: sealScore + editionScore,
       qualityMultiplier: 0,
       quality: 0,
@@ -548,3 +581,33 @@ export const idolColumnList = (text: string | undefined) =>
     .split(/[\s,]+/)
     .filter(Boolean)
     .map((c) => c.toLowerCase());
+
+/**
+ * The jokers the scoring looks at, with the short name a link (?jokers=sock-hack) or a guide
+ * (<IdolWeights jokers="sock hack">) uses for each.
+ */
+export const IDOL_JOKERS = [
+  { id: "sockAndBuskin", short: "sock", gameKey: "sock_and_buskin" },
+  { id: "hack", short: "hack", gameKey: "hack" },
+] as const;
+export const JOKERS_PARAM = "jokers";
+
+/** Jokers from link or prop text ("sock-hack", "sock hack"); unknown names come back apart. */
+export function parseIdolJokers(text: string | undefined): {
+  jokers: IdolJokers;
+  unknown: string[];
+} {
+  const jokers: IdolJokers = {};
+  const unknown: string[] = [];
+  for (const name of (text ?? "").split(/[\s,-]+/).filter(Boolean)) {
+    const j = IDOL_JOKERS.find((x) => x.short === name.toLowerCase());
+    if (j) jokers[j.id] = true;
+    else unknown.push(name);
+  }
+  return { jokers, unknown };
+}
+
+export const encodeIdolJokers = (jokers: IdolJokers) =>
+  IDOL_JOKERS.filter((j) => jokers[j.id])
+    .map((j) => j.short)
+    .join("-");

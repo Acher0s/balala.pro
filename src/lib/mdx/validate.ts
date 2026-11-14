@@ -14,7 +14,13 @@ import { isSkillLevel, LEVELS } from "@/components/level/levels";
 import { EDITION_IDS, findItem, getPlayingCard } from "@/data/game";
 import type { ItemKind } from "@/data/game-types";
 import { assertKnownVariables, compile as compileFormula } from "@/lib/formula";
-import { IDOL_COLUMNS, idolColumnList, idolDeckProblems } from "@/lib/idol";
+import {
+  IDOL_COLUMNS,
+  IDOL_JOKERS,
+  idolColumnList,
+  idolDeckProblems,
+  parseIdolJokers,
+} from "@/lib/idol";
 
 const CARD_TAGS: Record<string, ItemKind> = {
   Joker: "joker",
@@ -295,6 +301,13 @@ function checkComponent(
         if (bad.length)
           problems.push(
             `${at}: <IdolWeights deck> has parts that aren't cards: ${bad.map((b) => `"${b}"`).join(", ")}. Copy the deck from the tool's link (?deck=…)`,
+          );
+      }
+      if (p.jokers !== undefined) {
+        const { unknown } = parseIdolJokers(String(p.jokers));
+        if (unknown.length)
+          problems.push(
+            `${at}: <IdolWeights jokers> can be ${IDOL_JOKERS.map((j) => `"${j.short}"`).join(" and ")}; not ${unknown.map((c) => `"${c}"`).join(", ")}`,
           );
       }
       if (p.deckOnly && !p.deck)

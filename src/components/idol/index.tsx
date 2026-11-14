@@ -1,11 +1,18 @@
 import {
   baseCardImage,
   EDITION_IDS,
+  findItem,
   getEdition,
   listItemEntries,
   listPlayingCards,
 } from "@/data/game";
-import { IDOL_COLUMNS, type IdolColumn, idolColumnList } from "@/lib/idol";
+import {
+  IDOL_COLUMNS,
+  IDOL_JOKERS,
+  type IdolColumn,
+  idolColumnList,
+  parseIdolJokers,
+} from "@/lib/idol";
 import { type IdolArt, IdolCalculator } from "./idol-calculator";
 
 /** Seals in the game's own order. */
@@ -14,13 +21,15 @@ const SEAL_ORDER = ["red", "blue", "gold", "purple"];
 /**
  * The Idol Sorting Weight Calculator: build a deck and see how The Order weighs and sorts each
  * card before the Idol picks its target. <IdolWeights /> to build one; in a guide,
- * <IdolWeights deck="KH*4-KSw-AHgRp" deckOnly /> shows just that deck.
+ * <IdolWeights deck="KH*4-KSw-AHgRp" deckOnly /> shows just that deck, and jokers="sock hack"
+ * starts with Sock and Buskin and/or Hack held.
  */
 export function IdolWeights({
   deck,
   deckOnly,
   hideColumn,
   disableExpand,
+  jokers,
 }: {
   /** A deck to start with, as in the tool's link: deck="KH*4-KSw-AHgRp". */
   deck?: string;
@@ -30,6 +39,8 @@ export function IdolWeights({
   hideColumn?: string;
   /** Rows can't be opened to show how their weight adds up. */
   disableExpand?: boolean;
+  /** Jokers held from the start: "sock" (Sock and Buskin) and/or "hack". */
+  jokers?: string;
 } = {}) {
   const hideColumns = idolColumnList(hideColumn).filter((c): c is IdolColumn =>
     (IDOL_COLUMNS as readonly string[]).includes(c),
@@ -52,6 +63,12 @@ export function IdolWeights({
       id,
       name: getEdition(id).name,
     })),
+    jokers: Object.fromEntries(
+      IDOL_JOKERS.flatMap((j) => {
+        const item = findItem("joker", j.gameKey);
+        return item ? [[j.id, { name: item.name, image: item.image }]] : [];
+      }),
+    ),
   };
   return (
     <IdolCalculator
@@ -60,6 +77,7 @@ export function IdolWeights({
       deckOnly={deckOnly}
       hideColumns={hideColumns}
       disableExpand={disableExpand}
+      initialJokers={parseIdolJokers(jokers).jokers}
     />
   );
 }

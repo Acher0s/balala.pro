@@ -7,16 +7,21 @@ import type { EditionId } from "@/data/game-types";
 import {
   decodeIdolDeck,
   encodeIdolDeck,
+  encodeIdolJokers,
   IDOL_BONUS,
   IDOL_COLUMNS,
+  IDOL_JOKERS,
   IDOL_PRESETS,
   IDOL_RANKS,
   IDOL_WEIGHTS,
   type IdolCard,
   type IdolColumn,
   type IdolEntry,
+  type IdolJokers,
   type IdolSuit,
   idolWeights,
+  JOKERS_PARAM,
+  parseIdolJokers,
 } from "@/lib/idol";
 
 /** The card art the calculator draws with, gathered on the server. */
@@ -27,6 +32,8 @@ export interface IdolArt {
   enhancements: { id: string; name: string; image: string }[];
   seals: { id: string; name: string; image: string }[];
   editions: { id: string; name: string }[];
+  /** Sock and Buskin and Hack, by IDOL_JOKERS id. */
+  jokers: Record<string, { name: string; image: string }>;
 }
 
 /** A card in the deck, with an id so one copy can be removed. */
@@ -266,6 +273,12 @@ function explain(e: IdolEntry, art: IdolArt): Step[] {
       how: `${plural(q.copies, "copy", "copies")} × ${q.each}${p.qualityMultiplier !== 1 ? ` × ${p.qualityMultiplier} (half in tier B)` : ""}`,
       value: q.copies * q.each * p.qualityMultiplier,
     });
+  if (p.retrigger > 0 && p.retriggerJoker)
+    steps.push({
+      label: art.jokers[p.retriggerJoker]?.name ?? p.retriggerJoker,
+      how: `retriggers ${plural(p.effectiveCount, "copy", "copies")} (3 or more), +1 each, counting at most ${W.RETRIGGER_MAX}${p.qualityMultiplier !== 1 ? ` × ${p.qualityMultiplier} (half in tier B)` : ""}`,
+      value: p.retrigger * p.qualityMultiplier,
+    });
   return steps;
 }
 
@@ -278,6 +291,7 @@ function explain(e: IdolEntry, art: IdolArt): Step[] {
  * `initialDeck` starts it with a deck (link text, like ?deck=…). `deckOnly` shows just that deck,
  * for a guide pointing at a setup: no adding or removing cards, and the page's link is left alone.
  * `hideColumns` leaves columns of the table out; `disableExpand` turns off the breakdowns.
+ * `initialJokers` starts with Sock and Buskin and/or Hack held (link: ?jokers=sock-hack).
  */
 export function IdolCalculator({
   art,
@@ -285,12 +299,14 @@ export function IdolCalculator({
   deckOnly = false,
   hideColumns = [],
   disableExpand = false,
+  initialJokers = {},
 }: {
   art: IdolArt;
   initialDeck?: string;
   deckOnly?: boolean;
   hideColumns?: IdolColumn[];
   disableExpand?: boolean;
+  initialJokers?: IdolJokers;
 }) {
   const suit = useRotation(SUIT_PICKER);
   const enhancement = useRotation([undefined, ...art.enhancements]);
@@ -306,6 +322,7 @@ export function IdolCalculator({
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [jokers, setJokers] = useState<IdolJokers>(initialJokers);
 
   const withIds = (cards: IdolCard[], from: number) =>
     cards.map((c, i) => ({ ...c, id: from + i }));
@@ -329,6 +346,8 @@ export function IdolCalculator({
       setDeck(withIds(cards, 1));
       setNextId(cards.length + 1);
     }
+    const held = new URLSearchParams(window.location.search).get(JOKERS_PARAM);
+    if (held) setJokers(parseIdolJokers(held).jokers);
     setLoaded(true);
   }, []);
   // Every change goes into the link, so the address bar can be shared as it is.
@@ -337,9 +356,12 @@ export function IdolCalculator({
     const url = new URL(window.location.href);
     if (deck.length) url.searchParams.set(DECK_PARAM, encodeIdolDeck(deck));
     else url.searchParams.delete(DECK_PARAM);
+    const held = encodeIdolJokers(jokers);
+    if (held) url.searchParams.set(JOKERS_PARAM, held);
+    else url.searchParams.delete(JOKERS_PARAM);
     window.history.replaceState(null, "", url);
     setCopied(false);
-  }, [deck, loaded, deckOnly]);
+  }, [deck, jokers, loaded, deckOnly]);
 
   const make = (rank: IdolCard["rank"]): IdolCard => ({
     rank,
@@ -349,7 +371,7 @@ export function IdolCalculator({
     ...(edition.value && { edition: edition.value.id }),
   });
 
-  const result = useMemo(() => idolWeights(deck), [deck]);
+  const result = useMemo(() => idolWeights(deck, jokers), [deck, jokers]);
   // The deck's cards per group, so each copy can be removed on its own.
   const copiesOf = (e: IdolEntry) =>
     deck.filter(
@@ -541,6 +563,44 @@ export function IdolCalculator({
               </button>
             </div>
           )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-fd-muted-foreground">Jokers held</span>
+          {IDOL_JOKERS.map((j) => {
+            const on = !!jokers[j.id];
+            const info = art.jokers[j.id];
+            return (
+              <button
+                key={j.id}
+                type="button"
+                aria-pressed={on}
+                title={
+                  j.id === "hack"
+                    ? "Hack retriggers 2s to 5s: 3+ copies of one get +1 per copy (up to 5)"
+                    : "Sock and Buskin retriggers face cards: 3+ copies of one get +1 per copy (up to 5)"
+                }
+                onClick={() => setJokers((h) => ({ ...h, [j.id]: !on }))}
+                className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
+                  on
+                    ? "border-fd-primary bg-fd-primary/10 font-medium"
+                    : "opacity-70 hover:bg-fd-accent hover:opacity-100"
+                }`}
+              >
+                {info && (
+                  // biome-ignore lint/performance/noImgElement: small local card picture
+                  <img
+                    src={info.image}
+                    alt=""
+                    width={17}
+                    height={23}
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                )}
+                {info?.name ?? j.short}
+              </button>
+            );
+          })}
         </div>
 
         {deck.length === 0 ? (

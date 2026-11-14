@@ -94,6 +94,30 @@ describe("Idol weights (The Order)", () => {
   it("returns nothing for an empty deck", () => {
     expect(idolWeights([])).toEqual({ entries: [], stones: 0, total: 0 });
   });
+  it("gives face groups +1 per copy with Sock and Buskin (1.0.x)", () => {
+    const deck = [
+      ...copies(4, card("King", "Spades")),
+      ...copies(4, card("Ace", "Hearts")),
+    ];
+    // Without it they tie on 8 and the higher rank wins.
+    expect(idolWeights(deck).entries[0].rank).toBe("Ace");
+    expect(idolWeights(deck, { hack: true }).entries[0].rank).toBe("Ace");
+    const [kings] = idolWeights(deck, { sockAndBuskin: true }).entries;
+    expect(kings.rank).toBe("King");
+    expect(kings.parts.retrigger).toBe(4);
+    expect(kings.parts.retriggerJoker).toBe("sockAndBuskin");
+    // Tier B halves it: 8 + 4 × 0.5.
+    expect(kings.score).toBe(10);
+  });
+
+  it("needs 3 copies for the retrigger bonus and counts at most 5", () => {
+    const low = idolWeights(copies(2, card("3", "Clubs")), { hack: true });
+    expect(low.entries[0].parts.retrigger).toBe(0);
+    const many = idolWeights(copies(7, card("3", "Clubs")), { hack: true });
+    expect(many.entries[0].tier).toBe("A");
+    expect(many.entries[0].parts.retrigger).toBe(5);
+    expect(many.entries[0].score).toBe(7 + 5);
+  });
 });
 
 describe("Idol deck links", () => {
