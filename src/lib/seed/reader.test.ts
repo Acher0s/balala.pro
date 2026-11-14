@@ -3,14 +3,19 @@ import pools from "./pools.generated.json";
 import type { SeedRng } from "./pseudo";
 import {
   _internal,
+  certificateQueue,
+  illusionQueue,
   jokerQueue,
   luckyQueue,
+  magicTrickQueue,
   normalizeSeed,
   packConsumableQueue,
   packQueue,
   type ReaderSettings,
+  rawJokerQueue,
   shopConsumableQueue,
   shopQueue,
+  standardPackQueue,
   tagQueue,
   voucherQueue,
 } from "./reader";
@@ -75,16 +80,16 @@ describe("poll_edition", () => {
 
 describe("queues", () => {
   it("are the same for the same seed and differ between seeds", () => {
-    const a = jokerQueue(settings("6EQHIH19"), 1, 20);
-    expect(jokerQueue(settings("6EQHIH19"), 1, 20)).toEqual(a);
-    expect(jokerQueue(settings("94VJ9P47"), 1, 20)).not.toEqual(a);
+    const a = rawJokerQueue(settings("6EQHIH19"), 1, 20);
+    expect(rawJokerQueue(settings("6EQHIH19"), 1, 20)).toEqual(a);
+    expect(rawJokerQueue(settings("94VJ9P47"), 1, 20)).not.toEqual(a);
   });
 
   it("never give a banned card, and do give the ruleset's own", () => {
     const seen = new Set<string>();
     for (const seed of SEEDS) {
       for (const r of [1, 2] as const)
-        for (const j of jokerQueue(settings(seed), r, 300)) seen.add(j.key);
+        for (const j of rawJokerQueue(settings(seed), r, 300)) seen.add(j.key);
       for (const t of shopConsumableQueue(settings(seed), "Tarot", 200))
         seen.add(t);
     }
@@ -100,7 +105,9 @@ describe("queues", () => {
 
   it("never give Chicot, the Boss Tag or the ante vouchers in Attrition", () => {
     for (const seed of SEEDS) {
-      const legendaries = jokerQueue(settings(seed), 4, 60).map((j) => j.key);
+      const legendaries = rawJokerQueue(settings(seed), 4, 60).map(
+        (j) => j.key,
+      );
       expect(legendaries).not.toContain("j_chicot");
       const tags = tagQueue(settings(seed), 12).flatMap((t) => [
         t.small,
@@ -121,10 +128,10 @@ describe("queues", () => {
 
   it("keep each rarity to its own pool", () => {
     const rares = new Set(pools.jokers[3]);
-    for (const j of jokerQueue(settings("AAAAAAAA"), 3, 100))
+    for (const j of rawJokerQueue(settings("AAAAAAAA"), 3, 100))
       expect(rares.has(j.key)).toBe(true);
     const legendaries = new Set(pools.jokers[4]);
-    for (const j of jokerQueue(settings("AAAAAAAA"), 4, 20))
+    for (const j of rawJokerQueue(settings("AAAAAAAA"), 4, 20))
       expect(legendaries.has(j.key)).toBe(true);
   });
 
@@ -150,8 +157,8 @@ describe("queues", () => {
 
 describe("edition vouchers", () => {
   it("keep the jokers and only add editions", () => {
-    const base = jokerQueue(settings("6EQHIH19"), 1, 200);
-    const glow = jokerQueue(settings("6EQHIH19"), 1, 200, false, 4);
+    const base = rawJokerQueue(settings("6EQHIH19"), 1, 200);
+    const glow = rawJokerQueue(settings("6EQHIH19"), 1, 200, false, 4);
     expect(glow.map((j) => j.key)).toEqual(base.map((j) => j.key));
     glow.forEach((j, i) => {
       if (base[i].edition) expect(j.edition).toBeDefined();
@@ -173,7 +180,7 @@ describe("shop", () => {
 
   it("takes its jokers from the stickerless queues on White Stake", () => {
     const shop = shopQueue(settings("6EQHIH19"), 60);
-    const commons = jokerQueue(settings("6EQHIH19"), 1, 60);
+    const commons = rawJokerQueue(settings("6EQHIH19"), 1, 60);
     const fromShop = shop.filter((i) => i.kind === "joker" && i.rarity === 1);
     expect(fromShop.length).toBeGreaterThan(0);
     fromShop.forEach((j, i) => {
@@ -310,7 +317,7 @@ describe("Expanded", () => {
     const seen = new Set<string>();
     for (const seed of SEEDS) {
       for (const r of [1, 2] as const)
-        for (const j of jokerQueue(exp(seed), r, 300)) seen.add(j.key);
+        for (const j of rawJokerQueue(exp(seed), r, 300)) seen.add(j.key);
       for (const set of ["Planet", "Spectral"] as const)
         for (const c of shopConsumableQueue(exp(seed), set, 200)) seen.add(c);
     }
@@ -338,7 +345,9 @@ describe("Expanded", () => {
 
   it("opens Penny Pincher after the first PvP blind", () => {
     const seen = SEEDS.flatMap((s) =>
-      jokerQueue(exp(s, { pincherUnlocked: true }), 1, 300).map((j) => j.key),
+      rawJokerQueue(exp(s, { pincherUnlocked: true }), 1, 300).map(
+        (j) => j.key,
+      ),
     );
     expect(seen).toContain("j_mp_penny_pincher");
     const before = shopQueue(exp("6EQHIH19"), 40);
@@ -372,5 +381,85 @@ describe("Expanded", () => {
     for (const j of jokers)
       if (["j_mp_pizza", "j_mp_seltzer", "j_mp_turtle_bean"].includes(j.key))
         expect(j.stickers).not.toContain("eternal");
+  });
+});
+
+describe("joker queues as the shop gives them", () => {
+  it("are the stickerless queue on White Stake", () => {
+    const shop = jokerQueue(settings("6EQHIH19"), 2, 40);
+    const raw = rawJokerQueue(settings("6EQHIH19"), 2, 40);
+    expect(shop.map((j) => j.key)).toEqual(raw.map((j) => j.key));
+    for (const j of shop) expect(j.stickers).toEqual([]);
+  });
+
+  it("mix both queues on Black Stake, in order", () => {
+    const s = settings("6EQHIH19", 4);
+    const shop = jokerQueue(s, 1, 80);
+    const plain = rawJokerQueue(s, 1, 80);
+    const stickered = rawJokerQueue(s, 1, 80, true);
+    let p = 0;
+    let q = 0;
+    for (const j of shop) {
+      const from = j.stickerQueue ? stickered[q++] : plain[p++];
+      expect(j.key).toBe(from.key);
+      expect(j.edition).toBe(from.edition);
+    }
+    expect(q).toBeGreaterThan(0);
+    expect(shop.some((j) => j.stickers.includes("eternal"))).toBe(true);
+  });
+
+  it("match the shop's own jokers of that rarity", () => {
+    const s = settings("94VJ9P47", 8);
+    const fromShop = shopQueue(s, 120).flatMap((i) =>
+      i.kind === "joker" && i.rarity === 1 ? [i] : [],
+    );
+    const queue = jokerQueue(s, 1, fromShop.length);
+    expect(queue).toEqual(fromShop);
+  });
+});
+
+describe("playing card queues", () => {
+  it("give Standard Pack cards with seals, editions and enhancements", () => {
+    const cards = SEEDS.flatMap((s) => standardPackQueue(settings(s), 200));
+    const share = (f: (c: (typeof cards)[number]) => unknown) =>
+      cards.filter(f).length / cards.length;
+    expect(share((c) => c.seal)).toBeGreaterThan(0.15);
+    expect(share((c) => c.seal)).toBeLessThan(0.25);
+    expect(share((c) => c.enhancement)).toBeGreaterThan(0.35);
+    expect(share((c) => c.enhancement)).toBeLessThan(0.45);
+    expect(share((c) => c.edition)).toBeGreaterThan(0.05);
+    expect(cards.some((c) => c.edition === "negative")).toBe(false);
+    for (const c of cards) expect(pools.cards).toContain(c.card);
+  });
+
+  it("only gives Standard Packs more editions with Glow Up", () => {
+    const base = standardPackQueue(settings("6EQHIH19"), 200);
+    const glow = standardPackQueue(settings("6EQHIH19"), 200, 4);
+    expect(glow.map((c) => [c.card, c.seal, c.enhancement])).toEqual(
+      base.map((c) => [c.card, c.seal, c.enhancement]),
+    );
+    expect(glow.filter((c) => c.edition).length).toBeGreaterThan(
+      base.filter((c) => c.edition).length,
+    );
+  });
+
+  it("match the shop's own playing cards", () => {
+    const s = settings("6EQHIH19");
+    const shop = shopQueue(s, 200, { vouchers: { v_magic_trick: 1 } });
+    const fromShop = shop.flatMap((i) => (i.kind === "card" ? [i.card] : []));
+    expect(magicTrickQueue(s, fromShop.length).map((c) => c.card)).toEqual(
+      fromShop,
+    );
+    const illusion = illusionQueue(s, 200);
+    expect(illusion.length).toBeGreaterThan(0);
+    for (const c of illusion) expect(c.slot).toBeDefined();
+    expect(illusion.some((c) => c.enhancement || c.edition)).toBe(true);
+  });
+
+  it("always gives Certificate a seal", () => {
+    const cards = certificateQueue(settings("6EQHIH19"), 200);
+    for (const c of cards)
+      expect(["Gold", "Red", "Blue", "Purple"]).toContain(c.seal);
+    expect(new Set(cards.map((c) => c.seal)).size).toBe(4);
   });
 });

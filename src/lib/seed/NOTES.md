@@ -90,3 +90,14 @@ name. Cards a ruleset can't use (sandbox, experimental, traps, Wraith rework) ar
   while one exists).
 - The first shop's forced Buffoon Pack is shown as `p_buffoon_normal_1`; whether it's art 1 or 2
   comes from an unseeded `math.random`.
+
+## Playing cards
+
+- Standard Packs (MultiplayerAPI `api/the_order/standard_pack.lua`): edition on
+  `standard_edition0` (mod 2, no Negative, Hone/Glow Up apply), seal on `stdseal0` (over 0.8)
+  and `stdsealtype0`, Enhanced on `stdset0` (over 0.6), then `Enhancedsta0` and `frontsta0`.
+- Shop: `frontsho0`, `Enhancedsho0`; with Illusion, `illusion` is rolled on every shop slot,
+  so the Illusion queue is read from the shop itself.
+- Certificate: `cert_fr`, then Steamodded's guaranteed `poll_seal` with type key `certsl`
+  (under The Order a guaranteed seal skips its chance roll). Seal types: the seal pool in order
+  (Gold, Red, Blue, Purple), weight 10 each.

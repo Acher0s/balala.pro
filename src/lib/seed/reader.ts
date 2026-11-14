@@ -304,8 +304,11 @@ class Game {
 // ---------------------------------------------------------------------------
 // Queues
 
-/** Joker queue of one rarity: stickerless (`stickers` false) or the sticker queue. */
-export function jokerQueue(
+/**
+ * One of a rarity's two raw queues: stickerless (`stickers` false) or the sticker queue, as
+ * the pool stream and its edition stream give them.
+ */
+export function rawJokerQueue(
   settings: ReaderSettings,
   rarity: Rarity,
   count: number,
@@ -332,6 +335,31 @@ export function jokerQueue(
     });
   }
   return out;
+}
+
+/**
+ * The jokers of one rarity the shop and Buffoon Packs give, in order: each rolls its stickers
+ * first (Black Stake and up), and takes the next joker from the sticker queue if it got one,
+ * from the stickerless queue if not. Legendaries (The Soul) never get stickers.
+ */
+export function jokerQueue(
+  settings: ReaderSettings,
+  rarity: Rarity,
+  count: number,
+  /** edition_rate: 1, Hone 2, Glow Up 4. */
+  editionRate = 1,
+): ShopJoker[] {
+  const game = new Game(settings);
+  return Array.from({ length: count }, () =>
+    rarity === 4
+      ? {
+          ...game.plainJoker(4, editionRate),
+          kind: "joker" as const,
+          stickers: [],
+          stickerQueue: false,
+        }
+      : game.shopJoker(rarity, editionRate),
+  );
 }
 
 /** Consumables from the shop ("Tarot", "Planet", "Spectral" with key_append = the set). */
@@ -614,9 +642,127 @@ export function shopQueue(
   return out;
 }
 
-/** The Soul's legendary: the legendary queue, without stickers ("Joker4"). */
-export function legendaryQueue(settings: ReaderSettings, count: number) {
-  return jokerQueue(settings, 4, count);
+// ---------------------------------------------------------------------------
+// Playing cards
+
+export interface PlayingCardRoll {
+  /** Playing card key, e.g. "H_K". */
+  card: string;
+  enhancement?: string;
+  edition?: Edition;
+  /** "Gold", "Red", "Blue" or "Purple". */
+  seal?: string;
+  /** Shop slot it came from (Illusion), 1-based. */
+  slot?: number;
+}
+
+/**
+ * Which seal SMODS.poll_seal picks once it has decided on one: the seal pool in order (Gold,
+ * Red, Blue, Purple), weight 10 each, walked down from the top.
+ */
+function pollSealType(rng: SeedRng, key: string): string {
+  const seals = ["Gold", "Red", "Blue", "Purple"];
+  const typeWeight = seals.length * 10;
+  const poll = rng.random(key);
+  let acc = 0;
+  for (const seal of seals) {
+    acc = acc + 10;
+    if (poll > 1 - acc / typeWeight) return seal;
+  }
+  return seals[seals.length - 1];
+}
+
+/**
+ * Cards shown in Standard Packs, one after another across packs (MultiplayerAPI's
+ * api/the_order/standard_pack.lua): edition on "standard_edition0" (twice the usual odds, no
+ * Negative, Hone/Glow Up apply), a seal on "stdseal0" (1 in 5) with its type on
+ * "stdsealtype0", Enhanced or not on "stdset0" (over 0.6), then the enhancement from
+ * "Enhancedsta0" and the card from "frontsta0".
+ */
+export function standardPackQueue(
+  settings: ReaderSettings,
+  count: number,
+  editionRate = 1,
+): PlayingCardRoll[] {
+  const game = new Game(settings);
+  const rng = game.rng;
+  // poll_seal's chance: type_weight * mod / total_weight, total = 40 + 40 / 2 * 98.
+  const sealChance = (40 * 10) / (40 + (40 / 2) * 98);
+  return Array.from({ length: count }, () => {
+    const edition = pollEdition(rng, "standard_edition0", {
+      rate: editionRate,
+      mod: 2,
+      noNegative: true,
+    });
+    const seal =
+      rng.random("stdseal0") > 1 - sealChance
+        ? pollSealType(rng, "stdsealtype0")
+        : undefined;
+    const enhanced = rng.random("stdset0") > 0.6;
+    const enhancement = enhanced
+      ? drawFrom(rng, game.pools.enhancements, "Enhancedsta0")
+      : undefined;
+    const card = rng.element(game.pools.cards, "frontsta0");
+    return { card, enhancement, edition, seal };
+  });
+}
+
+/**
+ * Playing cards the shop rolls with Magic Trick, in order: plain cards, the card from
+ * "frontsho0". (With Illusion, see illusionQueue.)
+ */
+export function magicTrickQueue(
+  settings: ReaderSettings,
+  count: number,
+): PlayingCardRoll[] {
+  const game = new Game(settings);
+  return Array.from({ length: count }, () => ({
+    card: game.rng.element(game.pools.cards, "frontsho0"),
+  }));
+}
+
+/**
+ * Playing cards the shop rolls with Magic Trick and Illusion from the first slot. Illusion
+ * rolls on every shop slot, not just the playing card ones, so these come from reading the
+ * shop slot by slot, and each says which slot it's in.
+ */
+export function illusionQueue(
+  settings: ReaderSettings,
+  slots: number,
+  mods: ShopModifiers = {},
+): PlayingCardRoll[] {
+  const shop = shopQueue(settings, slots, {
+    ...mods,
+    vouchers: { ...mods.vouchers, v_magic_trick: 1, v_illusion: 1 },
+  });
+  return shop.flatMap((item, i) =>
+    item.kind === "card"
+      ? [
+          {
+            card: item.card,
+            enhancement: item.enhancement,
+            edition: item.edition,
+            slot: i + 1,
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * Certificate's cards, in order: the card from "cert_fr" and a guaranteed seal (Steamodded's
+ * poll_seal; under The Order a guaranteed seal skips its chance roll) with its type on "certsl".
+ */
+export function certificateQueue(
+  settings: ReaderSettings,
+  count: number,
+): PlayingCardRoll[] {
+  const game = new Game(settings);
+  return Array.from({ length: count }, () => {
+    const card = game.rng.element(game.pools.cards, "cert_fr");
+    const seal = pollSealType(game.rng, "certsl");
+    return { card, seal };
+  });
 }
 
 /** Exposed for tests. */

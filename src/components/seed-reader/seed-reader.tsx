@@ -2,9 +2,12 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
+  certificateQueue,
+  illusionQueue,
   jokerQueue,
   judgementRarities,
   luckyQueue,
+  magicTrickQueue,
   PACK_SIZES,
   packConsumableQueue,
   packQueue,
@@ -14,6 +17,7 @@ import {
   type ShopVoucher,
   shopConsumableQueue,
   shopQueue,
+  standardPackQueue,
   tagQueue,
   voucherQueue,
 } from "@/lib/seed/reader";
@@ -24,6 +28,7 @@ import { ArtContext, ItemCard, PlayingCardCard, useArt } from "./seed-card";
 const TABS = [
   ["shop", "Shop"],
   ["jokers", "Jokers"],
+  ["cards", "Playing cards"],
   ["tarots", "Tarots"],
   ["planets", "Planets"],
   ["spectrals", "Spectrals"],
@@ -252,9 +257,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
   );
 }
 
+const EDITION_VOUCHERS: readonly (readonly [number, string])[] = [
+  [1, "No edition voucher"],
+  [2, "Hone"],
+  [4, "Glow Up"],
+];
+
 function JokersTab({ settings }: { settings: ReaderSettings }) {
   const [rarity, setRarity] = useState<Rarity>(1);
-  const [stickers, setStickers] = useState(false);
+  const [hideStickered, setHideStickered] = useState(false);
   const [editionRate, setEditionRate] = useState(1);
   const [pincher, setPincher] = useState(false);
   const [count, setCount] = useState(STEP);
@@ -264,34 +275,34 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
         { ...settings, pincherUnlocked: pincher },
         rarity,
         count,
-        stickers,
         editionRate,
       ),
-    [settings, rarity, count, stickers, editionRate, pincher],
+    [settings, rarity, count, editionRate, pincher],
   );
+  // Stickers only exist from Black Stake up, and never on legendaries.
+  const canFilter = rarity !== 4 && settings.stake >= 4;
+  const shown = list
+    .map((j, i) => ({ j, index: i + 1 }))
+    .filter(({ j }) => !(canFilter && hideStickered && j.stickerQueue));
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Toggle value={rarity} options={RARITIES} onChange={setRarity} />
-        {rarity !== 4 && (
-          <Toggle
-            value={stickers ? "s" : "n"}
-            options={[
-              ["n", "Stickerless"],
-              ["s", "With stickers"],
-            ]}
-            onChange={(v) => setStickers(v === "s")}
-          />
-        )}
         <Toggle
           value={editionRate}
-          options={[
-            [1, "No edition voucher"],
-            [2, "Hone"],
-            [4, "Glow Up"],
-          ]}
+          options={EDITION_VOUCHERS}
           onChange={setEditionRate}
         />
+        {canFilter && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={hideStickered}
+              onChange={(e) => setHideStickered(e.target.checked)}
+            />
+            Hide jokers that rolled a sticker
+          </label>
+        )}
         {settings.ruleset.pennyPincher && rarity === 1 && (
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -306,21 +317,81 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
       <Note>
         {rarity === 4
           ? "The Soul's legendaries, in order."
-          : stickers
-            ? "Jokers that rolled a sticker in the shop or a pack (Black Stake and up) come from this queue; which sticker they get is rolled separately, so it isn't shown here."
-            : "Jokers with no sticker come from this queue: the shop and Buffoon Packs (when no sticker is rolled), Judgement, Riff-raff and the like all share it."}{" "}
+          : "Every joker of this rarity the shop and Buffoon Packs give, in order, with the stickers it gets. Under The Order a joker that rolls a sticker comes from a separate queue, so hiding those shows the stickerless queue on its own: the one Judgement, Riff-raff and the Uncommon/Rare Tags take from."}{" "}
         Hone and Glow Up make Foil, Holographic and Polychrome more likely (not
         Negative), so some jokers gain an edition, but which joker comes next
         doesn't change.
       </Note>
       <Grid>
-        {list.map((j, i) => (
+        {shown.map(({ j, index }) => (
           <ItemCard
-            // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
-            key={i}
+            key={index}
             itemKey={j.key}
             edition={j.edition}
+            stickers={j.stickers}
+            index={index}
+          />
+        ))}
+      </Grid>
+      <More onClick={() => setCount((c) => c + STEP)} />
+    </div>
+  );
+}
+
+const CARD_SOURCES = [
+  ["standard", "Standard Packs"],
+  ["magic", "Shop (Magic Trick)"],
+  ["illusion", "Shop (Illusion)"],
+  ["certificate", "Certificate"],
+] as const;
+type CardSource = (typeof CARD_SOURCES)[number][0];
+
+function CardsTab({ settings }: { settings: ReaderSettings }) {
+  const [source, setSource] = useState<CardSource>("standard");
+  const [editionRate, setEditionRate] = useState(1);
+  const [count, setCount] = useState(STEP);
+  const list = useMemo(() => {
+    if (source === "standard")
+      return standardPackQueue(settings, count, editionRate);
+    if (source === "magic") return magicTrickQueue(settings, count);
+    if (source === "illusion")
+      // Read enough shop slots to find this many playing cards (about 1 in 8 slots).
+      return illusionQueue(settings, count * 16).slice(0, count);
+    return certificateQueue(settings, count);
+  }, [settings, source, count, editionRate]);
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Toggle value={source} options={CARD_SOURCES} onChange={setSource} />
+        {source === "standard" && (
+          <Toggle
+            value={editionRate}
+            options={EDITION_VOUCHERS}
+            onChange={setEditionRate}
+          />
+        )}
+      </div>
+      <Note>
+        {source === "standard" &&
+          "Cards shown in Standard Packs, one after another across packs. Hone and Glow Up make editions more likely here; the cards, seals and enhancements stay the same."}
+        {source === "magic" &&
+          "The playing cards the shop rolls with Magic Trick, in order: plain cards, with no enhancement or edition. Hone and Glow Up don't change them."}
+        {source === "illusion" &&
+          "The playing cards the shop rolls with Magic Trick and Illusion from the first slot, and the shop slot each one is in. Illusion rolls on every shop slot, so these depend on the whole shop (see the Shop tab for vouchers bought later). Its editions are guaranteed rolls, so Hone and Glow Up don't change them."}
+        {source === "certificate" &&
+          "The card each Certificate adds, in order, with its seal. Hone and Glow Up don't change them."}
+      </Note>
+      <Grid>
+        {list.map((c, i) => (
+          <PlayingCardCard
+            // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
+            key={i}
+            card={c.card}
+            enhancement={c.enhancement}
+            edition={c.edition}
+            seal={c.seal}
             index={i + 1}
+            note={c.slot ? `slot ${c.slot}` : undefined}
           />
         ))}
       </Grid>
@@ -697,6 +768,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
             <section key={`${tab}:${seed}:${activeStake}:${ruleset.id}`}>
               {tab === "shop" && <ShopTab settings={settings} />}
               {tab === "jokers" && <JokersTab settings={settings} />}
+              {tab === "cards" && <CardsTab settings={settings} />}
               {tab === "tarots" && (
                 <ConsumableTab settings={settings} set="Tarot" />
               )}

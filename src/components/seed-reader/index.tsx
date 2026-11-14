@@ -22,6 +22,10 @@ function wantedKeys(): Set<string> {
     ...pools.enhancements,
     ...pools.tags.map((t) => t.key),
     "eternal",
+    "Gold",
+    "Red",
+    "Blue",
+    "Purple",
     "perishable",
     "rental",
     "b_ghost",
@@ -50,6 +54,7 @@ const KINDS: ItemKind[] = [
   "enhancement",
   "tag",
   "sticker",
+  "seal",
   "stake",
   "deck",
 ];

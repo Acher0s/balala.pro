@@ -218,22 +218,28 @@ export function PlayingCardCard({
   card,
   enhancement,
   edition,
+  seal,
   index,
+  note,
 }: {
   card: string;
   enhancement?: string;
   edition?: string;
+  /** Seal key: "Gold", "Red", "Blue" or "Purple". */
+  seal?: string;
   index?: number;
+  note?: ReactNode;
 }) {
   const art = useArt();
   const front = art.cards[card];
   const enh = enhancement ? art.items[enhancement] : undefined;
   const ed = edition ? art.editions[edition] : undefined;
+  const sl = seal ? art.items[seal] : undefined;
   const layers = [
     enh?.image ?? art.base,
     ...(enhancement === "m_stone" || !front ? [] : [front.image]),
   ];
-  const name = [front?.name ?? card, enh?.name, ed?.name]
+  const name = [front?.name ?? card, enh?.name, ed?.name, sl?.name]
     .filter(Boolean)
     .join(", ");
   return (
@@ -242,9 +248,14 @@ export function PlayingCardCard({
         type="button"
         className="flex h-[95px] w-[71px] items-center justify-center rounded transition-transform hover:-translate-y-1 focus:-translate-y-1"
       >
-        <Picture layers={layers} overlays={[]} edition={edition} alt={name} />
+        <Picture
+          layers={layers}
+          overlays={sl?.overlay ? [sl.overlay] : []}
+          edition={edition}
+          alt={name}
+        />
       </button>
-      <Caption index={index} />
+      <Caption index={index} note={note} />
       <Tooltip
         colour="#6b7f84"
         title={front?.name ?? card}
@@ -252,9 +263,11 @@ export function PlayingCardCard({
           { label: "Playing card", colour: "#6b7f84" },
           ...(enh ? [{ label: enh.name, colour: "#6b7f84" }] : []),
           ...(ed ? [{ label: ed.name, colour: EDITION_COLOUR }] : []),
+          ...(sl ? [{ label: sl.name, colour: colourOf(sl) }] : []),
         ]}
       >
         {enh && <EffectText lines={enh.text} />}
+        {sl && <EffectText lines={sl.text} />}
       </Tooltip>
     </span>
   );
