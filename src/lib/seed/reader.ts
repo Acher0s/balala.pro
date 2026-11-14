@@ -39,8 +39,6 @@ export interface ShopJoker extends JokerRoll {
   stickers: StickerId[];
   /** Taken from the rarity's sticker queue rather than its stickerless one. */
   stickerQueue: boolean;
-  /** Shown in a Buffoon Pack (the shop's list numbers these packs from 1), not a shop slot. */
-  pack?: number;
 }
 
 export type ShopItem =
@@ -84,11 +82,6 @@ export interface ShopModifiers {
   vouchers?: Partial<Record<ShopVoucher, number>>;
   /** The first shop slot after the first PvP blind, from which Penny Pincher can show up. */
   pincherFrom?: number;
-  /**
-   * Buffoon Packs opened: after which shop slot (0 = before the first) and how many cards.
-   * They take jokers from the same queues as the shop.
-   */
-  buffoonPacks?: { after: number; size: number }[];
 }
 
 /** The vouchers that change what the shop rolls. */
@@ -609,18 +602,7 @@ export function shopQueue(
   mods: ShopModifiers = {},
 ): ShopItem[] {
   const sim = new ShopSim(settings, mods);
-  const packs = [...(mods.buffoonPacks ?? [])].sort(
-    (a, b) => a.after - b.after,
-  );
-  const out: ShopItem[] = [];
-  let p = 0;
-  for (let slot = 1; slot <= count; slot++) {
-    for (; p < packs.length && packs[p].after < slot; p++)
-      for (let i = 0; i < packs[p].size; i++)
-        out.push({ ...sim.buffoonCard(), pack: p + 1 });
-    out.push(sim.next());
-  }
-  return out;
+  return Array.from({ length: count }, () => sim.next());
 }
 
 /**

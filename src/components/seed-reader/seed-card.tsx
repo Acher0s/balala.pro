@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
 import { EditionCard } from "@/components/edition-card";
 import { colourOf, EffectText } from "@/components/effect-text";
@@ -273,5 +274,61 @@ export function PlayingCardCard({
         {sl && <EffectText lines={sl.text} />}
       </Tooltip>
     </span>
+  );
+}
+
+/**
+ * A voucher you can mark as bought, drawn like the Shop slot odds tool's toggles: bought has
+ * the game's orange (attention) border and a check; not bought is dashed, faded and grey.
+ */
+export function VoucherTile({
+  itemKey,
+  on,
+  onClick,
+  children,
+}: {
+  itemKey: string;
+  on: boolean;
+  onClick: () => void;
+  /** Extra controls under the tile (e.g. which shop slot it was bought at). */
+  children?: ReactNode;
+}) {
+  const art = useArt();
+  const item = art.items[itemKey];
+  const name = item?.name ?? itemKey;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        aria-pressed={on}
+        title={`${name}: ${on ? "bought. Click to unbuy." : "not bought. Click if you bought it."}`}
+        onClick={onClick}
+        className={`relative flex w-24 flex-col items-center gap-1 rounded-lg border-2 p-1.5 text-center text-xs leading-tight transition ${
+          on
+            ? "border-[#ff9a00] bg-[#ff9a00]/15 font-semibold"
+            : "border-dashed text-fd-muted-foreground hover:border-fd-muted-foreground hover:bg-fd-accent"
+        }`}
+      >
+        {item && (
+          // biome-ignore lint/performance/noImgElement: small pixel-art card
+          <img
+            src={item.image}
+            alt=""
+            className={`h-[95px] w-[71px] transition ${on ? "" : "opacity-35 grayscale"}`}
+            style={{ imageRendering: "pixelated", margin: 0 }}
+          />
+        )}
+        {on && (
+          <span
+            aria-hidden
+            className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[#ff9a00] text-white shadow"
+          >
+            <Check className="size-3.5" />
+          </span>
+        )}
+        <span>{name}</span>
+      </button>
+      {children}
+    </div>
   );
 }
