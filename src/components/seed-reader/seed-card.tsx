@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, Check } from "lucide-react";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { EditionCard } from "@/components/edition-card";
 import { colourOf, EffectText } from "@/components/effect-text";
 import type { EditionId } from "@/data/game-types";
@@ -31,16 +31,23 @@ function Tooltip({
   title,
   badges,
   children,
+  hidden,
 }: {
   colour: string;
   title: string;
   badges: { label: string; colour: string }[];
   children?: ReactNode;
+  /** Kept closed even while hovered (e.g. right after the card was clicked). */
+  hidden?: boolean;
 }) {
   return (
     <span
       role="tooltip"
-      className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 flex w-56 -translate-x-1/2 flex-col items-center gap-1.5 rounded-xl border-2 bg-[#3a5055] p-2.5 text-center opacity-0 shadow-xl transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      className={`pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 flex w-56 -translate-x-1/2 flex-col items-center gap-1.5 rounded-xl border-2 bg-[#3a5055] p-2.5 text-center opacity-0 shadow-xl transition-opacity ${
+        hidden
+          ? ""
+          : "group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      }`}
       style={{ borderColor: colour }}
     >
       <span className="text-sm font-bold text-white">{title}</span>
@@ -152,6 +159,8 @@ export function ItemCard({
   onBlock?: () => void;
 }) {
   const art = useArt();
+  // After a click blocks the card, its hover card stays closed until the pointer leaves it.
+  const [quiet, setQuiet] = useState(false);
   const item: ArtItem | undefined = art.items[itemKey];
   if (!item)
     return (
@@ -183,14 +192,23 @@ export function ItemCard({
     >
       <button
         type="button"
-        onClick={onBlock}
+        onClick={
+          onBlock &&
+          ((e) => {
+            // Close the hover card: the card under the pointer is now a different one.
+            e.currentTarget.blur();
+            setQuiet(true);
+            onBlock();
+          })
+        }
+        onMouseLeave={() => setQuiet(false)}
         aria-label={onBlock ? `Block ${item.name}` : undefined}
         className={`relative flex h-[95px] w-[71px] items-center justify-center rounded transition-transform hover:-translate-y-1 focus:-translate-y-1 ${onBlock ? "cursor-pointer" : ""}`}
       >
         {onBlock && (
           <span
             aria-hidden
-            className="pointer-events-none absolute -top-1.5 -right-1.5 z-10 hidden size-5 items-center justify-center rounded-full bg-[#fe5f55] text-white shadow group-hover:flex"
+            className={`pointer-events-none absolute -top-1.5 -right-1.5 z-10 hidden size-5 items-center justify-center rounded-full bg-[#fe5f55] text-white shadow ${quiet ? "" : "group-hover:flex"}`}
           >
             <Ban className="size-3.5" />
           </span>
@@ -218,7 +236,7 @@ export function ItemCard({
         )}
       </button>
       <Caption index={index} note={note} />
-      <Tooltip colour={colour} title={item.name} badges={badges}>
+      <Tooltip colour={colour} title={item.name} badges={badges} hidden={quiet}>
         <EffectText lines={item.text} />
         {ed && (
           <span className="mt-1 border-t border-white/20 pt-1">

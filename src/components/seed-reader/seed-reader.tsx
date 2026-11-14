@@ -107,7 +107,41 @@ interface BlockEntry {
 const BlockContext = createContext<{
   blocks: BlockEntry[];
   add: (b: BlockEntry) => void;
-}>({ blocks: [], add: () => {} });
+  undo: () => void;
+  clear: () => void;
+}>({ blocks: [], add: () => {}, undo: () => {}, clear: () => {} });
+
+/** What clicking a card does, with Undo last block and Unblock all: shown above blockable cards. */
+function BlockBar() {
+  const { blocks, undo, clear } = useContext(BlockContext);
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <Ban className="size-4 text-[#fe5f55]" />
+      <span className="text-fd-muted-foreground">
+        Click a joker or consumable to block it: the queue skips it from there
+        on, as if you had it.
+        {blocks.length > 0 && ` ${blocks.length} blocked.`}
+      </span>
+      <button
+        type="button"
+        disabled={blocks.length === 0}
+        onClick={undo}
+        className="flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
+      >
+        <Undo2 className="size-4" />
+        Undo last block
+      </button>
+      <button
+        type="button"
+        disabled={blocks.length === 0}
+        onClick={clear}
+        className="rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
+      >
+        Unblock all
+      </button>
+    </div>
+  );
+}
 
 /** One list's blocks, a way to add one, and how many are blocked at a position. */
 function useBlocks(list: string) {
@@ -157,12 +191,15 @@ function CardList({
   slots,
   jump,
   onJumped,
+  blockable,
 }: {
   children: ReactNode;
   onMore: () => void;
   slots?: number[];
   jump?: number;
   onJumped?: () => void;
+  /** Its cards can be clicked to block them: show how, and Undo / Unblock all, above them. */
+  blockable?: boolean;
 }) {
   const [layout] = useContext(LayoutContext);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -175,17 +212,21 @@ function CardList({
   });
   if (layout === "band")
     return (
-      <Band
-        onMore={onMore}
-        slots={slots}
-        jump={jump}
-        onJumped={onJumped ?? (() => {})}
-      >
-        {children}
-      </Band>
+      <div className="flex flex-col gap-2">
+        {blockable && <BlockBar />}
+        <Band
+          onMore={onMore}
+          slots={slots}
+          jump={jump}
+          onJumped={onJumped ?? (() => {})}
+        >
+          {children}
+        </Band>
+      </div>
     );
   return (
     <div ref={gridRef} className="flex flex-col gap-4">
+      {blockable && <BlockBar />}
       <Grid>
         {Children.map(children, (child, i) => (
           <div className="contents" data-slot={slots?.[i]}>
@@ -627,6 +668,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
         });
         return (
           <CardList
+            blockable
             onMore={() => setCount((c) => c + STEP)}
             slots={shown.map((x) => x.slot)}
             jump={jump}
@@ -710,7 +752,7 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
           </label>
         )}
       </div>
-      <CardList onMore={() => setCount((c) => c + STEP)}>
+      <CardList onMore={() => setCount((c) => c + STEP)} blockable>
         {shown.map(({ j, index }) => (
           <ItemCard
             key={index}
@@ -836,7 +878,7 @@ function ConsumableTab({
         {set === "Spectral" &&
           " On Ghost Deck, Hex is skipped while you hold the one it starts with."}
       </Note>
-      <CardList onMore={() => setCount((c) => c + STEP)}>
+      <CardList onMore={() => setCount((c) => c + STEP)} blockable>
         {list.map((key, i) => (
           <ItemCard
             // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
@@ -1076,6 +1118,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
     () => ({
       blocks,
       add: (b: BlockEntry) => setBlocks((prev) => [...prev, b]),
+      undo: () => setBlocks((prev) => prev.slice(0, -1)),
+      clear: () => setBlocks([]),
     }),
     [blocks],
   );
@@ -1248,31 +1292,6 @@ export function SeedReader({ art }: { art: SeedArt }) {
 
             {seed ? (
               <>
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Ban className="size-4 text-[#fe5f55]" />
-                  <span className="text-fd-muted-foreground">
-                    Click a joker or consumable to block it: the queue skips it
-                    from there on, as if you had it.
-                    {blocks.length > 0 && ` ${blocks.length} blocked.`}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={blocks.length === 0}
-                    onClick={() => setBlocks((prev) => prev.slice(0, -1))}
-                    className="flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
-                  >
-                    <Undo2 className="size-4" />
-                    Undo last block
-                  </button>
-                  <button
-                    type="button"
-                    disabled={blocks.length === 0}
-                    onClick={() => setBlocks([])}
-                    className="rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
-                  >
-                    Unblock all
-                  </button>
-                </div>
                 <nav className="flex flex-wrap gap-1 border-b pb-2">
                   {TABS.map(([id, label]) => (
                     <button
