@@ -28,9 +28,15 @@ function wantedKeys(): Set<string> {
     "stake_white",
   ]);
   for (const patch of PATCHES)
-    for (const ruleset of patch.rulesets)
+    for (const ruleset of patch.rulesets) {
       for (const list of Object.values(ruleset.added.jokers ?? {}))
         for (const key of list ?? []) keys.add(key);
+      for (const key of [
+        ...(ruleset.added.Planet ?? []),
+        ...(ruleset.added.Spectral ?? []),
+      ])
+        keys.add(key);
+    }
   return keys;
 }
 

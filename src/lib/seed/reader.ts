@@ -58,8 +58,13 @@ export interface ReaderSettings {
   ruleset: RulesetDef;
   /** The game mode, whose bans add to the ruleset's. */
   gameMode: GameModeDef;
-  /** Stake number: 1 White … 4 Black (Eternals) … 7 Orange (Perishables), 8 Gold (Rentals). */
+  /**
+   * Stake number: 1 White … 4 Black (Eternals) … 7 Orange (Perishables), 8 Gold (Rentals),
+   * 9 Spectral+ (all three, like Gold).
+   */
   stake: number;
+  /** Penny Pincher's slot is open (after the first PvP blind), where the ruleset has it. */
+  pincherUnlocked?: boolean;
 }
 
 /** Shop rates that vouchers and decks change, from a given shop slot on. */
@@ -68,6 +73,8 @@ export interface ShopModifiers {
   ghostDeck?: boolean;
   /** Voucher key → the first shop slot (1-based) it applies to. */
   vouchers?: Partial<Record<ShopVoucher, number>>;
+  /** The first shop slot after the first PvP blind, from which Penny Pincher can show up. */
+  pincherFrom?: number;
 }
 
 /** The vouchers that change what the shop rolls. */
@@ -107,30 +114,44 @@ export function bannedKeys(settings: ReaderSettings): Set<string> {
   return new Set([...settings.ruleset.banned, ...settings.gameMode.banned]);
 }
 
+/** Every slot that's never picked: the bans, and Penny Pincher while it's locked. */
+function unavailableKeys(settings: ReaderSettings): Set<string> {
+  const keys = bannedKeys(settings);
+  if (settings.ruleset.pennyPincher && !settings.pincherUnlocked)
+    keys.add("j_mp_penny_pincher");
+  return keys;
+}
+
 /** The pools as get_current_pool builds them, with the bans and the ruleset's additions. */
 function buildPools(settings: ReaderSettings): Pools {
   const { ruleset } = settings;
-  const banned = bannedKeys(settings);
+  const banned = unavailableKeys(settings);
   const mark = (key: string) => (banned.has(key) ? UNAVAILABLE : key);
   const jokers = {} as Record<Rarity, string[]>;
   for (const r of [1, 2, 3, 4] as Rarity[])
-    jokers[r] = [
-      ...POOLS.jokers[r].map(mark),
-      ...(ruleset.added.jokers?.[r] ?? []),
-    ];
+    jokers[r] = [...POOLS.jokers[r], ...(ruleset.added.jokers?.[r] ?? [])].map(
+      mark,
+    );
   return {
     jokers,
     Tarot: POOLS.tarots.map(mark),
     // Planet X, Ceres and Eris need their hand played first; this reads as if it hasn't been.
-    Planet: POOLS.planets.map((p) => (p.softlock ? UNAVAILABLE : mark(p.key))),
+    Planet: [
+      ...POOLS.planets.map((p) => (p.softlock ? UNAVAILABLE : p.key)),
+      ...(ruleset.added.Planet ?? []),
+    ].map(mark),
     // The Soul and Black Hole are never picked from the pool, only by their own roll.
-    Spectral: POOLS.spectrals.map((s) =>
-      s.hidden ? UNAVAILABLE : mark(s.key),
-    ),
+    Spectral: [
+      ...POOLS.spectrals.map((s) => (s.hidden ? UNAVAILABLE : s.key)),
+      ...(ruleset.added.Spectral ?? []),
+    ].map(mark),
     enhancements: POOLS.enhancements.map(mark),
     cards: POOLS.cards,
-    noEternal: new Set(POOLS.noEternal),
-    noPerishable: new Set(POOLS.noPerishable),
+    noEternal: new Set([...POOLS.noEternal, ...(ruleset.noEternal ?? [])]),
+    noPerishable: new Set([
+      ...POOLS.noPerishable,
+      ...(ruleset.noPerishable ?? []),
+    ]),
   };
 }
 
@@ -210,7 +231,8 @@ function drawFrom(rng: SeedRng, pool: readonly string[], key: string): string {
 
 class Game {
   readonly rng: SeedRng;
-  readonly pools: Pools;
+  /** Replaced mid-run when a pool opens up (Penny Pincher). */
+  pools: Pools;
   readonly stake: number;
 
   constructor(settings: ReaderSettings) {
@@ -396,7 +418,13 @@ export function tagQueue(
   const banned = bannedKeys(settings);
   const out: { ante: number; small: string; big: string }[] = [];
   for (let ante = 1; ante <= antes; ante++) {
-    const pool = POOLS.tags.map((t) =>
+    const pool = [
+      ...POOLS.tags,
+      ...(settings.ruleset.added.tags ?? []).map((key) => ({
+        key,
+        minAnte: undefined as number | undefined,
+      })),
+    ].map((t) =>
       (t.minAnte ?? 0) > ante || banned.has(t.key) ? UNAVAILABLE : t.key,
     );
     const next = () => {
@@ -430,7 +458,10 @@ export function voucherQueue(
   const banned = bannedKeys(settings);
   const out: (string | null)[] = [];
   for (let ante = 1; ante <= antes; ante++) {
-    const pool = POOLS.vouchers.map((v) =>
+    const pool = [
+      ...POOLS.vouchers,
+      ...(settings.ruleset.added.vouchers ?? []),
+    ].map((v) =>
       have.has(v.key) ||
       banned.has(v.key) ||
       v.requires.some((r) => !have.has(r))
@@ -510,8 +541,16 @@ export function shopQueue(
 ): ShopItem[] {
   const game = new Game(settings);
   const rng = game.rng;
+  const locked = game.pools;
+  const unlocked = settings.ruleset.pennyPincher
+    ? buildPools({ ...settings, pincherUnlocked: true })
+    : locked;
   const out: ShopItem[] = [];
   for (let slot = 1; slot <= count; slot++) {
+    game.pools =
+      settings.pincherUnlocked || (mods.pincherFrom ?? Infinity) <= slot
+        ? unlocked
+        : locked;
     const has = (v: ShopVoucher) => (mods.vouchers?.[v] ?? Infinity) <= slot;
     const tarotRate = has("v_tarot_tycoon")
       ? 4 * (32 / 4)

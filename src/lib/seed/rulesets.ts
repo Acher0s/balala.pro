@@ -12,15 +12,49 @@
 export interface RulesetDef {
   id: string;
   name: string;
-  /** Vanilla keys this ruleset bans: they stay in their pool as UNAVAILABLE. */
+  /**
+   * Keys that stay in their pool as UNAVAILABLE: the ruleset's bans, and mod cards it keeps in
+   * the pool whose in_pool says no (they hold a slot, but are never picked).
+   */
   banned: string[];
   /** Mod cards in this ruleset's pools, by pool, appended after the vanilla cards. */
   added: {
     jokers?: Partial<Record<1 | 2 | 3 | 4, string[]>>;
+    Planet?: string[];
+    Spectral?: string[];
+    /** In pool order; an upgrade lists the voucher it requires. */
+    vouchers?: { key: string; requires: string[] }[];
+    tags?: string[];
   };
+  /** Added jokers that can't be Eternal / Perishable (eternal_compat / perishable_compat). */
+  noEternal?: string[];
+  noPerishable?: string[];
+  /**
+   * Penny Pincher: in the pool only once PVP.GAME.pincher_unlock is set, at the first PvP
+   * blind (objects/jokers/penny_pincher.lua); until then it's an UNAVAILABLE slot.
+   */
+  pennyPincher?: boolean;
+  /** Stakes ranked plays on (ids from STAKES), when not all the vanilla ones. */
+  stakes?: number[];
   /** Whether ranked matches on this ruleset always use The Order. */
   rankedOrder: boolean;
 }
+
+/**
+ * Stakes the reader knows, by the number it uses. Spectral+ is the mod's own (objects/stakes):
+ * it carries Eternals, Perishables and Rentals like Gold.
+ */
+export const STAKES: { id: number; name: string }[] = [
+  { id: 1, name: "White" },
+  { id: 2, name: "Red" },
+  { id: 3, name: "Green" },
+  { id: 4, name: "Black" },
+  { id: 5, name: "Blue" },
+  { id: 6, name: "Purple" },
+  { id: 7, name: "Orange" },
+  { id: 8, name: "Gold" },
+  { id: 9, name: "Spectral+" },
+];
 
 /**
  * A game mode's bans (gamemodes/*.lua). MPAPI.ApplyBans adds them to the ruleset's, so they
@@ -67,11 +101,76 @@ const ATTRITION: GameModeDef = {
  * swapped for the mod's versions, Justice is banned, and none of the mod's own new jokers
  * (multiplayer_content = false) are in the pools. Ranked forces The Order on (layers/ranked.lua).
  */
+/**
+ * Expanded (rulesets/expanded.lua): the Balanced, Expanded and Expanded Draft layers. On top of
+ * Balanced it bans Ticket, Seltzer, Turtle Bean and Ouija for the mod's versions, and turns the
+ * mod's own content on (multiplayer_content = true), so every PvP card no other layer owns is in
+ * the pools, after the vanilla cards, in the order the mod loads them (core.lua: objects/jokers,
+ * then jokers/standard, and so on; files by name). Speedrun, Conjoined Joker and Defensive Joker
+ * are banned but keep their slots; Penny Pincher's slot opens at the first PvP blind; the
+ * Manhunt vouchers and the Ward Tag are in the pools but their in_pool is false, so they're
+ * slots that are never picked. The stakes are Expanded Draft's.
+ */
+const EXPANDED: RulesetDef = {
+  id: "expanded",
+  name: "Expanded",
+  banned: [
+    "j_hanging_chad",
+    "j_bloodstone",
+    "c_justice",
+    "j_ticket",
+    "j_selzer",
+    "j_turtle_bean",
+    "c_ouija",
+    "j_mp_speedrun",
+    "j_mp_conjoined_joker",
+    "j_mp_defensive_joker",
+    "v_mp_hieroglyph_manhunt",
+    "v_mp_petroglyph_manhunt",
+    "tag_mp_ward",
+  ],
+  added: {
+    jokers: {
+      1: [
+        "j_mp_defensive_joker",
+        "j_mp_pacifist",
+        "j_mp_penny_pincher",
+        "j_mp_pizza",
+        "j_mp_taxes",
+        "j_mp_hanging_chad",
+      ],
+      2: [
+        "j_mp_conjoined_joker",
+        "j_mp_lets_go_gambling",
+        "j_mp_skip_off",
+        "j_mp_speedrun",
+        "j_mp_bloodstone",
+        "j_mp_seltzer",
+        "j_mp_ticket",
+        "j_mp_turtle_bean",
+      ],
+    },
+    Planet: ["c_mp_asteroid"],
+    Spectral: ["c_mp_ouija_standard"],
+    vouchers: [
+      { key: "v_mp_hieroglyph_manhunt", requires: [] },
+      { key: "v_mp_petroglyph_manhunt", requires: ["v_mp_hieroglyph_manhunt"] },
+    ],
+    tags: ["tag_mp_ward"],
+  },
+  noEternal: ["j_mp_pizza", "j_mp_seltzer", "j_mp_turtle_bean"],
+  noPerishable: ["j_mp_taxes"],
+  pennyPincher: true,
+  stakes: [1, 3, 4, 6, 8, 9],
+  rankedOrder: true,
+};
+
 const BALANCED: RulesetDef = {
   id: "balanced",
   name: "Balanced",
   banned: ["j_hanging_chad", "j_bloodstone", "c_justice"],
   added: { jokers: { 1: ["j_mp_hanging_chad"], 2: ["j_mp_bloodstone"] } },
+  stakes: [1, 2, 3, 4, 5, 6, 7, 8],
   rankedOrder: true,
 };
 
@@ -80,7 +179,7 @@ export const PATCHES: PatchDef[] = [
   {
     id: "pvp-1.0.5",
     label: "Multiplayer PvP 1.0.5",
-    rulesets: [BALANCED],
+    rulesets: [EXPANDED, BALANCED],
     gameMode: ATTRITION,
   },
 ];

@@ -49,6 +49,29 @@ keys and logic come from reading the code:
   "TarotTarot0"; The High Priestess and Blue Seals take Planets from "PlanetPlanet0"; Sixth
   Sense and Séance take Spectrals from "SpectralSpectral0".
 
+## Expanded
+
+Expanded (`rulesets/expanded.lua`) is the Balanced, Expanded and Expanded Draft layers, with
+`multiplayer_content = true`, so every PvP card that no layer owns is in the pools (the mod's
+isolation gate in `layers/_layers.lua`). Mod cards go after the vanilla ones in the order
+Steamodded injects them: the order they register, which is the order `core.lua` loads the
+folders (`objects/jokers`, then `jokers/sandbox`, `jokers/standard`, …) with files sorted by
+name. Cards a ruleset can't use (sandbox, experimental, traps, Wraith rework) are removed.
+
+- Common: Defensive Joker (banned), Pacifist, Penny Pincher, Pizza, Taxes, Hanging Chad.
+- Uncommon: Conjoined Joker (banned), Let's Go Gambling, Skip-Off, Speedrun (banned),
+  Bloodstone, Seltzer, Ticket, Turtle Bean.
+- Planet: Asteroid. Spectral: the mod's Ouija (vanilla Ouija is banned).
+- Banned vanilla: Ticket, Seltzer, Turtle Bean, Ouija, plus Balanced's and Attrition's.
+- Penny Pincher's `in_pool` is `PVP.GAME.pincher_unlock`, set at the first PvP blind, so its
+  slot is skipped until then. The page lets you say when that happened.
+- The Manhunt vouchers and the Ward Tag are in the pools but their `in_pool` is false: they're
+  slots that are never picked. The vouchers make the folded voucher list 17 slots instead of 16,
+  and the Ward makes the tag pool 25, so Expanded's voucher and tag rolls differ from Balanced's.
+- Stakes are Expanded Draft's: White, Green, Black, Purple, Gold and the mod's Spectral+, which
+  has Eternals, Perishables and Rentals like Gold.
+- Pizza, Seltzer and Turtle Bean can't be Eternal; Taxes can't be Perishable.
+
 ## Assumptions
 
 - Mod cards the ruleset doesn't use are removed from the pools (MPAPI's pool_gating, unlike

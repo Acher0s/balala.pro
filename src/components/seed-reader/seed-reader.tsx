@@ -17,20 +17,9 @@ import {
   tagQueue,
   voucherQueue,
 } from "@/lib/seed/reader";
-import { findPatch, findRuleset, PATCHES } from "@/lib/seed/rulesets";
+import { findPatch, findRuleset, PATCHES, STAKES } from "@/lib/seed/rulesets";
 import type { SeedArt } from "./art";
 import { ArtContext, ItemCard, PlayingCardCard, useArt } from "./seed-card";
-
-const STAKES = [
-  "White",
-  "Red",
-  "Green",
-  "Black",
-  "Blue",
-  "Purple",
-  "Orange",
-  "Gold",
-];
 
 const TABS = [
   ["shop", "Shop"],
@@ -120,13 +109,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
   const art = useArt();
   const [count, setCount] = useState(STEP);
   const [ghost, setGhost] = useState(false);
+  const [pincherFrom, setPincherFrom] = useState<number | undefined>();
   const [vouchers, setVouchers] = useState<
     Partial<Record<ShopVoucher, number>>
   >({});
   const [shops, setShops] = useState(8);
   const items = useMemo(
-    () => shopQueue(settings, count, { ghostDeck: ghost, vouchers }),
-    [settings, count, ghost, vouchers],
+    () =>
+      shopQueue(settings, count, { ghostDeck: ghost, vouchers, pincherFrom }),
+    [settings, count, ghost, vouchers, pincherFrom],
   );
   const packs = useMemo(() => packQueue(settings, shops), [settings, shops]);
 
@@ -152,6 +143,24 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
             {art.items.b_ghost?.name ?? "Ghost Deck"}: Spectral cards in the
             shop
           </label>
+          {settings.ruleset.pennyPincher && (
+            <label className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                placeholder="–"
+                value={pincherFrom ?? ""}
+                onChange={(e) => {
+                  const n = Number.parseInt(e.target.value, 10);
+                  setPincherFrom(Number.isFinite(n) && n > 0 ? n : undefined);
+                }}
+                className="w-16 rounded border bg-fd-background px-2 py-1"
+              />
+              First shop slot after your first PvP blind (Penny Pincher can show
+              up from there)
+            </label>
+          )}
           <p className="text-fd-muted-foreground">
             Bought from shop slot… (leave empty if you don't have it)
           </p>
@@ -247,10 +256,18 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
   const [rarity, setRarity] = useState<Rarity>(1);
   const [stickers, setStickers] = useState(false);
   const [editionRate, setEditionRate] = useState(1);
+  const [pincher, setPincher] = useState(false);
   const [count, setCount] = useState(STEP);
   const list = useMemo(
-    () => jokerQueue(settings, rarity, count, stickers, editionRate),
-    [settings, rarity, count, stickers, editionRate],
+    () =>
+      jokerQueue(
+        { ...settings, pincherUnlocked: pincher },
+        rarity,
+        count,
+        stickers,
+        editionRate,
+      ),
+    [settings, rarity, count, stickers, editionRate, pincher],
   );
   return (
     <div className="flex flex-col gap-4">
@@ -275,6 +292,16 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
           ]}
           onChange={setEditionRate}
         />
+        {settings.ruleset.pennyPincher && rarity === 1 && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={pincher}
+              onChange={(e) => setPincher(e.target.checked)}
+            />
+            After the first PvP blind (Penny Pincher in the pool)
+          </label>
+        )}
       </div>
       <Note>
         {rarity === 4
@@ -555,7 +582,9 @@ export function SeedReader({ art }: { art: SeedArt }) {
     const s = cleanSeed(params.get("seed") ?? "");
     if (s) setSeed(s);
     const st = Number(params.get("stake"));
-    if (st >= 1 && st <= 8) setStake(st);
+    if (STAKES.some((x) => x.id === st)) setStake(st);
+    const r = params.get("ruleset");
+    if (r) setRulesetId(r);
   }, []);
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -563,14 +592,22 @@ export function SeedReader({ art }: { art: SeedArt }) {
     else url.searchParams.delete("seed");
     if (stake > 1) url.searchParams.set("stake", String(stake));
     else url.searchParams.delete("stake");
+    if (rulesetId !== PATCHES[0].rulesets[0].id)
+      url.searchParams.set("ruleset", rulesetId);
+    else url.searchParams.delete("ruleset");
     window.history.replaceState(null, "", url);
-  }, [seed, stake]);
+  }, [seed, stake, rulesetId]);
 
   const patch = findPatch(patchId);
   const ruleset = findRuleset(patch, rulesetId);
+  // Only the stakes this ruleset's ranked queue plays on; an unlisted one falls back to the first.
+  const stakes = STAKES.filter(
+    (x) => !ruleset.stakes || ruleset.stakes.includes(x.id),
+  );
+  const activeStake = stakes.some((x) => x.id === stake) ? stake : stakes[0].id;
   const settings = useMemo<ReaderSettings>(
-    () => ({ seed, ruleset, gameMode: patch.gameMode, stake }),
-    [seed, ruleset, patch.gameMode, stake],
+    () => ({ seed, ruleset, gameMode: patch.gameMode, stake: activeStake }),
+    [seed, ruleset, patch.gameMode, activeStake],
   );
 
   return (
@@ -626,13 +663,13 @@ export function SeedReader({ art }: { art: SeedArt }) {
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold">Stake</span>
             <select
-              value={stake}
+              value={activeStake}
               onChange={(e) => setStake(Number(e.target.value))}
               className="rounded-lg border bg-fd-background px-3 py-2"
             >
-              {STAKES.map((name, i) => (
-                <option key={name} value={i + 1}>
-                  {name}
+              {stakes.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
                 </option>
               ))}
             </select>
@@ -657,7 +694,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
                 </button>
               ))}
             </nav>
-            <section key={`${tab}:${seed}:${stake}:${ruleset.id}`}>
+            <section key={`${tab}:${seed}:${activeStake}:${ruleset.id}`}>
               {tab === "shop" && <ShopTab settings={settings} />}
               {tab === "jokers" && <JokersTab settings={settings} />}
               {tab === "tarots" && (

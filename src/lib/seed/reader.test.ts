@@ -16,13 +16,21 @@ import {
 } from "./reader";
 import { PATCHES } from "./rulesets";
 
-const balanced = PATCHES[0].rulesets[0];
-const settings = (seed: string, stake = 1): ReaderSettings => ({
+const [expanded, balanced] = PATCHES[0].rulesets;
+const settings = (
+  seed: string,
+  stake = 1,
+  ruleset = balanced,
+  extra: Partial<ReaderSettings> = {},
+): ReaderSettings => ({
   seed,
-  ruleset: balanced,
+  ruleset,
   gameMode: PATCHES[0].gameMode,
   stake,
+  ...extra,
 });
+const exp = (seed: string, extra: Partial<ReaderSettings> = {}) =>
+  settings(seed, 1, expanded, extra);
 const SEEDS = ["6EQHIH19", "94VJ9P47", "HKGD2XBQ", "AAAAAAAA", "1"];
 
 describe("seed", () => {
@@ -259,5 +267,110 @@ describe("tags, packs and Lucky Cards", () => {
     doubled.forEach((r, i) => {
       if (rolls[i].mult) expect(r.mult).toBe(true);
     });
+  });
+});
+
+describe("Expanded", () => {
+  it("is the first ruleset, with Balanced still there", () => {
+    expect(expanded.id).toBe("expanded");
+    expect(balanced.id).toBe("balanced");
+  });
+
+  it("adds the mod cards after the vanilla ones, in load order", () => {
+    const p = _internal.buildPools(exp("X"));
+    expect(p.jokers[1]).toHaveLength(pools.jokers[1].length + 6);
+    expect(p.jokers[2]).toHaveLength(pools.jokers[2].length + 8);
+    expect(p.jokers[1].slice(-6)).toEqual([
+      "UNAVAILABLE", // Defensive Joker
+      "j_mp_pacifist",
+      "UNAVAILABLE", // Penny Pincher, until the first PvP blind
+      "j_mp_pizza",
+      "j_mp_taxes",
+      "j_mp_hanging_chad",
+    ]);
+    expect(p.jokers[2].slice(-8)).toEqual([
+      "UNAVAILABLE", // Conjoined Joker
+      "j_mp_lets_go_gambling",
+      "j_mp_skip_off",
+      "UNAVAILABLE", // Speedrun
+      "j_mp_bloodstone",
+      "j_mp_seltzer",
+      "j_mp_ticket",
+      "j_mp_turtle_bean",
+    ]);
+    expect(p.Planet.at(-1)).toBe("c_mp_asteroid");
+    expect(p.Spectral.at(-1)).toBe("c_mp_ouija_standard");
+    // Balanced keeps the mod's own content out.
+    const b = _internal.buildPools(settings("X"));
+    expect(b.jokers[1]).toHaveLength(pools.jokers[1].length + 1);
+    expect(b.Planet).toHaveLength(pools.planets.length);
+  });
+
+  it("gives the mod's jokers and consumables, never its bans", () => {
+    const seen = new Set<string>();
+    for (const seed of SEEDS) {
+      for (const r of [1, 2] as const)
+        for (const j of jokerQueue(exp(seed), r, 300)) seen.add(j.key);
+      for (const set of ["Planet", "Spectral"] as const)
+        for (const c of shopConsumableQueue(exp(seed), set, 200)) seen.add(c);
+    }
+    for (const k of [
+      "j_mp_pacifist",
+      "j_mp_lets_go_gambling",
+      "j_mp_ticket",
+      "c_mp_asteroid",
+      "c_mp_ouija_standard",
+    ])
+      expect(seen.has(k)).toBe(true);
+    for (const k of [
+      "j_mp_speedrun",
+      "j_mp_conjoined_joker",
+      "j_mp_defensive_joker",
+      "j_mp_penny_pincher",
+      "j_ticket",
+      "j_selzer",
+      "j_turtle_bean",
+      "c_ouija",
+      "j_mr_bones",
+    ])
+      expect(seen.has(k)).toBe(false);
+  });
+
+  it("opens Penny Pincher after the first PvP blind", () => {
+    const seen = SEEDS.flatMap((s) =>
+      jokerQueue(exp(s, { pincherUnlocked: true }), 1, 300).map((j) => j.key),
+    );
+    expect(seen).toContain("j_mp_penny_pincher");
+    const before = shopQueue(exp("6EQHIH19"), 40);
+    const after = shopQueue(exp("6EQHIH19"), 40, { pincherFrom: 21 });
+    expect(after.slice(0, 20)).toEqual(before.slice(0, 20));
+  });
+
+  it("has a different voucher and tag pool from Balanced", () => {
+    // The Manhunt vouchers and the Ward Tag are slots that are never picked, so rolls move.
+    const differs = SEEDS.some(
+      (s) =>
+        JSON.stringify(voucherQueue(exp(s), 8, false)) !==
+          JSON.stringify(voucherQueue(settings(s), 8, false)) ||
+        JSON.stringify(tagQueue(exp(s), 8)) !==
+          JSON.stringify(tagQueue(settings(s), 8)),
+    );
+    expect(differs).toBe(true);
+    for (const s of SEEDS) {
+      const tags = tagQueue(exp(s), 8).flatMap((t) => [t.small, t.big]);
+      expect(tags).not.toContain("tag_mp_ward");
+      const vouchers = voucherQueue(exp(s), 32, true);
+      expect(vouchers.some((v) => v?.includes("manhunt"))).toBe(false);
+    }
+  });
+
+  it("puts every sticker on Spectral+ like Gold", () => {
+    const shop = SEEDS.flatMap((s) => shopQueue(settings(s, 9, expanded), 200));
+    const jokers = shop.flatMap((i) => (i.kind === "joker" ? [i] : []));
+    for (const st of ["eternal", "perishable", "rental"] as const)
+      expect(jokers.some((j) => j.stickers.includes(st))).toBe(true);
+    for (const j of jokers)
+      if (["j_mp_pizza", "j_mp_seltzer", "j_mp_turtle_bean"].includes(j.key))
+        expect(j.stickers).not.toContain("eternal");
   });
 });
