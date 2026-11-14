@@ -499,18 +499,21 @@ export async function saveSiteSettings(
   return { ok: true };
 }
 
-/** Studio → Site → Categories: how the Guides and Tools pages are grouped, by tags. */
+/** Studio → Site → Categories: how the Guides or the Tools page is grouped, by tags. */
 export async function saveSiteCategories(
+  kind: PageKind,
   value: unknown,
 ): Promise<ActionResult> {
   await assertUser("admin");
+  if (kind !== "guide" && kind !== "tool")
+    return { ok: false, error: "Unknown page kind." };
   const parsed = categoriesSchema.safeParse(value);
   if (!parsed.success)
     return {
       ok: false,
       error: "Every category needs a name and at least one tag.",
     };
-  await saveCategories(parsed.data);
+  await saveCategories(kind, parsed.data);
   return { ok: true };
 }
 

@@ -9,6 +9,7 @@ import {
   secondaryButton,
   useAction,
 } from "@/components/studio/forms";
+import type { PageKind } from "@/db/schema";
 import { type CategorySettings, normalizeTag } from "@/lib/categories";
 
 interface Row {
@@ -26,13 +27,15 @@ const splitTags = (text: string) =>
     .filter(Boolean);
 
 /**
- * Studio → Site → Categories: named groups of tags for the Guides and Tools pages. A page goes in
+ * Studio → Site → Guide or Tool categories: named groups of tags for that page. A page goes in
  * the first category with one of its tags; the rest go under the catch-all.
  */
 export function CategoriesForm({
+  kind,
   initial,
   tagsInUse,
 }: {
+  kind: PageKind;
   initial: CategorySettings;
   /** Every tag on a published guide or tool, with how many pages use it. */
   tagsInUse: { tag: string; count: number }[];
@@ -77,7 +80,7 @@ export function CategoriesForm({
         e.preventDefault();
         run(
           () =>
-            saveSiteCategories({
+            saveSiteCategories(kind, {
               categories: rows.map((r) => ({
                 name: r.name,
                 tags: splitTags(r.tags),
@@ -91,10 +94,10 @@ export function CategoriesForm({
       className="flex flex-col gap-3"
     >
       <p className="text-sm text-fd-muted-foreground">
-        Groups on the Guides and Tools pages. A guide or tool goes in the first
-        category, top to bottom, that has one of its tags (or in every matching
-        one, see below). Without categories, everything is one list without
-        headings.
+        Groups on the {kind === "tool" ? "Tools" : "Guides"} page. A{" "}
+        {kind === "tool" ? "tool" : "guide"} goes in the first category, top to
+        bottom, that has one of its tags (or in every matching one, see below).
+        Without categories, everything is one list without headings.
       </p>
       {rows.length === 0 && (
         <p className="rounded-lg border border-dashed p-3 text-sm text-fd-muted-foreground">
@@ -196,8 +199,8 @@ export function CategoriesForm({
           className={field}
         />
         <span className="text-xs text-fd-muted-foreground">
-          Heading for guides and tools that match no category. Leave empty for
-          no heading.
+          Heading for {kind === "tool" ? "tools" : "guides"} that match no
+          category. Leave empty for no heading.
         </span>
       </label>
       {tagsInUse.length > 0 && (

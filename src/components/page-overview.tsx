@@ -16,6 +16,15 @@ import {
 import { getCategories, getSettings } from "@/lib/settings";
 import { getSiteTools } from "@/lib/site-tools-settings";
 
+/** A published page or one of the site's own tools, as listed. */
+interface Tile {
+  key: string;
+  href: string;
+  frontmatter: PublishedPage["frontmatter"];
+  parts: number;
+  ownerName: string | null;
+}
+
 const COPY: Record<PageKind, { title: string; empty: string }> = {
   guide: { title: "Guides", empty: "No guides published yet." },
   tool: { title: "Tools", empty: "No tools published yet." },
@@ -30,7 +39,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
   const [all, settings, categories] = await Promise.all([
     listPublished(kind),
     getSettings(),
-    getCategories(),
+    getCategories(kind),
   ]);
   const { main: pages, parts } = groupParts(all);
   // The line under the title is set in Studio → Site; empty hides it.
@@ -38,25 +47,40 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
     kind === "tool" ? settings.toolsIntro : settings.guidesIntro;
   const copy = COPY[kind];
 
+  // The site's own tools (like the log parser) are listed with the others, and grouped by their
+  // tags the same way.
+  const siteTools = kind === "tool" ? await getSiteTools() : [];
+  const tiles: Tile[] = [
+    ...pages.map((p) => ({
+      key: p.id,
+      href: pageUrl(kind, p.slug),
+      frontmatter: p.frontmatter,
+      parts: parts.get(p.id)?.length ?? 0,
+      ownerName: p.ownerName,
+    })),
+    ...siteTools.map((t) => ({
+      key: t.href,
+      href: t.href,
+      frontmatter: t.frontmatter,
+      parts: 0,
+      ownerName: null,
+    })),
+  ];
   // Without categories, everything is one list without headings.
-  const groups: { name: string; pages: PublishedPage[] }[] =
+  const groups: { name: string; tiles: Tile[] }[] =
     categories.categories.length > 0
       ? groupByCategory(
-          pages.map((p) => ({ page: p, tags: p.frontmatter.tags })),
+          tiles.map((t) => ({ tile: t, tags: t.frontmatter.tags })),
           categories,
-        ).map((g) => ({ name: g.name, pages: g.pages.map((x) => x.page) }))
-      : [{ name: "", pages }];
-  // The site's own tools (like the log parser) join the list: with categories, as a last group.
-  const siteTools = kind === "tool" ? await getSiteTools() : [];
-  const siteToolsGroup =
-    siteTools.length > 0 && categories.categories.length > 0;
+        ).map((g) => ({ name: g.name, tiles: g.pages.map((x) => x.tile) }))
+      : [{ name: "", tiles }];
 
   return (
     <DocsPage>
       <DocsTitle>{copy.title}</DocsTitle>
       {description && <DocsDescription>{description}</DocsDescription>}
       <DocsBody>
-        {pages.length === 0 && siteTools.length === 0 && <p>{copy.empty}</p>}
+        {tiles.length === 0 && <p>{copy.empty}</p>}
         {groups.map((group) => (
           <section
             key={group.name || "_"}
@@ -66,37 +90,19 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
               <h2 className="text-lg font-semibold">{group.name}</h2>
             )}
             <ul className="grid gap-3 sm:grid-cols-2">
-              {group.pages.map((p) => (
-                <li key={p.id}>
+              {group.tiles.map((t) => (
+                <li key={t.key}>
                   <PageTile
-                    frontmatter={p.frontmatter}
-                    href={pageUrl(kind, p.slug)}
-                    parts={parts.get(p.id)?.length ?? 0}
-                    ownerName={p.ownerName}
+                    frontmatter={t.frontmatter}
+                    href={t.href}
+                    parts={t.parts}
+                    ownerName={t.ownerName}
                   />
                 </li>
               ))}
-              {!siteToolsGroup &&
-                siteTools.map((t) => (
-                  <li key={t.href}>
-                    <PageTile frontmatter={t.frontmatter} href={t.href} />
-                  </li>
-                ))}
             </ul>
           </section>
         ))}
-        {siteToolsGroup && (
-          <section className="not-prose mb-8 flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">More tools</h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {siteTools.map((t) => (
-                <li key={t.href}>
-                  <PageTile frontmatter={t.frontmatter} href={t.href} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </DocsBody>
     </DocsPage>
   );

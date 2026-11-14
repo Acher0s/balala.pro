@@ -1,6 +1,7 @@
 import "server-only";
 import { eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import type { PageKind } from "@/db/schema";
 import {
   type CategorySettings,
   categoriesSchema,
@@ -112,24 +113,36 @@ export async function saveTheme(theme: SiteTheme) {
   themeCache.bmpTheme = theme;
 }
 
-const CATEGORIES_KEY = "categories";
+/** Categories used to be one set for both pages; it's what each starts from until saved. */
+const SHARED_CATEGORIES_KEY = "categories";
+const categoriesKey = (kind: PageKind) => `categories.${kind}`;
 
-/** How the Guides and Tools pages are grouped (Studio → Site → Categories). */
-export async function getCategories(): Promise<CategorySettings> {
+/** How the Guides or the Tools page is grouped (Studio → Site → Categories). */
+export async function getCategories(kind: PageKind): Promise<CategorySettings> {
   const db = await getDb();
-  const [row] = await db
+  const rows = await db
     .select()
     .from(schema.siteSettings)
-    .where(eq(schema.siteSettings.key, CATEGORIES_KEY));
-  const parsed = categoriesSchema.safeParse(row?.value);
-  return parsed.success ? parsed.data : DEFAULT_CATEGORIES;
+    .where(
+      inArray(schema.siteSettings.key, [
+        categoriesKey(kind),
+        SHARED_CATEGORIES_KEY,
+      ]),
+    );
+  for (const key of [categoriesKey(kind), SHARED_CATEGORIES_KEY]) {
+    const parsed = categoriesSchema.safeParse(
+      rows.find((r) => r.key === key)?.value,
+    );
+    if (parsed.success) return parsed.data;
+  }
+  return DEFAULT_CATEGORIES;
 }
 
-export async function saveCategories(value: CategorySettings) {
+export async function saveCategories(kind: PageKind, value: CategorySettings) {
   const db = await getDb();
   await db
     .insert(schema.siteSettings)
-    .values({ key: CATEGORIES_KEY, value })
+    .values({ key: categoriesKey(kind), value })
     .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value } });
 }
 
