@@ -31,6 +31,24 @@ keys and logic come from reading the code:
 - Packs are `shop_pack0`; shop types are `cdt0`.
 - Base and Enhanced cards keep `key_append = 'sho'` (`frontsho0`, `Enhancedsho0`).
 
+## Bans and reworks
+
+- Bans come from the ruleset and the game mode (MPAPI.ApplyBans). Attrition, the only PvP game
+  mode, bans Mr. Bones, Luchador, Matador, Chicot, Hieroglyph, Petroglyph, Director's Cut,
+  Retcon and the Boss Tag. Balanced adds Hanging Chad, Bloodstone and Justice. A banned card
+  keeps its slot in its pool as UNAVAILABLE: a roll that lands on it takes the next entry of
+  the same queue (for jokers, the sticker roll is redone and the edition queue moves on too).
+  Banned voucher pairs become one UNAVAILABLE slot that's rolled past; the Boss Tag's slot
+  retries on its "Tag<ante>_resample<n>" stream.
+- Reworks live in Balanced: Glass (numbers only), the mod's Hanging Chad (no RNG) and
+  Bloodstone (its own "bloodstone" streams), and The Order's Uncommon/Rare Tags (still a forced
+  rarity from the stickerless queue). None of them draws from a stream the reader shows. The
+  Wraith and Ouija reworks belong to other layers, not Balanced.
+- Consumables made outside packs share the shop queues under The Order (their key_append
+  becomes the set): The Emperor, Purple Seals, Cartomancer and Hallucination take Tarots from
+  "TarotTarot0"; The High Priestess and Blue Seals take Planets from "PlanetPlanet0"; Sixth
+  Sense and Séance take Spectrals from "SpectralSpectral0".
+
 ## Assumptions
 
 - Mod cards the ruleset doesn't use are removed from the pools (MPAPI's pool_gating, unlike

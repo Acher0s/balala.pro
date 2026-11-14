@@ -18,7 +18,7 @@
 import type { SeedPools } from "./pool-types";
 import vanilla from "./pools.generated.json";
 import { SeedRng } from "./pseudo";
-import type { RulesetDef } from "./rulesets";
+import type { GameModeDef, RulesetDef } from "./rulesets";
 
 const POOLS = vanilla as SeedPools;
 export const UNAVAILABLE = "UNAVAILABLE";
@@ -56,6 +56,8 @@ export interface ReaderSettings {
   /** The seed as the game shows it, with or without The Order's leading "*". */
   seed: string;
   ruleset: RulesetDef;
+  /** The game mode, whose bans add to the ruleset's. */
+  gameMode: GameModeDef;
   /** Stake number: 1 White … 4 Black (Eternals) … 7 Orange (Perishables), 8 Gold (Rentals). */
   stake: number;
 }
@@ -100,9 +102,15 @@ interface Pools {
   noPerishable: Set<string>;
 }
 
-/** The pools as get_current_pool builds them, with the ruleset's bans and additions. */
-function buildPools(ruleset: RulesetDef): Pools {
-  const banned = new Set(ruleset.banned);
+/** Everything banned in a match: the ruleset's bans and the game mode's. */
+export function bannedKeys(settings: ReaderSettings): Set<string> {
+  return new Set([...settings.ruleset.banned, ...settings.gameMode.banned]);
+}
+
+/** The pools as get_current_pool builds them, with the bans and the ruleset's additions. */
+function buildPools(settings: ReaderSettings): Pools {
+  const { ruleset } = settings;
+  const banned = bannedKeys(settings);
   const mark = (key: string) => (banned.has(key) ? UNAVAILABLE : key);
   const jokers = {} as Record<Rarity, string[]>;
   for (const r of [1, 2, 3, 4] as Rarity[])
@@ -207,7 +215,7 @@ class Game {
 
   constructor(settings: ReaderSettings) {
     this.rng = new SeedRng(normalizeSeed(settings.seed));
-    this.pools = buildPools(settings.ruleset);
+    this.pools = buildPools(settings);
     this.stake = settings.stake;
   }
 
@@ -331,7 +339,7 @@ export function packConsumableQueue(
   const game = new Game(settings);
   const soulKey = `soul_${set}0`;
   const poolKey = `${set}${set}_pack0`;
-  const banned = new Set(settings.ruleset.banned);
+  const banned = bannedKeys(settings);
   const out: string[] = [];
   for (let i = 0; i < count; i++) {
     let forced: string | undefined;
@@ -385,10 +393,11 @@ export function tagQueue(
   antes: number,
 ): { ante: number; small: string; big: string }[] {
   const game = new Game(settings);
+  const banned = bannedKeys(settings);
   const out: { ante: number; small: string; big: string }[] = [];
   for (let ante = 1; ante <= antes; ante++) {
     const pool = POOLS.tags.map((t) =>
-      (t.minAnte ?? 0) > ante ? UNAVAILABLE : t.key,
+      (t.minAnte ?? 0) > ante || banned.has(t.key) ? UNAVAILABLE : t.key,
     );
     const next = () => {
       let tag = game.rng.element(pool, `Tag${ante}`);
@@ -418,7 +427,7 @@ export function voucherQueue(
 ): (string | null)[] {
   const game = new Game(settings);
   const have = new Set(owned);
-  const banned = new Set(settings.ruleset.banned);
+  const banned = bannedKeys(settings);
   const out: (string | null)[] = [];
   for (let ante = 1; ante <= antes; ante++) {
     const pool = POOLS.vouchers.map((v) =>
@@ -466,7 +475,7 @@ function cull(pool: string[]): string[] {
  */
 export function packQueue(settings: ReaderSettings, shops: number): string[][] {
   const game = new Game(settings);
-  const banned = new Set(settings.ruleset.banned);
+  const banned = bannedKeys(settings);
   const boosters = POOLS.boosters.filter((b) => !banned.has(b.key));
   let cume = 0;
   for (const b of boosters) cume = cume + b.weight;

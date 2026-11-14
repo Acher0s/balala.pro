@@ -20,6 +20,7 @@ const balanced = PATCHES[0].rulesets[0];
 const settings = (seed: string, stake = 1): ReaderSettings => ({
   seed,
   ruleset: balanced,
+  gameMode: PATCHES[0].gameMode,
   stake,
 });
 const SEEDS = ["6EQHIH19", "94VJ9P47", "HKGD2XBQ", "AAAAAAAA", "1"];
@@ -82,8 +83,32 @@ describe("queues", () => {
     expect(seen.has("j_hanging_chad")).toBe(false);
     expect(seen.has("j_bloodstone")).toBe(false);
     expect(seen.has("c_justice")).toBe(false);
+    // Attrition's bans, whatever the ruleset.
+    for (const key of ["j_mr_bones", "j_luchador", "j_matador"])
+      expect(seen.has(key)).toBe(false);
     expect(seen.has("j_mp_hanging_chad")).toBe(true);
     expect(seen.has("j_mp_bloodstone")).toBe(true);
+  });
+
+  it("never give Chicot, the Boss Tag or the ante vouchers in Attrition", () => {
+    for (const seed of SEEDS) {
+      const legendaries = jokerQueue(settings(seed), 4, 60).map((j) => j.key);
+      expect(legendaries).not.toContain("j_chicot");
+      const tags = tagQueue(settings(seed), 12).flatMap((t) => [
+        t.small,
+        t.big,
+      ]);
+      expect(tags).not.toContain("tag_boss");
+      const vouchers = voucherQueue(settings(seed), 32, true);
+      for (const v of [
+        "v_hieroglyph",
+        "v_petroglyph",
+        "v_directors_cut",
+        "v_retcon",
+      ])
+        expect(vouchers).not.toContain(v);
+      expect(vouchers.filter((v) => v === null)).toHaveLength(4);
+    }
   });
 
   it("keep each rarity to its own pool", () => {
@@ -196,8 +221,9 @@ describe("vouchers", () => {
   });
 
   it("offers each voucher at most once when everything is bought", () => {
-    const list = voucherQueue(settings("6EQHIH19"), 32, true);
-    expect(new Set(list).size).toBe(32);
+    // 28: Attrition bans two pairs (Hieroglyph/Petroglyph, Director's Cut/Retcon).
+    const list = voucherQueue(settings("6EQHIH19"), 28, true);
+    expect(new Set(list).size).toBe(28);
     // An upgrade only comes after its base.
     list.forEach((v, i) => {
       const req = pools.vouchers.find((x) => x.key === v)?.requires ?? [];

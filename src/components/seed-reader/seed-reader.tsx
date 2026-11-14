@@ -333,7 +333,16 @@ function ConsumableTab({
       />
       <Note>
         {where === "shop"
-          ? `${set} cards the shop rolls, in order.`
+          ? `${set} cards the shop rolls, in order. ${
+              {
+                Tarot:
+                  "The Emperor, Purple Seals, Cartomancer and Hallucination take theirs from this queue too.",
+                Planet:
+                  "The High Priestess and Blue Seals take theirs from this queue too.",
+                Spectral:
+                  "Sixth Sense and Séance take theirs from this queue too.",
+              }[set]
+            }`
           : `Cards shown in ${pack} Packs, one after another across packs.${
               set === "Planet"
                 ? " Each card can be Black Hole instead."
@@ -560,8 +569,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const patch = findPatch(patchId);
   const ruleset = findRuleset(patch, rulesetId);
   const settings = useMemo<ReaderSettings>(
-    () => ({ seed, ruleset, stake }),
-    [seed, ruleset, stake],
+    () => ({ seed, ruleset, gameMode: patch.gameMode, stake }),
+    [seed, ruleset, patch.gameMode, stake],
   );
 
   return (

@@ -22,12 +22,45 @@ export interface RulesetDef {
   rankedOrder: boolean;
 }
 
+/**
+ * A game mode's bans (gamemodes/*.lua). MPAPI.ApplyBans adds them to the ruleset's, so they
+ * apply whatever the ruleset, and they also stay in their pools as UNAVAILABLE.
+ */
+export interface GameModeDef {
+  id: string;
+  name: string;
+  banned: string[];
+}
+
 export interface PatchDef {
   id: string;
   /** Shown in the page's picker. */
   label: string;
   rulesets: RulesetDef[];
+  /** The game mode matches are played in. */
+  gameMode: GameModeDef;
 }
+
+/**
+ * Attrition (gamemodes/attrition.lua), the only PvP game mode: no jokers that save you from a
+ * lost blind or touch the boss (Mr. Bones, Luchador, Matador, Chicot), no ante-changing
+ * vouchers, no Boss Tag.
+ */
+const ATTRITION: GameModeDef = {
+  id: "attrition",
+  name: "Attrition",
+  banned: [
+    "j_mr_bones",
+    "j_luchador",
+    "j_matador",
+    "j_chicot",
+    "v_hieroglyph",
+    "v_petroglyph",
+    "v_directors_cut",
+    "v_retcon",
+    "tag_boss",
+  ],
+};
 
 /**
  * Balanced (rulesets/balanced.lua → layers/balanced.lua): Hanging Chad and Bloodstone are
@@ -48,6 +81,7 @@ export const PATCHES: PatchDef[] = [
     id: "pvp-1.0.5",
     label: "Multiplayer PvP 1.0.5",
     rulesets: [BALANCED],
+    gameMode: ATTRITION,
   },
 ];
 
