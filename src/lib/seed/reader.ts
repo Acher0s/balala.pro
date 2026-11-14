@@ -280,6 +280,8 @@ export function jokerQueue(
   rarity: Rarity,
   count: number,
   stickers = false,
+  /** edition_rate: 1, Hone 2, Glow Up 4. */
+  editionRate = 1,
 ): JokerRoll[] {
   const game = new Game(settings);
   const pk = rarity === 4 ? "Joker4" : `Joker${rarity}0`;
@@ -293,7 +295,11 @@ export function jokerQueue(
       game.rng.random(editionKey);
       continue;
     }
-    out.push({ key, rarity, edition: pollEdition(game.rng, editionKey) });
+    out.push({
+      key,
+      rarity,
+      edition: pollEdition(game.rng, editionKey, { rate: editionRate }),
+    });
   }
   return out;
 }

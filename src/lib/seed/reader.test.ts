@@ -115,6 +115,20 @@ describe("queues", () => {
   });
 });
 
+describe("edition vouchers", () => {
+  it("keep the jokers and only add editions", () => {
+    const base = jokerQueue(settings("6EQHIH19"), 1, 200);
+    const glow = jokerQueue(settings("6EQHIH19"), 1, 200, false, 4);
+    expect(glow.map((j) => j.key)).toEqual(base.map((j) => j.key));
+    glow.forEach((j, i) => {
+      if (base[i].edition) expect(j.edition).toBeDefined();
+    });
+    expect(glow.filter((j) => j.edition).length).toBeGreaterThan(
+      base.filter((j) => j.edition).length,
+    );
+  });
+});
+
 describe("shop", () => {
   it("rolls about 20 jokers in 28 slots", () => {
     const items = SEEDS.flatMap((s) => shopQueue(settings(s), 400));

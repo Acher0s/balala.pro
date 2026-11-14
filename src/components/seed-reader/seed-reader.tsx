@@ -246,10 +246,11 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
 function JokersTab({ settings }: { settings: ReaderSettings }) {
   const [rarity, setRarity] = useState<Rarity>(1);
   const [stickers, setStickers] = useState(false);
+  const [editionRate, setEditionRate] = useState(1);
   const [count, setCount] = useState(STEP);
   const list = useMemo(
-    () => jokerQueue(settings, rarity, count, stickers),
-    [settings, rarity, count, stickers],
+    () => jokerQueue(settings, rarity, count, stickers, editionRate),
+    [settings, rarity, count, stickers, editionRate],
   );
   return (
     <div className="flex flex-col gap-4">
@@ -265,6 +266,15 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
             onChange={(v) => setStickers(v === "s")}
           />
         )}
+        <Toggle
+          value={editionRate}
+          options={[
+            [1, "No edition voucher"],
+            [2, "Hone"],
+            [4, "Glow Up"],
+          ]}
+          onChange={setEditionRate}
+        />
       </div>
       <Note>
         {rarity === 4
@@ -272,7 +282,9 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
           : stickers
             ? "Jokers that rolled a sticker in the shop or a pack (Black Stake and up) come from this queue; which sticker they get is rolled separately, so it isn't shown here."
             : "Jokers with no sticker come from this queue: the shop and Buffoon Packs (when no sticker is rolled), Judgement, Riff-raff and the like all share it."}{" "}
-        Editions are shown without Hone or Glow Up.
+        Hone and Glow Up make Foil, Holographic and Polychrome more likely (not
+        Negative), so some jokers gain an edition, but which joker comes next
+        doesn't change.
       </Note>
       <Grid>
         {list.map((j, i) => (
