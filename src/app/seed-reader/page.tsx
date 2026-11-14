@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { SeedReader } from "@/components/seed-reader";
 import { SEED_READER } from "@/lib/site-tools";
+import { getSiteTool } from "@/lib/site-tools-settings";
 
-export const metadata: Metadata = {
-  title: SEED_READER.frontmatter.title,
-  description: SEED_READER.frontmatter.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { frontmatter } = await getSiteTool(SEED_READER.href);
+  return { title: frontmatter.title, description: frontmatter.description };
+}
 
 /** The seed reader, on its own page and the full width of the screen. */
 export default function SeedReaderPage() {

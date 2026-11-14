@@ -14,7 +14,7 @@ import {
   pageUrl,
 } from "@/lib/guides";
 import { getCategories, getSettings } from "@/lib/settings";
-import { SITE_TOOLS } from "@/lib/site-tools";
+import { getSiteTools } from "@/lib/site-tools-settings";
 
 const COPY: Record<PageKind, { title: string; empty: string }> = {
   guide: { title: "Guides", empty: "No guides published yet." },
@@ -47,7 +47,7 @@ export async function PageOverview({ kind }: { kind: PageKind }) {
         ).map((g) => ({ name: g.name, pages: g.pages.map((x) => x.page) }))
       : [{ name: "", pages }];
   // The site's own tools (like the log parser) join the list: with categories, as a last group.
-  const siteTools = kind === "tool" ? SITE_TOOLS : [];
+  const siteTools = kind === "tool" ? await getSiteTools() : [];
   const siteToolsGroup =
     siteTools.length > 0 && categories.categories.length > 0;
 

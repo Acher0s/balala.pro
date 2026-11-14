@@ -31,6 +31,8 @@ import {
   compileGuide,
   compileGuideCached,
   GuideValidationError,
+  MAX_ICONS,
+  resolveIcon,
 } from "@/lib/mdx/compile";
 import {
   introMarkup,
@@ -41,6 +43,8 @@ import {
   saveTheme,
   siteTextSource,
 } from "@/lib/settings";
+import { SITE_TOOLS } from "@/lib/site-tools";
+import { saveSiteToolOverride } from "@/lib/site-tools-settings";
 import { siteThemeSchema } from "@/lib/theme";
 import { publishedTierListIds } from "@/lib/tierlists";
 
@@ -564,5 +568,39 @@ export async function saveCardOverride(
       });
   }
   await reloadCardOverrides();
+  return { ok: true };
+}
+
+/**
+ * A built-in tool's description, tags and banner cards (Studio → Site → Built-in tools). Tags
+ * and cards are typed comma-separated, cards as in a guide's details: joker:the_order, card:KH.
+ */
+export async function saveSiteTool(
+  href: string,
+  values: { description: string; tags: string; icon: string },
+): Promise<ActionResult> {
+  await assertUser("admin");
+  if (!SITE_TOOLS.some((t) => t.href === href))
+    return { ok: false, error: "That isn't a built-in tool." };
+  const list = (text: string) =>
+    text
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  const tags = [...new Set(list(values.tags))].slice(0, 20);
+  const icon = list(values.icon);
+  if (icon.length > MAX_ICONS)
+    return { ok: false, error: `Up to ${MAX_ICONS} banner cards.` };
+  const bad = icon.filter((i) => !resolveIcon(i));
+  if (bad.length)
+    return {
+      ok: false,
+      error: `Not a card: ${bad.join(", ")}. Write them like joker:the_order, tarot:hermit or card:KH.`,
+    };
+  await saveSiteToolOverride(href, {
+    description: values.description.trim().slice(0, 300),
+    tags,
+    icon,
+  });
   return { ok: true };
 }
