@@ -112,6 +112,14 @@ function CardList({
   onJumped?: () => void;
 }) {
   const [layout] = useContext(LayoutContext);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (layout !== "grid" || jump === undefined) return;
+    const el = gridRef.current?.querySelector(`[data-slot="${jump}"] > *`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    onJumped?.();
+  });
   if (layout === "band")
     return (
       <Band
@@ -124,10 +132,16 @@ function CardList({
       </Band>
     );
   return (
-    <>
-      <Grid>{children}</Grid>
+    <div ref={gridRef} className="flex flex-col gap-4">
+      <Grid>
+        {Children.map(children, (child, i) => (
+          <div className="contents" data-slot={slots?.[i]}>
+            {child}
+          </div>
+        ))}
+      </Grid>
       <More onClick={onMore} />
-    </>
+    </div>
   );
 }
 
@@ -328,6 +342,8 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
   const [jokersOnly, setJokersOnly] = useState(false);
   /** A slot to bring into view (the seek box's "Go there"). */
   const [jump, setJump] = useState<number | undefined>();
+  /** Which of the sought card's slots the seek buttons last went to. */
+  const [seekAt, setSeekAt] = useState({ key: "", i: -1 });
   const [seek, setSeek] = useState("");
   const mods = useMemo(() => ({ vouchers }), [vouchers]);
   const items = useMemo(
@@ -357,6 +373,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
       .filter(({ item }) => item.kind !== "card" && item.key === seekKey)
       .map(({ slot }) => slot);
   }, [settings, mods, seekKey]);
+  // Bring the i-th slot with the sought card into view (wrapping round after the last).
+  const goTo = (i: number) => {
+    if (!seekKey || seekSlots.length === 0) return;
+    const at = i % seekSlots.length;
+    const slot = seekSlots[at];
+    setSeekAt({ key: seekKey, i: at });
+    setCount((c) => Math.max(c, Math.ceil(slot / STEP) * STEP));
+    setJump(slot);
+  };
   const shown = items.filter(
     ({ item }) => !jokersOnly || item.kind === "joker",
   );
@@ -457,25 +482,25 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
         {picked && (
           <span>
             <b>{picked.name}</b>
-            {": "}
             {seekSlots.length === 0 ? (
-              `Not in the first ${SEEK_SLOTS} shop slots.`
+              `: not in the first ${SEEK_SLOTS} shop slots.`
             ) : (
               <>
-                next at shop slot <b>{seekSlots[0]}</b>
-                {seekSlots.length > 1 &&
-                  `, then ${seekSlots.slice(1, 6).join(", ")}${seekSlots.length > 6 ? ", …" : ""}`}
                 <button
                   type="button"
-                  onClick={() => {
-                    setCount((c) =>
-                      Math.max(c, Math.ceil(seekSlots[0] / STEP) * STEP),
-                    );
-                    setJump(seekSlots[0]);
-                  }}
+                  onClick={() => goTo(0)}
                   className="ml-2 rounded border px-2 py-0.5 hover:bg-fd-accent"
                 >
-                  Go there
+                  Go first
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    goTo(seekAt.key === seekKey ? seekAt.i + 1 : 0)
+                  }
+                  className="ml-2 rounded border px-2 py-0.5 hover:bg-fd-accent"
+                >
+                  Go next
                 </button>
               </>
             )}
