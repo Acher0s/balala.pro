@@ -741,7 +741,7 @@ function ConsumableTab({
                   : " Each card can be The Soul instead."
             }`}
         {set === "Planet" &&
-          " Planet X, Ceres and Eris are left out: they only show up once you've played their hand."}
+          " Planet X, Ceres and Eris are in the list, though the game only offers them once you've played their hand; until then they're skipped."}
         {set === "Spectral" &&
           " On Ghost Deck, Hex is skipped while you hold the one it starts with."}
       </Note>

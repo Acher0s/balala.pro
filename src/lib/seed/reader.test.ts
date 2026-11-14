@@ -136,15 +136,20 @@ describe("queues", () => {
       expect(legendaries.has(j.key)).toBe(true);
   });
 
-  it("never pick The Soul, Black Hole or a soft-locked planet from a pool", () => {
+  it("never pick The Soul or Black Hole from a pool", () => {
     for (const seed of SEEDS) {
       const spectrals = shopConsumableQueue(settings(seed), "Spectral", 200);
       expect(spectrals).not.toContain("c_soul");
       expect(spectrals).not.toContain("c_black_hole");
-      const planets = shopConsumableQueue(settings(seed), "Planet", 200);
-      for (const p of ["c_planet_x", "c_ceres", "c_eris"])
-        expect(planets).not.toContain(p);
     }
+  });
+
+  it("read Planet X, Ceres and Eris as unlocked", () => {
+    const planets = SEEDS.flatMap((s) =>
+      shopConsumableQueue(settings(s), "Planet", 200),
+    );
+    for (const p of ["c_planet_x", "c_ceres", "c_eris"])
+      expect(planets).toContain(p);
   });
 
   it("give pack cards The Soul and Black Hole only rarely", () => {

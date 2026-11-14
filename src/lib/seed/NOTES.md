@@ -85,7 +85,8 @@ name. Cards a ruleset can't use (sandbox, experimental, traps, Wraith rework) ar
 - Each queue is read as if nothing else draws from it. In the game a card that's already owned
   or on screen is skipped (and for jokers the sticker roll is redone), and the shop's jokers
   share their queues with Buffoon Packs, Judgement, Riff-raff, the Uncommon and Rare Tags and so on.
-- Planet X, Ceres and Eris are treated as locked (their hand not played yet).
+- Planet X, Ceres and Eris are read as unlocked (their hand already played), like the
+  enhancement-gated jokers and Penny Pincher are read as in the pool.
 - In packs a Soul or Black Hole already in the pack isn't modelled (the game skips that roll
   while one exists).
 - The first shop's forced Buffoon Pack is shown as `p_buffoon_normal_1`; whether it's art 1 or 2

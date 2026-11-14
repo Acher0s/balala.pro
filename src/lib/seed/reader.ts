@@ -145,9 +145,10 @@ function buildPools(settings: ReaderSettings): Pools {
   return {
     jokers,
     Tarot: POOLS.tarots.map(mark),
-    // Planet X, Ceres and Eris need their hand played first; this reads as if it hasn't been.
+    // Planet X, Ceres and Eris need their hand played first (softlock); like the gated
+    // jokers, they're read as in the pool.
     Planet: [
-      ...POOLS.planets.map((p) => (p.softlock ? UNAVAILABLE : p.key)),
+      ...POOLS.planets.map((p) => p.key),
       ...(ruleset.added.Planet ?? []),
     ].map(mark),
     // The Soul and Black Hole are never picked from the pool, only by their own roll.
