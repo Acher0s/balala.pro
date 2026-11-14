@@ -91,6 +91,11 @@ const pools: SeedPools = {
   noPerishable: ofSet("Joker")
     .filter(([, v]) => v.perishable_compat !== true)
     .map(([k]) => k),
+  enhancementGates: Object.fromEntries(
+    ofSet("Joker")
+      .filter(([, v]) => typeof v.enhancement_gate === "string")
+      .map(([k, v]) => [k, String(v.enhancement_gate)]),
+  ),
   tags: byOrder(Object.entries(tags)).map(([k, v]) => ({
     key: k,
     minAnte: typeof v.min_ante === "number" ? v.min_ante : undefined,

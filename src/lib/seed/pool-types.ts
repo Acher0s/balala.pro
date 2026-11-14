@@ -23,6 +23,11 @@ export interface SeedPools {
   noEternal: string[];
   /** Jokers that can't be Perishable. */
   noPerishable: string[];
+  /**
+   * Jokers only in the pool while the deck has a card with this enhancement
+   * (get_current_pool's enhancement_gate): Glass Joker needs a Glass Card, and so on.
+   */
+  enhancementGates: Record<string, string>;
   tags: { key: string; minAnte?: number }[];
   /** Playing card keys ("H_2", "S_A", …), sorted the way pseudorandom_element sorts them. */
   cards: string[];

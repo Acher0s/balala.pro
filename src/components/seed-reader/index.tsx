@@ -20,6 +20,7 @@ function wantedKeys(): Set<string> {
     ...pools.vouchers.map((v) => v.key),
     ...pools.boosters.map((b) => b.key),
     ...pools.enhancements,
+    ...Object.keys(pools.enhancementGates),
     ...pools.tags.map((t) => t.key),
     "eternal",
     "Gold",

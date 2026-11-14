@@ -114,7 +114,8 @@ describe("queues", () => {
         t.big,
       ]);
       expect(tags).not.toContain("tag_boss");
-      const vouchers = voucherQueue(settings(seed), 32, true);
+      const perAnte = voucherQueue(settings(seed), 32, true);
+      const vouchers = perAnte.flat();
       for (const v of [
         "v_hieroglyph",
         "v_petroglyph",
@@ -122,7 +123,7 @@ describe("queues", () => {
         "v_retcon",
       ])
         expect(vouchers).not.toContain(v);
-      expect(vouchers.filter((v) => v === null)).toHaveLength(4);
+      expect(perAnte.filter((a) => a.length === 0)).toHaveLength(4);
     }
   });
 
@@ -228,7 +229,7 @@ describe("shop", () => {
 
 describe("vouchers", () => {
   it("offers base vouchers until they are bought", () => {
-    const list = voucherQueue(settings("6EQHIH19"), 8, false);
+    const list = voucherQueue(settings("6EQHIH19"), 8, false).flat();
     const bases = new Set(
       pools.vouchers.filter((v) => !v.requires.length).map((v) => v.key),
     );
@@ -237,7 +238,7 @@ describe("vouchers", () => {
 
   it("offers each voucher at most once when everything is bought", () => {
     // 28: Attrition bans two pairs (Hieroglyph/Petroglyph, Director's Cut/Retcon).
-    const list = voucherQueue(settings("6EQHIH19"), 28, true);
+    const list = voucherQueue(settings("6EQHIH19"), 28, true).flat();
     expect(new Set(list).size).toBe(28);
     // An upgrade only comes after its base.
     list.forEach((v, i) => {
@@ -368,7 +369,7 @@ describe("Expanded", () => {
     for (const s of SEEDS) {
       const tags = tagQueue(exp(s), 8).flatMap((t) => [t.small, t.big]);
       expect(tags).not.toContain("tag_mp_ward");
-      const vouchers = voucherQueue(exp(s), 32, true);
+      const vouchers = voucherQueue(exp(s), 32, true).flat();
       expect(vouchers.some((v) => v?.includes("manhunt"))).toBe(false);
     }
   });

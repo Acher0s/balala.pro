@@ -14,6 +14,7 @@ import {
   type Rarity,
   type ReaderSettings,
   SHOP_VOUCHERS,
+  type ShopItem,
   type ShopVoucher,
   shopConsumableQueue,
   shopQueue,
@@ -21,7 +22,14 @@ import {
   tagQueue,
   voucherQueue,
 } from "@/lib/seed/reader";
-import { findPatch, findRuleset, PATCHES, STAKES } from "@/lib/seed/rulesets";
+import {
+  DECKS,
+  type DeckId,
+  findPatch,
+  findRuleset,
+  PATCHES,
+  STAKES,
+} from "@/lib/seed/rulesets";
 import type { SeedArt } from "./art";
 import { ArtContext, ItemCard, PlayingCardCard, useArt } from "./seed-card";
 
@@ -39,6 +47,15 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
+/** Enhancement → the joker it lets into the pool (vanilla enhancement_gate). */
+const GATES: [string, string][] = [
+  ["m_glass", "j_glass"],
+  ["m_steel", "j_steel_joker"],
+  ["m_stone", "j_stone"],
+  ["m_lucky", "j_lucky_cat"],
+  ["m_gold", "j_ticket"],
+];
+
 const RARITIES: [Rarity, string][] = [
   [4, "Legendary"],
   [3, "Rare"],
@@ -47,6 +64,16 @@ const RARITIES: [Rarity, string][] = [
 ];
 
 const STEP = 30;
+/** How far the seek box looks for a joker. */
+const SEEK_SLOTS = 1000;
+
+/** Shop slot numbers: Buffoon Pack cards sit between the slots, unnumbered. */
+function numberSlots(items: ShopItem[]): { item: ShopItem; slot?: number }[] {
+  let slot = 0;
+  return items.map((item) =>
+    item.kind === "joker" && item.pack ? { item } : { item, slot: ++slot },
+  );
+}
 
 /** A seed as the game accepts one: up to 8 letters and digits, upper case. */
 function cleanSeed(input: string) {
@@ -113,16 +140,42 @@ function Note({ children }: { children: ReactNode }) {
 function ShopTab({ settings }: { settings: ReaderSettings }) {
   const art = useArt();
   const [count, setCount] = useState(STEP);
-  const [ghost, setGhost] = useState(false);
+  const [buffoon, setBuffoon] = useState<{ after: number; size: number }[]>([]);
   const [pincherFrom, setPincherFrom] = useState<number | undefined>();
   const [vouchers, setVouchers] = useState<
     Partial<Record<ShopVoucher, number>>
   >({});
   const [shops, setShops] = useState(8);
+  const [jokersOnly, setJokersOnly] = useState(false);
+  const [seek, setSeek] = useState("");
+  const mods = useMemo(
+    () => ({ vouchers, pincherFrom, buffoonPacks: buffoon }),
+    [vouchers, pincherFrom, buffoon],
+  );
   const items = useMemo(
+    () => numberSlots(shopQueue(settings, count, mods)),
+    [settings, count, mods],
+  );
+  // Jokers by name, for the seek box.
+  const jokerNames = useMemo(
     () =>
-      shopQueue(settings, count, { ghostDeck: ghost, vouchers, pincherFrom }),
-    [settings, count, ghost, vouchers, pincherFrom],
+      new Map(
+        Object.entries(art.items)
+          .filter(([, it]) => it.kind === "joker")
+          .map(([key, it]) => [it.name.toLowerCase(), key]),
+      ),
+    [art],
+  );
+  const seekKey = jokerNames.get(seek.trim().toLowerCase());
+  // Where that joker shows up in the shop, looking well past what's on screen.
+  const seekSlots = useMemo(() => {
+    if (!seekKey) return [];
+    return numberSlots(shopQueue(settings, SEEK_SLOTS, mods))
+      .filter(({ item }) => item.kind === "joker" && item.key === seekKey)
+      .flatMap(({ slot }) => (slot === undefined ? [] : [slot]));
+  }, [settings, mods, seekKey]);
+  const shown = items.filter(
+    ({ item }) => !jokersOnly || item.kind === "joker",
   );
   const packs = useMemo(() => packQueue(settings, shops), [settings, shops]);
 
@@ -130,24 +183,76 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
     <div className="flex flex-col gap-4">
       <Note>
         Every card the shop rolls, in order, across shops and rerolls: two per
-        shop, one more per reroll. Jokers come from the same queues as Buffoon
-        Packs, so opening one moves the shop's jokers on, and a card you already
-        have (or that's on screen) is skipped.
+        shop (more with Overstock), one more set per reroll. Buffoon Packs take
+        jokers from the same queues, so add the ones you opened below to keep
+        the shop's jokers in line. A card you already have (or that's on screen)
+        is skipped.
       </Note>
       <details className="rounded-xl border bg-fd-card p-3">
         <summary className="cursor-pointer text-sm font-semibold">
-          Deck and vouchers that change the shop
+          Buffoon Packs and vouchers that change the shop
         </summary>
         <div className="mt-3 flex flex-col gap-2 text-sm">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={ghost}
-              onChange={(e) => setGhost(e.target.checked)}
-            />
-            {art.items.b_ghost?.name ?? "Ghost Deck"}: Spectral cards in the
-            shop
-          </label>
+          <p className="font-semibold">Buffoon Packs opened</p>
+          {buffoon.map((b, i) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: rows are positional
+              key={i}
+              className="flex flex-wrap items-center gap-2"
+            >
+              After shop slot
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={b.after}
+                onChange={(e) => {
+                  const n = Math.max(
+                    0,
+                    Number.parseInt(e.target.value, 10) || 0,
+                  );
+                  setBuffoon((prev) =>
+                    prev.map((x, j) => (j === i ? { ...x, after: n } : x)),
+                  );
+                }}
+                className="w-16 rounded border bg-fd-background px-2 py-1"
+              />
+              <select
+                value={b.size}
+                onChange={(e) => {
+                  const size = Number(e.target.value);
+                  setBuffoon((prev) =>
+                    prev.map((x, j) => (j === i ? { ...x, size } : x)),
+                  );
+                }}
+                className="rounded border bg-fd-background px-2 py-1"
+              >
+                <option value={2}>Buffoon Pack (2)</option>
+                <option value={4}>Jumbo or Mega Buffoon Pack (4)</option>
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setBuffoon((prev) => prev.filter((_, j) => j !== i))
+                }
+                className="rounded border px-2 py-0.5 hover:bg-fd-accent"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setBuffoon((prev) => [
+                ...prev,
+                { after: prev.at(-1)?.after ?? 2, size: 2 },
+              ])
+            }
+            className="self-start rounded border px-2 py-0.5 hover:bg-fd-accent"
+          >
+            Add a Buffoon Pack
+          </button>
           {settings.ruleset.pennyPincher && (
             <label className="flex items-center gap-2">
               <input
@@ -195,9 +300,64 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
           </div>
         </div>
       </details>
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={jokersOnly}
+            onChange={(e) => setJokersOnly(e.target.checked)}
+          />
+          Jokers only
+        </label>
+        <label className="flex items-center gap-2">
+          Seek
+          <input
+            list="seed-reader-jokers"
+            value={seek}
+            onChange={(e) => setSeek(e.target.value)}
+            placeholder="a joker, e.g. Blueprint"
+            className="w-56 rounded-lg border bg-fd-background px-3 py-1.5"
+          />
+          <datalist id="seed-reader-jokers">
+            {[...jokerNames.keys()].sort().map((n) => (
+              <option
+                key={n}
+                value={art.items[jokerNames.get(n) ?? ""]?.name}
+              />
+            ))}
+          </datalist>
+        </label>
+        {seekKey && (
+          <span>
+            {seekSlots.length === 0 ? (
+              `Not in the first ${SEEK_SLOTS} shop slots.`
+            ) : (
+              <>
+                Next at shop slot <b>{seekSlots[0]}</b>
+                {seekSlots.length > 1 &&
+                  `, then ${seekSlots.slice(1, 6).join(", ")}${seekSlots.length > 6 ? ", …" : ""}`}
+                {seekSlots[0] > count && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCount(Math.ceil(seekSlots[0] / STEP) * STEP)
+                    }
+                    className="ml-2 rounded border px-2 py-0.5 hover:bg-fd-accent"
+                  >
+                    Show up to there
+                  </button>
+                )}
+              </>
+            )}
+          </span>
+        )}
+      </div>
       <Grid>
-        {items.map((item, i) => {
-          const index = i + 1;
+        {shown.map(({ item, slot }, i) => {
+          const found =
+            seekKey !== undefined &&
+            item.kind === "joker" &&
+            item.key === seekKey;
           if (item.kind === "joker")
             return (
               <ItemCard
@@ -206,12 +366,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
                 itemKey={item.key}
                 edition={item.edition}
                 stickers={item.stickers}
-                index={index}
+                index={slot}
+                note={item.pack ? `Buffoon Pack ${item.pack}` : undefined}
+                dim={item.pack !== undefined}
+                highlight={found}
               />
             );
           if (item.kind === "consumable")
             // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-            return <ItemCard key={i} itemKey={item.key} index={index} />;
+            return <ItemCard key={i} itemKey={item.key} index={slot} />;
           return (
             <PlayingCardCard
               // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
@@ -219,7 +382,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
               card={item.card}
               enhancement={item.enhancement}
               edition={item.edition}
-              index={index}
+              index={slot}
             />
           );
         })}
@@ -373,7 +536,7 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
       </div>
       <Note>
         {source === "standard" &&
-          "Cards shown in Standard Packs, one after another across packs. Hone and Glow Up make editions more likely here; the cards, seals and enhancements stay the same."}
+          `Cards shown in Standard Packs, one after another across packs.${settings.deck === "orange" ? " On Orange Deck the first ten are the Giga Standard Pack it opens at the start." : ""} Hone and Glow Up make editions more likely here; the cards, seals and enhancements stay the same.`}
         {source === "magic" &&
           "The playing cards the shop rolls with Magic Trick, in order: plain cards, with no enhancement or edition. Hone and Glow Up don't change them."}
         {source === "illusion" &&
@@ -391,7 +554,7 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
             edition={c.edition}
             seal={c.seal}
             index={i + 1}
-            note={c.slot ? `slot ${c.slot}` : undefined}
+            note={c.slot ? `slot ${c.slot}` : c.giga ? "Giga Pack" : undefined}
           />
         ))}
       </Grid>
@@ -466,39 +629,79 @@ function ConsumableTab({
 
 function VouchersTab({ settings }: { settings: ReaderSettings }) {
   const [buyAll, setBuyAll] = useState(false);
+  // "ante:key" of each voucher marked as bought.
+  const [bought, setBought] = useState<Set<string>>(() => new Set());
   const [antes, setAntes] = useState(16);
   const list = useMemo(
-    () => voucherQueue(settings, antes, buyAll),
-    [settings, antes, buyAll],
+    () =>
+      voucherQueue(
+        settings,
+        antes,
+        buyAll || ((ante, key) => bought.has(`${ante}:${key}`)),
+      ),
+    [settings, antes, buyAll, bought],
   );
+  const toggle = (id: string) =>
+    setBought((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   return (
     <div className="flex flex-col gap-4">
       <Toggle
         value={buyAll ? "all" : "none"}
         options={[
-          ["none", "Buying none"],
+          ["none", "Buying what you tick"],
           ["all", "Buying every one"],
         ]}
         onChange={(v) => setBuyAll(v === "all")}
       />
       <Note>
-        The voucher in each ante's shop. Each pair (a voucher and its upgrade)
-        is one slot: it holds the upgrade once you own the base, and a pair you
-        own both of is skipped, so what you buy changes what comes later. A
-        Voucher Tag takes the next one from this list.
+        The vouchers each ante's shop offers
+        {settings.deck === "violet" ? " (two, on Violet Deck)" : ""}. They're
+        rolled when the ante starts, so the shop after a boss already shows the
+        next ante's. Each pair (a voucher and its upgrade) is one slot: it holds
+        the upgrade once you own the base, and a pair you own both of is
+        skipped, so tick what you bought to see what comes after. A Voucher Tag
+        takes the next one from this list.
       </Note>
-      <Grid>
-        {list.map((v, i) =>
-          v ? (
-            <ItemCard
-              // biome-ignore lint/suspicious/noArrayIndexKey: antes are positional
-              key={i}
-              itemKey={v}
-              note={`Ante ${i + 1}`}
-            />
-          ) : null,
-        )}
-      </Grid>
+      <div className="flex flex-wrap gap-3">
+        {list.map((offers, i) => {
+          const ante = i + 1;
+          return (
+            <div
+              key={ante}
+              className="flex flex-col items-center gap-1 rounded-xl border bg-fd-card p-2"
+            >
+              <span className="text-xs font-semibold">Ante {ante}</span>
+              <div className="flex gap-2">
+                {offers.length === 0 && (
+                  <span className="text-xs text-fd-muted-foreground">
+                    none left
+                  </span>
+                )}
+                {offers.map((v) => (
+                  <span key={v} className="flex flex-col items-center gap-1">
+                    <ItemCard itemKey={v} />
+                    {!buyAll && (
+                      <label className="flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={bought.has(`${ante}:${v}`)}
+                          onChange={() => toggle(`${ante}:${v}`)}
+                        />
+                        bought
+                      </label>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
       <More onClick={() => setAntes((c) => c + 8)} />
     </div>
   );
@@ -645,6 +848,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [patchId, setPatchId] = useState(PATCHES[0].id);
   const [rulesetId, setRulesetId] = useState(PATCHES[0].rulesets[0].id);
   const [stake, setStake] = useState(1);
+  const [deckId, setDeckId] = useState<DeckId | "">("");
+  const [enhancements, setEnhancements] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("shop");
 
   // Read the seed from the address once, and keep it there as it changes.
@@ -656,6 +861,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
     if (STAKES.some((x) => x.id === st)) setStake(st);
     const r = params.get("ruleset");
     if (r) setRulesetId(r);
+    const d = params.get("deck");
+    if (DECKS.some((x) => x.id === d)) setDeckId(d as DeckId);
   }, []);
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -666,8 +873,10 @@ export function SeedReader({ art }: { art: SeedArt }) {
     if (rulesetId !== PATCHES[0].rulesets[0].id)
       url.searchParams.set("ruleset", rulesetId);
     else url.searchParams.delete("ruleset");
+    if (deckId) url.searchParams.set("deck", deckId);
+    else url.searchParams.delete("deck");
     window.history.replaceState(null, "", url);
-  }, [seed, stake, rulesetId]);
+  }, [seed, stake, rulesetId, deckId]);
 
   const patch = findPatch(patchId);
   const ruleset = findRuleset(patch, rulesetId);
@@ -676,9 +885,21 @@ export function SeedReader({ art }: { art: SeedArt }) {
     (x) => !ruleset.stakes || ruleset.stakes.includes(x.id),
   );
   const activeStake = stakes.some((x) => x.id === stake) ? stake : stakes[0].id;
+  // Only decks this ruleset allows; one it doesn't falls back to "any other deck".
+  const decks = DECKS.filter((d) => ruleset.decks.includes(d.id));
+  const deck = decks.some((d) => d.id === deckId)
+    ? (deckId as DeckId)
+    : undefined;
   const settings = useMemo<ReaderSettings>(
-    () => ({ seed, ruleset, gameMode: patch.gameMode, stake: activeStake }),
-    [seed, ruleset, patch.gameMode, activeStake],
+    () => ({
+      seed,
+      ruleset,
+      gameMode: patch.gameMode,
+      stake: activeStake,
+      deck,
+      enhancements,
+    }),
+    [seed, ruleset, patch.gameMode, activeStake, deck, enhancements],
   );
 
   return (
@@ -745,6 +966,45 @@ export function SeedReader({ art }: { art: SeedArt }) {
               ))}
             </select>
           </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold">Deck</span>
+            <select
+              value={deck ?? ""}
+              onChange={(e) => setDeckId(e.target.value as DeckId | "")}
+              className="rounded-lg border bg-fd-background px-3 py-2"
+            >
+              <option value="">Any other deck</option>
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.effect})
+                </option>
+              ))}
+            </select>
+          </label>
+          <fieldset className="flex basis-full flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <legend className="mb-1 font-semibold">
+              Your deck has a card that's…
+            </legend>
+            {GATES.map(([enh, joker]) => (
+              <label key={enh} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={enhancements.includes(enh)}
+                  onChange={(e) =>
+                    setEnhancements((prev) =>
+                      e.target.checked
+                        ? [...prev, enh]
+                        : prev.filter((x) => x !== enh),
+                    )
+                  }
+                />
+                {art.items[enh]?.name ?? enh}
+                <span className="text-fd-muted-foreground">
+                  ({art.items[joker]?.name ?? joker} in the pool)
+                </span>
+              </label>
+            ))}
+          </fieldset>
         </div>
 
         {seed ? (
@@ -765,7 +1025,9 @@ export function SeedReader({ art }: { art: SeedArt }) {
                 </button>
               ))}
             </nav>
-            <section key={`${tab}:${seed}:${activeStake}:${ruleset.id}`}>
+            <section
+              key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}:${enhancements.join()}`}
+            >
               {tab === "shop" && <ShopTab settings={settings} />}
               {tab === "jokers" && <JokersTab settings={settings} />}
               {tab === "cards" && <CardsTab settings={settings} />}

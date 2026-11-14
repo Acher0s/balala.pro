@@ -18,7 +18,7 @@
 import type { SeedPools } from "./pool-types";
 import vanilla from "./pools.generated.json";
 import { SeedRng } from "./pseudo";
-import type { GameModeDef, RulesetDef } from "./rulesets";
+import type { DeckId, GameModeDef, RulesetDef } from "./rulesets";
 
 const POOLS = vanilla as SeedPools;
 export const UNAVAILABLE = "UNAVAILABLE";
@@ -39,6 +39,8 @@ export interface ShopJoker extends JokerRoll {
   stickers: StickerId[];
   /** Taken from the rarity's sticker queue rather than its stickerless one. */
   stickerQueue: boolean;
+  /** Shown in a Buffoon Pack (the shop's list numbers these packs from 1), not a shop slot. */
+  pack?: number;
 }
 
 export type ShopItem =
@@ -65,6 +67,13 @@ export interface ReaderSettings {
   stake: number;
   /** Penny Pincher's slot is open (after the first PvP blind), where the ruleset has it. */
   pincherUnlocked?: boolean;
+  /** A deck that changes a queue (Violet: vouchers, Orange: Standard Packs, Ghost: shop). */
+  deck?: DeckId;
+  /**
+   * Enhancements the deck has a card with ("m_glass", …): Glass Joker, Steel Joker, Stone
+   * Joker, Lucky Cat and Golden Ticket are only in the pool while it does.
+   */
+  enhancements?: readonly string[];
 }
 
 /** Shop rates that vouchers and decks change, from a given shop slot on. */
@@ -75,6 +84,11 @@ export interface ShopModifiers {
   vouchers?: Partial<Record<ShopVoucher, number>>;
   /** The first shop slot after the first PvP blind, from which Penny Pincher can show up. */
   pincherFrom?: number;
+  /**
+   * Buffoon Packs opened: after which shop slot (0 = before the first) and how many cards.
+   * They take jokers from the same queues as the shop.
+   */
+  buffoonPacks?: { after: number; size: number }[];
 }
 
 /** The vouchers that change what the shop rolls. */
@@ -119,6 +133,9 @@ function unavailableKeys(settings: ReaderSettings): Set<string> {
   const keys = bannedKeys(settings);
   if (settings.ruleset.pennyPincher && !settings.pincherUnlocked)
     keys.add("j_mp_penny_pincher");
+  const has = new Set(settings.enhancements ?? []);
+  for (const [joker, gate] of Object.entries(POOLS.enhancementGates))
+    if (!has.has(gate)) keys.add(joker);
   return keys;
 }
 
@@ -219,10 +236,19 @@ function pollEdition(
   return undefined;
 }
 
-/** pseudorandom_element over a pool, taking the next entry while it's UNAVAILABLE. */
-function drawFrom(rng: SeedRng, pool: readonly string[], key: string): string {
+/**
+ * pseudorandom_element over a pool, taking the next entry while it's UNAVAILABLE, or a card
+ * that already exists in the run (`owned`: get_current_pool's used_jokers check).
+ */
+function drawFrom(
+  rng: SeedRng,
+  pool: readonly string[],
+  key: string,
+  owned?: ReadonlySet<string>,
+): string {
+  const gone = (c: string) => c === UNAVAILABLE || (owned?.has(c) ?? false);
   let center = rng.element(pool, key);
-  for (let it = 2; center === UNAVAILABLE; it++) {
+  for (let it = 2; gone(center); it++) {
     center = rng.element(pool, key);
     if (it > 1000) center = rng.element(pool, `${key}_resample${it}`);
   }
@@ -233,6 +259,8 @@ class Game {
   readonly rng: SeedRng;
   /** Replaced mid-run when a pool opens up (Penny Pincher). */
   pools: Pools;
+  /** Cards that exist in the run right now: skipped like unavailable ones. */
+  readonly owned = new Set<string>();
   readonly stake: number;
 
   constructor(settings: ReaderSettings) {
@@ -261,7 +289,7 @@ class Game {
       const s = eternal || perishable || rental ? "_sticker" : "";
       let key = this.rng.element(pool, pk + s);
       if (it > 1000) key = this.rng.element(pool, `${pk}${s}_resample${it}`);
-      if (key !== UNAVAILABLE) {
+      if (key !== UNAVAILABLE && !this.owned.has(key)) {
         const edition = pollEdition(this.rng, `edi${pk}${s}`, {
           rate: editionRate,
         });
@@ -290,7 +318,7 @@ class Game {
     const pool = this.pools.jokers[rarity];
     for (;;) {
       const key = this.rng.element(pool, pk);
-      if (key !== UNAVAILABLE)
+      if (key !== UNAVAILABLE && !this.owned.has(key))
         return {
           key,
           rarity,
@@ -478,13 +506,17 @@ export function tagQueue(
 export function voucherQueue(
   settings: ReaderSettings,
   antes: number,
-  buyAll: boolean,
+  /** Whether the voucher `key` offered in `ante` is bought; true buys all of them. */
+  bought: boolean | ((ante: number, key: string) => boolean),
   owned: readonly string[] = [],
-): (string | null)[] {
+): string[][] {
   const game = new Game(settings);
   const have = new Set(owned);
   const banned = bannedKeys(settings);
-  const out: (string | null)[] = [];
+  // vouchers_in_shop + extra_vouchers: Violet Deck adds one (SMODS.change_voucher_limit(1)),
+  // before the first ante's vouchers are rolled.
+  const perAnte = 1 + (settings.deck === "violet" ? 1 : 0);
+  const out: string[][] = [];
   for (let ante = 1; ante <= antes; ante++) {
     const pool = [
       ...POOLS.vouchers,
@@ -497,17 +529,26 @@ export function voucherQueue(
         : v.key,
     );
     const culled = cull(pool);
-    if (culled.every((v) => v === UNAVAILABLE)) {
-      out.push(null);
-      continue;
+    const size = pool.filter((v) => v !== UNAVAILABLE).length;
+    const offered: string[] = [];
+    for (let i = 0; i < Math.min(size, perAnte); i++) {
+      // The mod's guard: stop when no slot is left that this ante hasn't offered.
+      if (!culled.some((v) => v !== UNAVAILABLE && !offered.includes(v))) break;
+      let center = game.rng.element(culled, "Voucher0");
+      for (
+        let it = 2;
+        center === UNAVAILABLE || offered.includes(center);
+        it++
+      ) {
+        center = game.rng.element(culled, "Voucher0");
+        if (it > 1000) center = game.rng.element(culled, `Voucher0${it}`);
+      }
+      offered.push(center);
     }
-    let center = game.rng.element(culled, "Voucher0");
-    for (let it = 2; center === UNAVAILABLE; it++) {
-      center = game.rng.element(culled, "Voucher0");
-      if (it > 1000) center = game.rng.element(culled, `Voucher0${it}`);
-    }
-    out.push(center);
-    if (buyAll) have.add(center);
+    out.push(offered);
+    for (const v of offered)
+      if (bought === true || (typeof bought === "function" && bought(ante, v)))
+        have.add(v);
   }
   return out;
 }
@@ -567,19 +608,121 @@ export function shopQueue(
   count: number,
   mods: ShopModifiers = {},
 ): ShopItem[] {
-  const game = new Game(settings);
-  const rng = game.rng;
-  const locked = game.pools;
-  const unlocked = settings.ruleset.pennyPincher
-    ? buildPools({ ...settings, pincherUnlocked: true })
-    : locked;
+  const sim = new ShopSim(settings, mods);
+  const packs = [...(mods.buffoonPacks ?? [])].sort(
+    (a, b) => a.after - b.after,
+  );
   const out: ShopItem[] = [];
+  let p = 0;
   for (let slot = 1; slot <= count; slot++) {
-    game.pools =
-      settings.pincherUnlocked || (mods.pincherFrom ?? Infinity) <= slot
-        ? unlocked
-        : locked;
-    const has = (v: ShopVoucher) => (mods.vouchers?.[v] ?? Infinity) <= slot;
+    for (; p < packs.length && packs[p].after < slot; p++)
+      for (let i = 0; i < packs[p].size; i++)
+        out.push({ ...sim.buffoonCard(), pack: p + 1 });
+    out.push(sim.next());
+  }
+  return out;
+}
+
+/**
+ * The shop rolled one step at a time, so other things that draw from the same queues can be
+ * put in between: `next()` is one shop slot, `buffoonCard()` one card in a Buffoon Pack.
+ * Cards in `owned` (on screen, held, in a pack) are skipped like the game skips them.
+ */
+export class ShopSim {
+  private readonly game: Game;
+  private locked: Pools;
+  private unlocked: Pools;
+  private settings: ReaderSettings;
+  private slotNo = 0;
+  readonly mods: ShopModifiers;
+
+  private readonly ghost: boolean;
+
+  constructor(settings: ReaderSettings, mods: ShopModifiers = {}) {
+    this.game = new Game(settings);
+    this.ghost = settings.deck === "ghost";
+    this.mods = mods;
+    this.settings = settings;
+    this.locked = this.game.pools;
+    this.unlocked = settings.ruleset.pennyPincher
+      ? buildPools({ ...settings, pincherUnlocked: true })
+      : this.locked;
+    this.pincherUnlocked = settings.pincherUnlocked ?? false;
+  }
+
+  /** Penny Pincher's slot is open from now on. */
+  pincherUnlocked: boolean;
+
+  /** The deck's enhancements changed (a Glass Card bought, …): gated jokers follow. */
+  setEnhancements(enhancements: readonly string[]): void {
+    this.settings = { ...this.settings, enhancements };
+    this.locked = buildPools({ ...this.settings, pincherUnlocked: false });
+    this.unlocked = this.settings.ruleset.pennyPincher
+      ? buildPools({ ...this.settings, pincherUnlocked: true })
+      : this.locked;
+  }
+
+  /** Cards that exist in the run: the shop and packs skip them. */
+  get owned(): Set<string> {
+    return this.game.owned;
+  }
+
+  /** The number of shop slots rolled so far. */
+  get slots(): number {
+    return this.slotNo;
+  }
+
+  private has(v: ShopVoucher, slot: number): boolean {
+    return (this.mods.vouchers?.[v] ?? Infinity) <= slot;
+  }
+
+  private editionRate(slot: number): number {
+    return this.has("v_glow_up", slot) ? 4 : this.has("v_hone", slot) ? 2 : 1;
+  }
+
+  private selectPools(slot: number) {
+    this.game.pools =
+      this.pincherUnlocked || (this.mods.pincherFrom ?? Infinity) <= slot
+        ? this.unlocked
+        : this.locked;
+  }
+
+  /** A card in a Buffoon Pack: a joker rolled exactly like the shop's (stickers included). */
+  buffoonCard(): ShopJoker {
+    this.selectPools(this.slotNo + 1);
+    const rarity = pollRarity(this.game.rng, "rarity0");
+    return this.game.shopJoker(rarity, this.editionRate(this.slotNo + 1));
+  }
+
+  /**
+   * A joker made outside the shop and packs, from the stickerless queue: Riff-raff (always
+   * Common), Judgement (rarity from "rarity0" below Black Stake, from "order_jud_rarity" on
+   * it and up), Wraith (Rare).
+   */
+  otherJoker(rarity?: Rarity | "judgement"): ShopJoker {
+    this.selectPools(this.slotNo + 1);
+    const rng = this.game.rng;
+    const r =
+      rarity === "judgement"
+        ? this.game.stake >= 4
+          ? rarityOf(rng.random("order_jud_rarity"))
+          : pollRarity(rng, "rarity0")
+        : (rarity ?? pollRarity(rng, "rarity0"));
+    return {
+      ...this.game.plainJoker(r, this.editionRate(this.slotNo + 1)),
+      kind: "joker",
+      stickers: [],
+      stickerQueue: false,
+    };
+  }
+
+  /** The next shop slot. */
+  next(): ShopItem {
+    const slot = ++this.slotNo;
+    const { game } = this;
+    const rng = game.rng;
+    this.selectPools(slot);
+    const has = (v: ShopVoucher) => this.has(v, slot);
     const tarotRate = has("v_tarot_tycoon")
       ? 4 * (32 / 4)
       : has("v_tarot_merchant")
@@ -592,8 +735,8 @@ export function shopQueue(
         : 4;
     const illusion = has("v_illusion");
     const cardRate = illusion || has("v_magic_trick") ? 4 : 0;
-    const spectralRate = mods.ghostDeck ? 2 : 0;
-    const editionRate = has("v_glow_up") ? 4 : has("v_hone") ? 2 : 1;
+    const spectralRate = this.mods.ghostDeck || this.ghost ? 2 : 0;
+    const editionRate = this.editionRate(slot);
 
     const total = 20 + tarotRate + planetRate + cardRate + spectralRate;
     const polled = rng.random("cdt0") * total;
@@ -618,28 +761,26 @@ export function shopQueue(
 
     if (type === "Joker") {
       const rarity = pollRarity(rng, "rarity0");
-      out.push(game.shopJoker(rarity, editionRate));
-    } else if (type === "Tarot" || type === "Planet" || type === "Spectral") {
-      out.push({
+      return game.shopJoker(rarity, editionRate);
+    }
+    if (type === "Tarot" || type === "Planet" || type === "Spectral")
+      return {
         kind: "consumable",
         set: type,
-        key: drawFrom(rng, game.pools[type], `${type}${type}0`),
-      });
-    } else {
-      // Base / Enhanced keep their "sho" key_append under The Order.
-      const enhancement =
-        type === "Enhanced"
-          ? drawFrom(rng, game.pools.enhancements, "Enhancedsho0")
-          : undefined;
-      const card = rng.element(game.pools.cards, "frontsho0");
-      const edition =
-        illusion && rng.random("illusion") > 0.8
-          ? pollEdition(rng, "illusion", { noNegative: true, guaranteed: true })
-          : undefined;
-      out.push({ kind: "card", card, enhancement, edition });
-    }
+        key: drawFrom(rng, game.pools[type], `${type}${type}0`, game.owned),
+      };
+    // Base / Enhanced keep their "sho" key_append under The Order.
+    const enhancement =
+      type === "Enhanced"
+        ? drawFrom(rng, game.pools.enhancements, "Enhancedsho0")
+        : undefined;
+    const card = rng.element(game.pools.cards, "frontsho0");
+    const edition =
+      illusion && rng.random("illusion") > 0.8
+        ? pollEdition(rng, "illusion", { noNegative: true, guaranteed: true })
+        : undefined;
+    return { kind: "card", card, enhancement, edition };
   }
-  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -654,6 +795,8 @@ export interface PlayingCardRoll {
   seal?: string;
   /** Shop slot it came from (Illusion), 1-based. */
   slot?: number;
+  /** Orange Deck's Giga Standard Pack, opened before any Standard Pack. */
+  giga?: boolean;
 }
 
 /**
@@ -688,15 +831,15 @@ export function standardPackQueue(
   const rng = game.rng;
   // poll_seal's chance: type_weight * mod / total_weight, total = 40 + 40 / 2 * 98.
   const sealChance = (40 * 10) / (40 + (40 / 2) * 98);
-  return Array.from({ length: count }, () => {
+  const roll = (sealKey: string, sealTypeKey: string): PlayingCardRoll => {
     const edition = pollEdition(rng, "standard_edition0", {
       rate: editionRate,
       mod: 2,
       noNegative: true,
     });
     const seal =
-      rng.random("stdseal0") > 1 - sealChance
-        ? pollSealType(rng, "stdsealtype0")
+      rng.random(sealKey) > 1 - sealChance
+        ? pollSealType(rng, sealTypeKey)
         : undefined;
     const enhanced = rng.random("stdset0") > 0.6;
     const enhancement = enhanced
@@ -704,7 +847,21 @@ export function standardPackQueue(
       : undefined;
     const card = rng.element(game.pools.cards, "frontsta0");
     return { card, enhancement, edition, seal };
-  });
+  };
+  // Orange Deck opens the mod's Giga Standard Pack (10 cards) at the start: its cards take
+  // the same edition, Enhanced, enhancement and card streams; its seal key is passed in as
+  // "stdseal0", to which poll_seal adds the ante again (objects/boosters/standard_giga.lua).
+  const giga =
+    settings.deck === "orange"
+      ? Array.from({ length: 10 }, () => ({
+          ...roll("stdseal00", "stdseal0type0"),
+          giga: true,
+        }))
+      : [];
+  return [
+    ...giga,
+    ...Array.from({ length: count }, () => roll("stdseal0", "stdsealtype0")),
+  ];
 }
 
 /**

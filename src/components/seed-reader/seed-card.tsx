@@ -136,6 +136,7 @@ export function ItemCard({
   index,
   note,
   dim,
+  highlight,
 }: {
   itemKey: string;
   edition?: string;
@@ -143,6 +144,8 @@ export function ItemCard({
   index?: number;
   note?: ReactNode;
   dim?: boolean;
+  /** Ringed, e.g. the joker the seek box looks for. */
+  highlight?: boolean;
 }) {
   const art = useArt();
   const item: ArtItem | undefined = art.items[itemKey];
@@ -172,7 +175,7 @@ export function ItemCard({
   const small = item.w < 100;
   return (
     <span
-      className={`group relative flex w-[71px] flex-col items-center gap-1 ${dim ? "opacity-40" : ""}`}
+      className={`group relative flex w-[71px] flex-col items-center gap-1 rounded-md ${dim ? "opacity-40" : ""} ${highlight ? "outline outline-2 outline-offset-2 outline-fd-primary" : ""}`}
     >
       <button
         type="button"

@@ -701,6 +701,13 @@
     "j_glass",
     "j_wee"
   ],
+  "enhancementGates": {
+    "j_steel_joker": "m_steel",
+    "j_stone": "m_stone",
+    "j_lucky_cat": "m_lucky",
+    "j_ticket": "m_gold",
+    "j_glass": "m_glass"
+  },
   "tags": [
     {
       "key": "tag_uncommon"

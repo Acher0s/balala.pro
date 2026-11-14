@@ -101,3 +101,28 @@ name. Cards a ruleset can't use (sandbox, experimental, traps, Wraith rework) ar
 - Certificate: `cert_fr`, then Steamodded's guaranteed `poll_seal` with type key `certsl`
   (under The Order a guaranteed seal skips its chance roll). Seal types: the seal pool in order
   (Gold, Red, Blue, Purple), weight 10 each.
+
+## Checked against a real match
+
+`replay.test.ts` replays one player of a ranked Expanded match (seed FZZUAJBR, Violet Deck,
+White Stake; the fixture holds their shops, rerolls, packs, buys and sells through Ante 4 from
+the site's match log). Rolling the shop slot by slot as they rerolled, with their Buffoon Packs
+and Riff-raff's jokers taken from the same queues in between, every joker they bought or picked
+is where the reader puts it; every pack they opened was offered in that shop; and the vouchers
+they bought are the reader's two-per-ante offers. That match also showed three things the
+reader now models:
+
+- **Enhancement-gated jokers.** Glass Joker, Steel Joker, Stone Joker, Lucky Cat and Golden
+  Ticket are only in the pool while the deck has a card with that enhancement
+  (`enhancement_gate`); otherwise their slot is skipped. The page has a setting for it.
+- **Violet Deck** adds a voucher to every shop (`SMODS.change_voucher_limit(1)`, before the
+  first ante's roll). Vouchers are rolled when an ante starts, so the shop after a boss already
+  offers the next ante's.
+- **Orange Deck** opens the mod's Giga Standard Pack (10 cards) first, from the same edition,
+  Enhanced, enhancement and card streams as Standard Packs. Assumed: the Giga Pack keeps its own
+  `create_card` (MultiplayerAPI's Standard take-over runs before PvP registers it), so its seal
+  streams are `stdseal00` / `stdseal0type0`.
+
+Later in that match the replay drifts, from things the log doesn't record: how full the joker
+row was (Riff-raff and Judgement need room) and consumables made by The Emperor, High Priestess,
+Vagabond and the like, which take from the shop's Tarot and Planet queues.

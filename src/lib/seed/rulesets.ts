@@ -36,9 +36,39 @@ export interface RulesetDef {
   pennyPincher?: boolean;
   /** Stakes ranked plays on (ids from STAKES), when not all the vanilla ones. */
   stakes?: number[];
+  /** Decks that change a queue and that this ruleset allows (ids from DECKS). */
+  decks: DeckId[];
   /** Whether ranked matches on this ruleset always use The Order. */
   rankedOrder: boolean;
 }
+
+/** Decks that change what a seed rolls. Any other deck reads the same as Red Deck. */
+export type DeckId = "violet" | "orange" | "ghost";
+export const DECKS: {
+  id: DeckId;
+  name: string;
+  key: string;
+  effect: string;
+}[] = [
+  {
+    id: "violet",
+    name: "Violet Deck",
+    key: "b_mp_violet",
+    effect: "two vouchers in every shop",
+  },
+  {
+    id: "orange",
+    name: "Orange Deck",
+    key: "b_mp_orange",
+    effect: "opens a Giga Standard Pack first",
+  },
+  {
+    id: "ghost",
+    name: "Ghost Deck",
+    key: "b_ghost",
+    effect: "Spectral cards in the shop",
+  },
+];
 
 /**
  * Stakes the reader knows, by the number it uses. Spectral+ is the mod's own (objects/stakes):
@@ -162,6 +192,8 @@ const EXPANDED: RulesetDef = {
   noPerishable: ["j_mp_taxes"],
   pennyPincher: true,
   stakes: [1, 3, 4, 6, 8, 9],
+  // layers/expanded.lua allowed_backs; Ghost Deck isn't in ranked, but it's there to read.
+  decks: ["violet", "orange", "ghost"],
   rankedOrder: true,
 };
 
@@ -171,6 +203,8 @@ const BALANCED: RulesetDef = {
   banned: ["j_hanging_chad", "j_bloodstone", "c_justice"],
   added: { jokers: { 1: ["j_mp_hanging_chad"], 2: ["j_mp_bloodstone"] } },
   stakes: [1, 2, 3, 4, 5, 6, 7, 8],
+  // rulesets/balanced.lua bans the Orange and Violet Decks.
+  decks: ["ghost"],
   rankedOrder: true,
 };
 
