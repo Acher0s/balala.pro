@@ -11,8 +11,15 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-/** "none" = signed in but not (yet) an author. "writer" = author (shown as "Author"): edits their own guides. Admins edit everything. */
-export type Role = "none" | "writer" | "admin";
+/**
+ * "none" = signed in but not (yet) an author. "tester" = a member who tests things for the site;
+ * no extra permissions yet. "writer" = author (shown as "Author"): edits their own guides.
+ * Admins edit everything.
+ */
+export type Role = "none" | "tester" | "writer" | "admin";
+
+/** Every role, in the order the People page lists them. */
+export const ROLES: readonly Role[] = ["none", "tester", "writer", "admin"];
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -251,3 +258,62 @@ export const creators = pgTable("creators", {
 });
 
 export type CreatorRow = typeof creators.$inferSelect;
+
+/**
+ * Every seed read with the seed reader (/seed-reader): the page reports each seed it settles on,
+ * so admins can see which seeds are being read while games are on (Studio → Seed reader). The IP
+ * is kept only as a salted hash, enough to tell lookups from the same place apart.
+ */
+export const seedLookups = pgTable(
+  "seed_lookups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seed: text("seed").notNull(),
+    ruleset: text("ruleset").notNull(),
+    stake: integer("stake").notNull(),
+    deck: text("deck"),
+    /** The mod version picked in the reader, e.g. "pvp-1.0.5". */
+    patch: text("patch").notNull(),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** A random id per browser tab, to group one reader's lookups. */
+    clientId: text("client_id").notNull(),
+    ipHash: text("ip_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("seed_lookups_created_idx").on(t.createdAt),
+    index("seed_lookups_seed_idx").on(t.seed),
+  ],
+);
+
+export type SeedLookupRow = typeof seedLookups.$inferSelect;
+
+/** What an API key may do. */
+export type ApiScope = "seed-reader:read";
+
+/**
+ * API keys for the site's API, made and revoked by admins in Studio. Only a SHA-256 of the key
+ * is stored; the key itself is shown once, when it's made.
+ */
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  /** The start of the key, so admins can tell keys apart. */
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").$type<ApiScope[]>().notNull().default([]),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+export type ApiKeyRow = typeof apiKeys.$inferSelect;

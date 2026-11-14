@@ -6,6 +6,7 @@ import type { Role } from "@/db/schema";
  */
 export const ROLE_LABELS: Record<Role, string> = {
   none: "Member",
+  tester: "Tester",
   writer: "Author",
   admin: "Admin",
 };

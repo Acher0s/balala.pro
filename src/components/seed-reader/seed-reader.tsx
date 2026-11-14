@@ -73,6 +73,27 @@ const RARITIES: [Rarity, string][] = [
 ];
 
 const STEP = 30;
+
+/** A seed is reported once it has stayed the same this long (not every keystroke). */
+const REPORT_AFTER_MS = 1500;
+/** Lookups this tab has already reported. */
+const reported = new Set<string>();
+let tabId: string | undefined;
+/** A random id for this tab, so one reader's lookups can be told apart from another's. */
+function readerId(): string {
+  if (tabId) return tabId;
+  try {
+    tabId = sessionStorage.getItem("seed-reader-id") ?? undefined;
+  } catch {}
+  if (!tabId) {
+    tabId = crypto.randomUUID().replace(/-/g, "");
+    try {
+      sessionStorage.setItem("seed-reader-id", tabId);
+    } catch {}
+  }
+  return tabId;
+}
+
 /** How far the seek box looks for a joker. */
 const SEEK_SLOTS = 1000;
 
@@ -1027,6 +1048,31 @@ export function SeedReader({ art }: { art: SeedArt }) {
     }),
     [seed, ruleset, patch.gameMode, activeStake, deck],
   );
+
+  // Report each seed read to the site (Studio → Seed reader), once it's been left alone for a
+  // moment, and once per seed and settings in this tab.
+  useEffect(() => {
+    if (!seed) return;
+    const lookup = {
+      seed,
+      ruleset: ruleset.id,
+      stake: activeStake,
+      deck: deck ?? null,
+      patch: patch.id,
+    };
+    const id = JSON.stringify(lookup);
+    if (reported.has(id)) return;
+    const timer = window.setTimeout(() => {
+      reported.add(id);
+      fetch("/api/seed-reader/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...lookup, clientId: readerId() }),
+        keepalive: true,
+      }).catch(() => {});
+    }, REPORT_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [seed, ruleset.id, activeStake, deck, patch.id]);
 
   return (
     <ArtContext value={art}>

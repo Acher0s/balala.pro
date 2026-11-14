@@ -170,6 +170,7 @@ export function RoleSelect({
         onChange={(e) => run(() => setUserRole(userId, e.target.value as Role))}
       >
         <option value="none">{ROLE_LABELS.none} (no access)</option>
+        <option value="tester">{ROLE_LABELS.tester}</option>
         <option value="writer">{ROLE_LABELS.writer}</option>
         <option value="admin">{ROLE_LABELS.admin}</option>
       </select>

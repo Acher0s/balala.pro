@@ -7,7 +7,7 @@ import { signOut } from "@/app/studio/actions";
 export interface MenuUser {
   displayName: string;
   avatarUrl: string | null;
-  role: "none" | "writer" | "admin";
+  role: "none" | "tester" | "writer" | "admin";
 }
 
 const item = "block rounded-md px-3 py-1.5 text-sm hover:bg-fd-accent";
@@ -47,7 +47,7 @@ export function AccountMenu({ user }: { user: MenuUser | null }) {
         <Link href="/tierlists/new" className={item}>
           Make a tier list
         </Link>
-        {user.role === "none" ? (
+        {user.role === "none" || user.role === "tester" ? (
           <Link href="/studio" className={item}>
             Become an author
           </Link>

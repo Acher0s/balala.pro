@@ -85,7 +85,8 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   return row?.user ?? null;
 });
 
-const RANK: Record<Role, number> = { none: 0, writer: 1, admin: 2 };
+// Testers rank with members: the role has no permissions of its own (yet).
+const RANK: Record<Role, number> = { none: 0, tester: 0, writer: 1, admin: 2 };
 
 export function hasRole(user: Pick<User, "role"> | null, role: Role) {
   return !!user && RANK[user.role] >= RANK[role];

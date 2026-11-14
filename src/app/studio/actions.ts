@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import type { ItemKind } from "@/data/game-types";
 import type { ItemOverride } from "@/data/overrides";
 import { getDb, schema } from "@/db";
-import type { Guide, PageKind, Role } from "@/db/schema";
+import { type Guide, type PageKind, ROLES, type Role } from "@/db/schema";
 import {
   assertUser,
   canEditGuide,
   destroySession,
+  hasRole,
   STUDIO,
   safeNext,
 } from "@/lib/auth";
@@ -98,7 +99,7 @@ export async function requestWriterAccess(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await assertUser("none");
-  if (user.role !== "none")
+  if (hasRole(user, "writer"))
     return { ok: false, error: "You already have access." };
   const message = String(formData.get("message") ?? "")
     .trim()
@@ -156,7 +157,10 @@ export async function decideRequest(
       .update(schema.users)
       .set({ role: "writer" })
       .where(
-        and(eq(schema.users.id, request.userId), eq(schema.users.role, "none")),
+        and(
+          eq(schema.users.id, request.userId),
+          inArray(schema.users.role, ["none", "tester"]),
+        ),
       );
   }
   return { ok: true };
@@ -167,8 +171,7 @@ export async function setUserRole(
   role: Role,
 ): Promise<ActionResult> {
   const admin = await assertUser("admin");
-  if (!["none", "writer", "admin"].includes(role))
-    return { ok: false, error: "Unknown role" };
+  if (!ROLES.includes(role)) return { ok: false, error: "Unknown role" };
   if (userId === admin.id)
     return { ok: false, error: "You can't change your own role." };
   const db = await getDb();

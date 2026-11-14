@@ -25,6 +25,8 @@ export function StudioNav({ isAdmin }: { isAdmin: boolean }) {
           { href: `${STUDIO}/admin/import`, text: "Import" },
           { href: `${STUDIO}/admin/cleanup`, text: "Clean up" },
           { href: `${STUDIO}/admin/creators`, text: "Creators" },
+          { href: `${STUDIO}/admin/seed-reader`, text: "Seed reader" },
+          { href: `${STUDIO}/admin/api-keys`, text: "API keys" },
           { href: `${STUDIO}/admin/settings`, text: "Site" },
           { href: `${STUDIO}/admin/style`, text: "Style" },
         ]

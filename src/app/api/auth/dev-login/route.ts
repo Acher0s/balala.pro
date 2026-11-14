@@ -13,13 +13,13 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Local development only: /api/auth/dev-login?as=admin|writer|none signs in as a test user,
+ * Local development only: /api/auth/dev-login?as=admin|writer|tester|none signs in as a test user,
  * so the studio can be tried without setting up a Discord app. Returns 404 in production.
  */
 export async function GET(req: Request) {
   if (!devLoginEnabled) return new NextResponse(null, { status: 404 });
   const as = (new URL(req.url).searchParams.get("as") ?? "admin") as Role;
-  if (!["admin", "writer", "none"].includes(as))
+  if (!["admin", "writer", "tester", "none"].includes(as))
     return new NextResponse("Unknown role", { status: 400 });
 
   const user = await upsertDiscordUser({

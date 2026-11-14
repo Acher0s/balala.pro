@@ -46,7 +46,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="rounded-lg border border-dashed p-3 text-sm">
           <p className="mb-2 font-medium">Local development only</p>
           <div className="flex flex-wrap gap-2">
-            {(["admin", "writer", "none"] as const).map((role) => (
+            {(["admin", "writer", "tester", "none"] as const).map((role) => (
               <a
                 key={role}
                 href={`/api/auth/dev-login?as=${role}&${q}`}
