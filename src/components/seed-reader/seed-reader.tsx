@@ -3,7 +3,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Children,
+  createContext,
   type ReactNode,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -60,14 +62,8 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
-/** Enhancement → the joker it lets into the pool (vanilla enhancement_gate). */
-const GATES: [string, string][] = [
-  ["m_glass", "j_glass"],
-  ["m_steel", "j_steel_joker"],
-  ["m_stone", "j_stone"],
-  ["m_lucky", "j_lucky_cat"],
-  ["m_gold", "j_ticket"],
-];
+/** Every enhancement that gates a joker (Glass Joker, Steel Joker, …): all read as present. */
+const ALL_GATES = ["m_glass", "m_steel", "m_stone", "m_lucky", "m_gold"];
 
 const RARITIES: [Rarity, string][] = [
   [4, "Legendary"],
@@ -79,6 +75,61 @@ const RARITIES: [Rarity, string][] = [
 const STEP = 30;
 /** How far the seek box looks for a joker. */
 const SEEK_SLOTS = 1000;
+
+type Layout = "band" | "grid";
+/** Band or grid, shared by every tab that lists cards. */
+const LayoutContext = createContext<[Layout, (l: Layout) => void]>([
+  "band",
+  () => {},
+]);
+
+function LayoutToggle() {
+  const [layout, setLayout] = useContext(LayoutContext);
+  return (
+    <Toggle
+      value={layout}
+      options={[
+        ["band", "Band"],
+        ["grid", "Grid"],
+      ]}
+      onChange={setLayout}
+    />
+  );
+}
+
+/** A queue of cards as a scrolling band or a wrapping grid, by the shared layout. */
+function CardList({
+  children,
+  onMore,
+  slots,
+  jump,
+  onJumped,
+}: {
+  children: ReactNode;
+  onMore: () => void;
+  slots?: number[];
+  jump?: number;
+  onJumped?: () => void;
+}) {
+  const [layout] = useContext(LayoutContext);
+  if (layout === "band")
+    return (
+      <Band
+        onMore={onMore}
+        slots={slots}
+        jump={jump}
+        onJumped={onJumped ?? (() => {})}
+      >
+        {children}
+      </Band>
+    );
+  return (
+    <>
+      <Grid>{children}</Grid>
+      <More onClick={onMore} />
+    </>
+  );
+}
 
 /** What the seek box looks for. */
 const SEEK_KINDS = new Set(["joker", "tarot", "planet", "spectral"]);
@@ -93,8 +144,8 @@ function normName(name: string): string {
 }
 
 /**
- * Cards in one row that scrolls sideways, with back and forward buttons; going forward past
- * the end loads more. The row reserves room above the cards for their hover cards, which a
+ * Cards in one row that scrolls sideways, with back and forward buttons; more load as you near
+ * the end. The row reserves room above the cards for their hover cards, which a
  * scrolling box would otherwise cut off; that room lets clicks through to what's under it.
  */
 function Band({
@@ -113,6 +164,18 @@ function Band({
   slots?: number[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Infinite scroll: ask for more once the end is near, once per length of the row.
+  const askedAt = useRef(-1);
+  const fill = () => {
+    const el = ref.current;
+    if (!el || el.scrollWidth === askedAt.current) return;
+    if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 600) {
+      askedAt.current = el.scrollWidth;
+      onMore();
+    }
+  };
+  // Also when the row is too short to scroll at all.
+  useEffect(fill);
   useEffect(() => {
     if (jump === undefined) return;
     const el = ref.current?.querySelector(`[data-slot="${jump}"]`);
@@ -127,8 +190,6 @@ function Band({
   const step = (dir: 1 | -1) => {
     const el = ref.current;
     if (!el) return;
-    if (dir > 0 && el.scrollLeft + el.clientWidth >= el.scrollWidth - 80)
-      onMore();
     el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
   };
   const arrow =
@@ -145,6 +206,7 @@ function Band({
       </button>
       <div
         ref={ref}
+        onScroll={fill}
         className="pointer-events-none -mt-60 flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pt-60 pb-3"
       >
         {Children.map(children, (child, i) => (
@@ -152,13 +214,6 @@ function Band({
             {child}
           </div>
         ))}
-        <button
-          type="button"
-          onClick={onMore}
-          className="pointer-events-auto mb-6 h-[95px] w-[71px] shrink-0 rounded-lg border border-dashed text-xs hover:bg-fd-accent"
-        >
-          {STEP} more
-        </button>
       </div>
       <button
         type="button"
@@ -271,7 +326,6 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
     });
   const [shops, setShops] = useState(8);
   const [jokersOnly, setJokersOnly] = useState(false);
-  const [layout, setLayout] = useState<"band" | "grid">("band");
   /** A slot to bring into view (the seek box's "Go there"). */
   const [jump, setJump] = useState<number | undefined>();
   const [seek, setSeek] = useState("");
@@ -373,14 +427,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
           />
           Jokers only
         </label>
-        <Toggle
-          value={layout}
-          options={[
-            ["band", "Band"],
-            ["grid", "Grid"],
-          ]}
-          onChange={setLayout}
-        />
+        <LayoutToggle />
         <label className="flex items-center gap-2">
           Seek
           <input
@@ -474,20 +521,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
             />
           );
         });
-        return layout === "band" ? (
-          <Band
+        return (
+          <CardList
             onMore={() => setCount((c) => c + STEP)}
             slots={shown.map((x) => x.slot)}
             jump={jump}
             onJumped={() => setJump(undefined)}
           >
             {cards}
-          </Band>
-        ) : (
-          <>
-            <Grid>{cards}</Grid>
-            <More onClick={() => setCount((c) => c + STEP)} />
-          </>
+          </CardList>
         );
       })()}
 
@@ -546,6 +588,7 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Toggle value={rarity} options={RARITIES} onChange={setRarity} />
+        <LayoutToggle />
         <Toggle
           value={editionRate}
           options={EDITION_VOUCHERS}
@@ -570,7 +613,7 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
         Negative), so some jokers gain an edition, but which joker comes next
         doesn't change.
       </Note>
-      <Grid>
+      <CardList onMore={() => setCount((c) => c + STEP)}>
         {shown.map(({ j, index }) => (
           <ItemCard
             key={index}
@@ -580,8 +623,7 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
             index={index}
           />
         ))}
-      </Grid>
-      <More onClick={() => setCount((c) => c + STEP)} />
+      </CardList>
     </div>
   );
 }
@@ -611,6 +653,7 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Toggle value={source} options={CARD_SOURCES} onChange={setSource} />
+        <LayoutToggle />
         {source === "standard" && (
           <Toggle
             value={editionRate}
@@ -629,7 +672,7 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
         {source === "certificate" &&
           "The card each Certificate adds, in order, with its seal. Hone and Glow Up don't change them."}
       </Note>
-      <Grid>
+      <CardList onMore={() => setCount((c) => c + STEP)}>
         {list.map((c, i) => (
           <PlayingCardCard
             // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
@@ -642,8 +685,7 @@ function CardsTab({ settings }: { settings: ReaderSettings }) {
             note={c.slot ? `slot ${c.slot}` : c.giga ? "Giga Pack" : undefined}
           />
         ))}
-      </Grid>
-      <More onClick={() => setCount((c) => c + STEP)} />
+      </CardList>
     </div>
   );
 }
@@ -669,14 +711,17 @@ function ConsumableTab({
   ];
   return (
     <div className="flex flex-col gap-4">
-      <Toggle
-        value={where}
-        options={[
-          ["shop", "In the shop"],
-          ["pack", `In ${pack} Packs`],
-        ]}
-        onChange={setWhere}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Toggle
+          value={where}
+          options={[
+            ["shop", "In the shop"],
+            ["pack", `In ${pack} Packs`],
+          ]}
+          onChange={setWhere}
+        />
+        <LayoutToggle />
+      </div>
       <Note>
         {where === "shop"
           ? `${set} cards the shop rolls, in order. ${
@@ -701,13 +746,12 @@ function ConsumableTab({
         {set === "Spectral" &&
           " On Ghost Deck, Hex is skipped while you hold the one it starts with."}
       </Note>
-      <Grid>
+      <CardList onMore={() => setCount((c) => c + STEP)}>
         {list.map((key, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
           <ItemCard key={i} itemKey={key} index={i + 1} />
         ))}
-      </Grid>
-      <More onClick={() => setCount((c) => c + STEP)} />
+      </CardList>
     </div>
   );
 }
@@ -929,11 +973,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [rulesetId, setRulesetId] = useState(PATCHES[0].rulesets[0].id);
   const [stake, setStake] = useState(1);
   const [deckId, setDeckId] = useState<DeckId | "">("");
-  // Jokers that need something first, all in the pool unless unticked.
-  const [enhancements, setEnhancements] = useState<string[]>(() =>
-    GATES.map(([enh]) => enh),
-  );
-  const [pincherUnlocked, setPincherUnlocked] = useState(true);
+  const [layout, setLayout] = useState<Layout>("band");
   const [tab, setTab] = useState<Tab>("shop");
 
   // Read the seed from the address once, and keep it there as it changes.
@@ -981,186 +1021,140 @@ export function SeedReader({ art }: { art: SeedArt }) {
       gameMode: patch.gameMode,
       stake: activeStake,
       deck,
-      enhancements,
-      pincherUnlocked,
+      // Jokers that need something first (Glass Joker needs a Glass Card, Penny Pincher a
+      // PvP blind) are always read as in the pool.
+      enhancements: ALL_GATES,
+      pincherUnlocked: true,
     }),
-    [
-      seed,
-      ruleset,
-      patch.gameMode,
-      activeStake,
-      deck,
-      enhancements,
-      pincherUnlocked,
-    ],
+    [seed, ruleset, patch.gameMode, activeStake, deck],
   );
 
   return (
     <ArtContext value={art}>
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Seed</span>
-            <input
-              value={seed}
-              onChange={(e) => setSeed(cleanSeed(e.target.value))}
-              placeholder="e.g. 6EQHIH19"
-              spellCheck={false}
-              autoComplete="off"
-              className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Version</span>
-            <select
-              value={patch.id}
-              onChange={(e) => setPatchId(e.target.value)}
-              className="rounded-lg border bg-fd-background px-3 py-2"
+      <LayoutContext value={[layout, setLayout]}>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">Seed</span>
+              <input
+                value={seed}
+                onChange={(e) => setSeed(cleanSeed(e.target.value))}
+                placeholder="e.g. 6EQHIH19"
+                spellCheck={false}
+                autoComplete="off"
+                className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">Version</span>
+              <select
+                value={patch.id}
+                onChange={(e) => setPatchId(e.target.value)}
+                className="rounded-lg border bg-fd-background px-3 py-2"
+              >
+                {PATCHES.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">Ruleset</span>
+              <select
+                value={ruleset.id}
+                onChange={(e) => setRulesetId(e.target.value)}
+                className="rounded-lg border bg-fd-background px-3 py-2"
+              >
+                {patch.rulesets.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} (ranked)
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label
+              className="flex items-center gap-2 py-2 text-sm"
+              title="Only The Order is supported for now"
             >
-              {PATCHES.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Ruleset</span>
-            <select
-              value={ruleset.id}
-              onChange={(e) => setRulesetId(e.target.value)}
-              className="rounded-lg border bg-fd-background px-3 py-2"
-            >
-              {patch.rulesets.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} (ranked)
-                </option>
-              ))}
-            </select>
-          </label>
-          <label
-            className="flex items-center gap-2 py-2 text-sm"
-            title="Only The Order is supported for now"
-          >
-            <input type="checkbox" checked disabled />
-            The Order
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Stake</span>
-            <select
-              value={activeStake}
-              onChange={(e) => setStake(Number(e.target.value))}
-              className="rounded-lg border bg-fd-background px-3 py-2"
-            >
-              {stakes.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Deck</span>
-            <select
-              value={deck ?? ""}
-              onChange={(e) => setDeckId(e.target.value as DeckId | "")}
-              className="rounded-lg border bg-fd-background px-3 py-2"
-            >
-              <option value="">Any other deck</option>
-              {decks.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.effect})
-                </option>
-              ))}
-            </select>
-          </label>
-          <fieldset className="flex basis-full flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <legend className="mb-1 font-semibold">
-              Jokers that need something first (untick the ones that can't show
-              up yet)
-            </legend>
-            {GATES.filter(
-              ([, joker]) =>
-                !ruleset.banned.includes(joker) &&
-                !patch.gameMode.banned.includes(joker),
-            ).map(([enh, joker]) => (
-              <label key={enh} className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={enhancements.includes(enh)}
-                  onChange={(e) =>
-                    setEnhancements((prev) =>
-                      e.target.checked
-                        ? [...prev, enh]
-                        : prev.filter((x) => x !== enh),
-                    )
-                  }
-                />
-                {art.items[joker]?.name ?? joker}
-                <span className="text-fd-muted-foreground">
-                  (a {art.items[enh]?.name ?? enh} in your deck)
-                </span>
-              </label>
-            ))}
-            {ruleset.pennyPincher && (
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={pincherUnlocked}
-                  onChange={(e) => setPincherUnlocked(e.target.checked)}
-                />
-                {art.items.j_mp_penny_pincher?.name ?? "Penny Pincher"}
-                <span className="text-fd-muted-foreground">
-                  (after your first PvP blind)
-                </span>
-              </label>
-            )}
-          </fieldset>
-        </div>
+              <input type="checkbox" checked disabled />
+              The Order
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">Stake</span>
+              <select
+                value={activeStake}
+                onChange={(e) => setStake(Number(e.target.value))}
+                className="rounded-lg border bg-fd-background px-3 py-2"
+              >
+                {stakes.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">Deck</span>
+              <select
+                value={deck ?? ""}
+                onChange={(e) => setDeckId(e.target.value as DeckId | "")}
+                className="rounded-lg border bg-fd-background px-3 py-2"
+              >
+                <option value="">Any other deck</option>
+                {decks.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.effect})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-        {seed ? (
-          <>
-            <nav className="flex flex-wrap gap-1 border-b pb-2">
-              {TABS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                    tab === id
-                      ? "bg-fd-primary text-fd-primary-foreground"
-                      : "text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-            <section
-              key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}:${enhancements.join()}:${pincherUnlocked}`}
-            >
-              {tab === "shop" && <ShopTab settings={settings} />}
-              {tab === "jokers" && <JokersTab settings={settings} />}
-              {tab === "cards" && <CardsTab settings={settings} />}
-              {tab === "tarots" && (
-                <ConsumableTab settings={settings} set="Tarot" />
-              )}
-              {tab === "planets" && (
-                <ConsumableTab settings={settings} set="Planet" />
-              )}
-              {tab === "spectrals" && (
-                <ConsumableTab settings={settings} set="Spectral" />
-              )}
-              {tab === "vouchers" && <VouchersTab settings={settings} />}
-              {tab === "tags" && <TagsTab settings={settings} />}
-              {tab === "judgement" && <JudgementTab settings={settings} />}
-              {tab === "lucky" && <LuckyTab settings={settings} />}
-            </section>
-          </>
-        ) : (
-          <Note>Type a seed to see what it rolls.</Note>
-        )}
-      </div>
+          {seed ? (
+            <>
+              <nav className="flex flex-wrap gap-1 border-b pb-2">
+                {TABS.map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      tab === id
+                        ? "bg-fd-primary text-fd-primary-foreground"
+                        : "text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              <section
+                key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}`}
+              >
+                {tab === "shop" && <ShopTab settings={settings} />}
+                {tab === "jokers" && <JokersTab settings={settings} />}
+                {tab === "cards" && <CardsTab settings={settings} />}
+                {tab === "tarots" && (
+                  <ConsumableTab settings={settings} set="Tarot" />
+                )}
+                {tab === "planets" && (
+                  <ConsumableTab settings={settings} set="Planet" />
+                )}
+                {tab === "spectrals" && (
+                  <ConsumableTab settings={settings} set="Spectral" />
+                )}
+                {tab === "vouchers" && <VouchersTab settings={settings} />}
+                {tab === "tags" && <TagsTab settings={settings} />}
+                {tab === "judgement" && <JudgementTab settings={settings} />}
+                {tab === "lucky" && <LuckyTab settings={settings} />}
+              </section>
+            </>
+          ) : (
+            <Note>Type a seed to see what it rolls.</Note>
+          )}
+        </div>
+      </LayoutContext>
     </ArtContext>
   );
 }
