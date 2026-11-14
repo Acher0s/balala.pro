@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
 import {
   Children,
   createContext,
@@ -96,6 +96,38 @@ function readerId(): string {
 
 /** How far the seek box looks for a joker. */
 const SEEK_SLOTS = 1000;
+
+/** A blocked card in one list ("shop", "jokers:1", "Tarot:pack", …) from a position on. */
+interface BlockEntry {
+  list: string;
+  key: string;
+  from: number;
+}
+
+const BlockContext = createContext<{
+  blocks: BlockEntry[];
+  add: (b: BlockEntry) => void;
+}>({ blocks: [], add: () => {} });
+
+/** One list's blocks, a way to add one, and how many are blocked at a position. */
+function useBlocks(list: string) {
+  const { blocks, add } = useContext(BlockContext);
+  const mine = useMemo(
+    () =>
+      blocks
+        .filter((b) => b.list === list)
+        .map(({ key, from }) => ({ key, from })),
+    [blocks, list],
+  );
+  return {
+    blocks: mine,
+    block: (key: string, from: number) => add({ list, key, from }),
+    note: (at: number) => {
+      const n = mine.filter((b) => b.from === at).length;
+      return n ? `${n} blocked` : undefined;
+    },
+  };
+}
 
 type Layout = "band" | "grid";
 /** Band or grid, shared by every tab that lists cards. */
@@ -211,6 +243,16 @@ function Band({
   };
   // Also when the row is too short to scroll at all.
   useEffect(fill);
+  // The slider under the row: where the row is scrolled to, out of how far it can go.
+  const [pos, setPos] = useState(0);
+  const [max, setMax] = useState(0);
+  const sync = () => {
+    const el = ref.current;
+    if (!el) return;
+    setPos(el.scrollLeft);
+    setMax(Math.max(0, el.scrollWidth - el.clientWidth));
+  };
+  useEffect(sync);
   useEffect(() => {
     if (jump === undefined) return;
     const el = ref.current?.querySelector(`[data-slot="${jump}"]`);
@@ -230,34 +272,53 @@ function Band({
   const arrow =
     "z-10 mb-[52px] flex size-9 shrink-0 items-center justify-center rounded-full border bg-fd-card shadow hover:bg-fd-accent";
   return (
-    <div className="flex items-end gap-2">
-      <button
-        type="button"
-        aria-label="Back"
-        onClick={() => step(-1)}
-        className={arrow}
-      >
-        <ChevronLeft className="size-5" />
-      </button>
-      <div
-        ref={ref}
-        onScroll={fill}
-        className="pointer-events-none -mt-60 flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pt-60 pb-3"
-      >
-        {Children.map(children, (child, i) => (
-          <div className="pointer-events-auto shrink-0" data-slot={slots?.[i]}>
-            {child}
-          </div>
-        ))}
+    <div className="flex flex-col gap-1">
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={() => step(-1)}
+          className={arrow}
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <div
+          ref={ref}
+          onScroll={() => {
+            fill();
+            sync();
+          }}
+          className="pointer-events-none -mt-60 flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pt-60 pb-3"
+        >
+          {Children.map(children, (child, i) => (
+            <div
+              className="pointer-events-auto shrink-0"
+              data-slot={slots?.[i]}
+            >
+              {child}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-label="Forward"
+          onClick={() => step(1)}
+          className={arrow}
+        >
+          <ChevronRight className="size-5" />
+        </button>
       </div>
-      <button
-        type="button"
-        aria-label="Forward"
-        onClick={() => step(1)}
-        className={arrow}
-      >
-        <ChevronRight className="size-5" />
-      </button>
+      <input
+        type="range"
+        aria-label="Scroll through the cards"
+        min={0}
+        max={max}
+        value={Math.min(pos, max)}
+        onChange={(e) => {
+          if (ref.current) ref.current.scrollLeft = Number(e.target.value);
+        }}
+        className="mx-11 cursor-grab accent-[#ff9a00] active:cursor-grabbing"
+      />
     </div>
   );
 }
@@ -366,7 +427,8 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
   /** Which of the sought card's slots the seek buttons last went to. */
   const [seekAt, setSeekAt] = useState({ key: "", i: -1 });
   const [seek, setSeek] = useState("");
-  const mods = useMemo(() => ({ vouchers }), [vouchers]);
+  const { blocks, block, note } = useBlocks("shop");
+  const mods = useMemo(() => ({ vouchers, blocks }), [vouchers, blocks]);
   const items = useMemo(
     () => numberSlots(shopQueue(settings, count, mods)),
     [settings, count, mods],
@@ -536,6 +598,8 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
                 stickers={item.stickers}
                 index={slot}
                 highlight={found}
+                note={note(slot)}
+                onBlock={() => block(item.key, slot)}
               />
             );
           if (item.kind === "consumable")
@@ -546,6 +610,8 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
                 itemKey={item.key}
                 index={slot}
                 highlight={found}
+                note={note(slot)}
+                onBlock={() => block(item.key, slot)}
               />
             );
           return (
@@ -613,9 +679,10 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
   const [hideStickered, setHideStickered] = useState(false);
   const [editionRate, setEditionRate] = useState(1);
   const [count, setCount] = useState(STEP);
+  const { blocks, block, note } = useBlocks(`jokers:${rarity}`);
   const list = useMemo(
-    () => jokerQueue(settings, rarity, count, editionRate),
-    [settings, rarity, count, editionRate],
+    () => jokerQueue(settings, rarity, count, editionRate, blocks),
+    [settings, rarity, count, editionRate, blocks],
   );
   // Stickers only exist from Black Stake up, and never on legendaries.
   const canFilter = rarity !== 4 && settings.stake >= 4;
@@ -651,6 +718,8 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
             edition={j.edition}
             stickers={j.stickers}
             index={index}
+            note={note(index)}
+            onBlock={() => block(j.key, index)}
           />
         ))}
       </CardList>
@@ -719,12 +788,13 @@ function ConsumableTab({
 }) {
   const [where, setWhere] = useState<"shop" | "pack">("shop");
   const [count, setCount] = useState(STEP);
+  const { blocks, block, note } = useBlocks(`${set}:${where}`);
   const list = useMemo(
     () =>
       where === "shop"
-        ? shopConsumableQueue(settings, set, count)
-        : packConsumableQueue(settings, set, count),
-    [settings, set, where, count],
+        ? shopConsumableQueue(settings, set, count, blocks)
+        : packConsumableQueue(settings, set, count, blocks),
+    [settings, set, where, count, blocks],
   );
   const pack = { Tarot: "Arcana", Planet: "Celestial", Spectral: "Spectral" }[
     set
@@ -768,8 +838,14 @@ function ConsumableTab({
       </Note>
       <CardList onMore={() => setCount((c) => c + STEP)}>
         {list.map((key, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
-          <ItemCard key={i} itemKey={key} index={i + 1} />
+          <ItemCard
+            // biome-ignore lint/suspicious/noArrayIndexKey: queue positions
+            key={i}
+            itemKey={key}
+            index={i + 1}
+            note={note(i + 1)}
+            onBlock={() => block(key, i + 1)}
+          />
         ))}
       </CardList>
     </div>
@@ -994,6 +1070,15 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [stake, setStake] = useState(1);
   const [deckId, setDeckId] = useState<DeckId | "">("");
   const [layout, setLayout] = useState<Layout>("band");
+  // Blocked cards, in the order they were blocked (so Undo takes the last one off).
+  const [blocks, setBlocks] = useState<BlockEntry[]>([]);
+  const blockStore = useMemo(
+    () => ({
+      blocks,
+      add: (b: BlockEntry) => setBlocks((prev) => [...prev, b]),
+    }),
+    [blocks],
+  );
   const [tab, setTab] = useState<Tab>("shop");
 
   // Read the seed from the address once, and keep it there as it changes.
@@ -1049,6 +1134,10 @@ export function SeedReader({ art }: { art: SeedArt }) {
     [seed, ruleset, patch.gameMode, activeStake, deck],
   );
 
+  // Blocks are for one seed and its settings; changing them starts afresh.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clears when these change
+  useEffect(() => setBlocks([]), [seed, ruleset.id, activeStake, deck]);
+
   // Report each seed read to the site (Studio → Seed reader), once it's been left alone for a
   // moment, and once per seed and settings in this tab.
   useEffect(() => {
@@ -1077,128 +1166,155 @@ export function SeedReader({ art }: { art: SeedArt }) {
   return (
     <ArtContext value={art}>
       <LayoutContext value={[layout, setLayout]}>
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Seed</span>
-              <input
-                value={seed}
-                onChange={(e) => setSeed(cleanSeed(e.target.value))}
-                placeholder="e.g. 6EQHIH19"
-                spellCheck={false}
-                autoComplete="off"
-                className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Version</span>
-              <select
-                value={patch.id}
-                onChange={(e) => setPatchId(e.target.value)}
-                className="rounded-lg border bg-fd-background px-3 py-2"
+        <BlockContext value={blockStore}>
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-semibold">Seed</span>
+                <input
+                  value={seed}
+                  onChange={(e) => setSeed(cleanSeed(e.target.value))}
+                  placeholder="e.g. 6EQHIH19"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-semibold">Version</span>
+                <select
+                  value={patch.id}
+                  onChange={(e) => setPatchId(e.target.value)}
+                  className="rounded-lg border bg-fd-background px-3 py-2"
+                >
+                  {PATCHES.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-semibold">Ruleset</span>
+                <select
+                  value={ruleset.id}
+                  onChange={(e) => setRulesetId(e.target.value)}
+                  className="rounded-lg border bg-fd-background px-3 py-2"
+                >
+                  {patch.rulesets.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} (ranked)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className="flex items-center gap-2 py-2 text-sm"
+                title="Only The Order is supported for now"
               >
-                {PATCHES.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Ruleset</span>
-              <select
-                value={ruleset.id}
-                onChange={(e) => setRulesetId(e.target.value)}
-                className="rounded-lg border bg-fd-background px-3 py-2"
-              >
-                {patch.rulesets.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} (ranked)
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label
-              className="flex items-center gap-2 py-2 text-sm"
-              title="Only The Order is supported for now"
-            >
-              <input type="checkbox" checked disabled />
-              The Order
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Stake</span>
-              <select
-                value={activeStake}
-                onChange={(e) => setStake(Number(e.target.value))}
-                className="rounded-lg border bg-fd-background px-3 py-2"
-              >
-                {stakes.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Deck</span>
-              <select
-                value={deck ?? ""}
-                onChange={(e) => setDeckId(e.target.value as DeckId | "")}
-                className="rounded-lg border bg-fd-background px-3 py-2"
-              >
-                <option value="">Any other deck</option>
-                {decks.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.effect})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+                <input type="checkbox" checked disabled />
+                The Order
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-semibold">Stake</span>
+                <select
+                  value={activeStake}
+                  onChange={(e) => setStake(Number(e.target.value))}
+                  className="rounded-lg border bg-fd-background px-3 py-2"
+                >
+                  {stakes.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-semibold">Deck</span>
+                <select
+                  value={deck ?? ""}
+                  onChange={(e) => setDeckId(e.target.value as DeckId | "")}
+                  className="rounded-lg border bg-fd-background px-3 py-2"
+                >
+                  <option value="">Any other deck</option>
+                  {decks.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.effect})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-          {seed ? (
-            <>
-              <nav className="flex flex-wrap gap-1 border-b pb-2">
-                {TABS.map(([id, label]) => (
+            {seed ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <Ban className="size-4 text-[#fe5f55]" />
+                  <span className="text-fd-muted-foreground">
+                    Click a joker or consumable to block it: the queue skips it
+                    from there on, as if you had it.
+                    {blocks.length > 0 && ` ${blocks.length} blocked.`}
+                  </span>
                   <button
-                    key={id}
                     type="button"
-                    onClick={() => setTab(id)}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                      tab === id
-                        ? "bg-fd-primary text-fd-primary-foreground"
-                        : "text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground"
-                    }`}
+                    disabled={blocks.length === 0}
+                    onClick={() => setBlocks((prev) => prev.slice(0, -1))}
+                    className="flex items-center gap-1 rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
                   >
-                    {label}
+                    <Undo2 className="size-4" />
+                    Undo last block
                   </button>
-                ))}
-              </nav>
-              <section
-                key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}`}
-              >
-                {tab === "shop" && <ShopTab settings={settings} />}
-                {tab === "jokers" && <JokersTab settings={settings} />}
-                {tab === "cards" && <CardsTab settings={settings} />}
-                {tab === "tarots" && (
-                  <ConsumableTab settings={settings} set="Tarot" />
-                )}
-                {tab === "planets" && (
-                  <ConsumableTab settings={settings} set="Planet" />
-                )}
-                {tab === "spectrals" && (
-                  <ConsumableTab settings={settings} set="Spectral" />
-                )}
-                {tab === "vouchers" && <VouchersTab settings={settings} />}
-                {tab === "tags" && <TagsTab settings={settings} />}
-                {tab === "judgement" && <JudgementTab settings={settings} />}
-                {tab === "lucky" && <LuckyTab settings={settings} />}
-              </section>
-            </>
-          ) : (
-            <Note>Type a seed to see what it rolls.</Note>
-          )}
-        </div>
+                  <button
+                    type="button"
+                    disabled={blocks.length === 0}
+                    onClick={() => setBlocks([])}
+                    className="rounded-lg border px-2 py-1 hover:bg-fd-accent disabled:opacity-40"
+                  >
+                    Unblock all
+                  </button>
+                </div>
+                <nav className="flex flex-wrap gap-1 border-b pb-2">
+                  {TABS.map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setTab(id)}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                        tab === id
+                          ? "bg-fd-primary text-fd-primary-foreground"
+                          : "text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+                <section
+                  key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}`}
+                >
+                  {tab === "shop" && <ShopTab settings={settings} />}
+                  {tab === "jokers" && <JokersTab settings={settings} />}
+                  {tab === "cards" && <CardsTab settings={settings} />}
+                  {tab === "tarots" && (
+                    <ConsumableTab settings={settings} set="Tarot" />
+                  )}
+                  {tab === "planets" && (
+                    <ConsumableTab settings={settings} set="Planet" />
+                  )}
+                  {tab === "spectrals" && (
+                    <ConsumableTab settings={settings} set="Spectral" />
+                  )}
+                  {tab === "vouchers" && <VouchersTab settings={settings} />}
+                  {tab === "tags" && <TagsTab settings={settings} />}
+                  {tab === "judgement" && <JudgementTab settings={settings} />}
+                  {tab === "lucky" && <LuckyTab settings={settings} />}
+                </section>
+              </>
+            ) : (
+              <Note>Type a seed to see what it rolls.</Note>
+            )}
+          </div>
+        </BlockContext>
       </LayoutContext>
     </ArtContext>
   );

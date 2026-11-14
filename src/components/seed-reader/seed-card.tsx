@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Ban, Check } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
 import { EditionCard } from "@/components/edition-card";
 import { colourOf, EffectText } from "@/components/effect-text";
@@ -138,6 +138,7 @@ export function ItemCard({
   note,
   dim,
   highlight,
+  onBlock,
 }: {
   itemKey: string;
   edition?: string;
@@ -147,6 +148,8 @@ export function ItemCard({
   dim?: boolean;
   /** Ringed, e.g. the joker the seek box looks for. */
   highlight?: boolean;
+  /** Clicking blocks the card (the queue skips it from here on). */
+  onBlock?: () => void;
 }) {
   const art = useArt();
   const item: ArtItem | undefined = art.items[itemKey];
@@ -180,8 +183,18 @@ export function ItemCard({
     >
       <button
         type="button"
-        className="flex h-[95px] w-[71px] items-center justify-center rounded transition-transform hover:-translate-y-1 focus:-translate-y-1"
+        onClick={onBlock}
+        aria-label={onBlock ? `Block ${item.name}` : undefined}
+        className={`relative flex h-[95px] w-[71px] items-center justify-center rounded transition-transform hover:-translate-y-1 focus:-translate-y-1 ${onBlock ? "cursor-pointer" : ""}`}
       >
+        {onBlock && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-1.5 -right-1.5 z-10 hidden size-5 items-center justify-center rounded-full bg-[#fe5f55] text-white shadow group-hover:flex"
+          >
+            <Ban className="size-3.5" />
+          </span>
+        )}
         {small ? (
           // biome-ignore lint/performance/noImgElement: tiny static pixel art
           <img
@@ -210,6 +223,12 @@ export function ItemCard({
         {ed && (
           <span className="mt-1 border-t border-white/20 pt-1">
             <EffectText lines={ed.text} />
+          </span>
+        )}
+        {onBlock && (
+          <span className="mt-1 border-t border-white/20 pt-1 text-xs font-semibold text-[#ff9a00]">
+            Click to block it: the queue skips it from here on, as if you had
+            it.
           </span>
         )}
       </Tooltip>

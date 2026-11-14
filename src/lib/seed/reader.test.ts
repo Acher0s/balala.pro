@@ -469,3 +469,34 @@ describe("playing card queues", () => {
     expect(new Set(cards.map((c) => c.seal)).size).toBe(4);
   });
 });
+
+describe("blocking a card", () => {
+  it("skips it from that slot on, and leaves the slots before alone", () => {
+    const s = settings("FZZUAJBR");
+    const plain = shopQueue(s, 80);
+    const at = plain.findIndex((i) => i.kind === "joker");
+    const first = plain[at];
+    if (first.kind !== "joker") throw new Error("no joker");
+    const blocked = shopQueue(s, 80, {
+      blocks: [{ key: first.key, from: at + 1 }],
+    });
+    expect(blocked.slice(0, at)).toEqual(plain.slice(0, at));
+    expect(blocked[at].kind).toBe("joker");
+    for (const item of blocked.slice(at))
+      if (item.kind !== "card") expect(item.key).not.toBe(first.key);
+  });
+
+  it("moves a queue on to its next card", () => {
+    const s = settings("FZZUAJBR");
+    const commons = jokerQueue(s, 1, 30);
+    const blocked = jokerQueue(s, 1, 30, 1, [{ key: commons[0].key, from: 1 }]);
+    expect(blocked[0].key).not.toBe(commons[0].key);
+    expect(blocked.map((j) => j.key)).not.toContain(commons[0].key);
+    const tarots = shopConsumableQueue(s, "Tarot", 20);
+    const fewer = shopConsumableQueue(s, "Tarot", 20, [
+      { key: tarots[2], from: 3 },
+    ]);
+    expect(fewer.slice(0, 2)).toEqual(tarots.slice(0, 2));
+    expect(fewer.slice(2)).not.toContain(tarots[2]);
+  });
+});

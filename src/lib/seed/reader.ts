@@ -75,6 +75,36 @@ export interface ReaderSettings {
 }
 
 /** Shop rates that vouchers and decks change, from a given shop slot on. */
+/**
+ * A card that is "blocked" from a position on: it exists in the run (you have it, or it's on
+ * screen), so every roll from that position skips it, as get_current_pool skips cards in
+ * G.GAME.used_jokers. Positions are 1-based: a shop slot, or a place in a queue.
+ */
+export interface Block {
+  key: string;
+  from: number;
+}
+
+/** The blocked keys at `position`. */
+export function blockedAt(
+  blocks: readonly Block[] | undefined,
+  position: number,
+): Set<string> {
+  return new Set(
+    (blocks ?? []).filter((b) => b.from <= position).map((b) => b.key),
+  );
+}
+
+/** Makes `owned` hold exactly the keys blocked at `position`. */
+function applyBlocks(
+  owned: Set<string>,
+  blocks: readonly Block[] | undefined,
+  position: number,
+) {
+  owned.clear();
+  for (const key of blockedAt(blocks, position)) owned.add(key);
+}
+
 export interface ShopModifiers {
   /** Ghost Deck: Spectral cards in the shop from the start (spectral_rate = 2). */
   ghostDeck?: boolean;
@@ -82,6 +112,8 @@ export interface ShopModifiers {
   vouchers?: Partial<Record<ShopVoucher, number>>;
   /** The first shop slot after the first PvP blind, from which Penny Pincher can show up. */
   pincherFrom?: number;
+  /** Cards blocked from a shop slot on. */
+  blocks?: readonly Block[];
 }
 
 /** The vouchers that change what the shop rolls. */
@@ -370,18 +402,21 @@ export function jokerQueue(
   count: number,
   /** edition_rate: 1, Hone 2, Glow Up 4. */
   editionRate = 1,
+  /** Jokers blocked from a place in this queue on. */
+  blocks?: readonly Block[],
 ): ShopJoker[] {
   const game = new Game(settings);
-  return Array.from({ length: count }, () =>
-    rarity === 4
+  return Array.from({ length: count }, (_, i) => {
+    applyBlocks(game.owned, blocks, i + 1);
+    return rarity === 4
       ? {
           ...game.plainJoker(4, editionRate),
           kind: "joker" as const,
           stickers: [],
           stickerQueue: false,
         }
-      : game.shopJoker(rarity, editionRate),
-  );
+      : game.shopJoker(rarity, editionRate);
+  });
 }
 
 /** Consumables from the shop ("Tarot", "Planet", "Spectral" with key_append = the set). */
@@ -389,12 +424,15 @@ export function shopConsumableQueue(
   settings: ReaderSettings,
   set: ConsumableSet,
   count: number,
+  /** Cards blocked from a place in this queue on. */
+  blocks?: readonly Block[],
 ): string[] {
   const game = new Game(settings);
   const key = `${set}${set}0`;
-  return Array.from({ length: count }, () =>
-    drawFrom(game.rng, game.pools[set], key),
-  );
+  return Array.from({ length: count }, (_, i) => {
+    applyBlocks(game.owned, blocks, i + 1);
+    return drawFrom(game.rng, game.pools[set], key, game.owned);
+  });
 }
 
 /**
@@ -407,6 +445,8 @@ export function packConsumableQueue(
   settings: ReaderSettings,
   set: ConsumableSet,
   count: number,
+  /** Cards blocked from a place in this queue on. */
+  blocks?: readonly Block[],
 ): string[] {
   const game = new Game(settings);
   const soulKey = `soul_${set}0`;
@@ -414,14 +454,21 @@ export function packConsumableQueue(
   const banned = bannedKeys(settings);
   const out: string[] = [];
   for (let i = 0; i < count; i++) {
+    applyBlocks(game.owned, blocks, i + 1);
     let forced: string | undefined;
+    // A Soul or Black Hole that exists isn't rolled for at all (create_card's used_jokers check).
     if (!banned.has("c_soul")) {
-      if (set === "Tarot" || set === "Spectral")
+      if ((set === "Tarot" || set === "Spectral") && !game.owned.has("c_soul"))
         if (game.rng.random(soulKey) > 0.997) forced = "c_soul";
-      if (set === "Planet" || set === "Spectral")
+      if (
+        (set === "Planet" || set === "Spectral") &&
+        !game.owned.has("c_black_hole")
+      )
         if (game.rng.random(soulKey) > 0.997) forced = "c_black_hole";
     }
-    out.push(forced ?? drawFrom(game.rng, game.pools[set], poolKey));
+    out.push(
+      forced ?? drawFrom(game.rng, game.pools[set], poolKey, game.owned),
+    );
   }
   return out;
 }
@@ -603,7 +650,10 @@ export function shopQueue(
   mods: ShopModifiers = {},
 ): ShopItem[] {
   const sim = new ShopSim(settings, mods);
-  return Array.from({ length: count }, () => sim.next());
+  return Array.from({ length: count }, (_, i) => {
+    applyBlocks(sim.owned, mods.blocks, i + 1);
+    return sim.next();
+  });
 }
 
 /**
