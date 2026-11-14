@@ -1,7 +1,14 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Children,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   certificateQueue,
   illusionQueue,
@@ -72,6 +79,98 @@ const RARITIES: [Rarity, string][] = [
 const STEP = 30;
 /** How far the seek box looks for a joker. */
 const SEEK_SLOTS = 1000;
+
+/** What the seek box looks for. */
+const SEEK_KINDS = new Set(["joker", "tarot", "planet", "spectral"]);
+
+/** A name for loose matching: lower case, no accents, letters and digits only. */
+function normName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Cards in one row that scrolls sideways, with back and forward buttons; going forward past
+ * the end loads more. The row reserves room above the cards for their hover cards, which a
+ * scrolling box would otherwise cut off; that room lets clicks through to what's under it.
+ */
+function Band({
+  children,
+  onMore,
+  jump,
+  onJumped,
+  slots,
+}: {
+  children: ReactNode;
+  onMore: () => void;
+  /** A slot number to scroll into view (its card has data-slot). */
+  jump?: number;
+  onJumped: () => void;
+  /** Each card's slot number, for jump. */
+  slots?: number[];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (jump === undefined) return;
+    const el = ref.current?.querySelector(`[data-slot="${jump}"]`);
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+    onJumped();
+  });
+  const step = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    if (dir > 0 && el.scrollLeft + el.clientWidth >= el.scrollWidth - 80)
+      onMore();
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+  };
+  const arrow =
+    "z-10 mb-[52px] flex size-9 shrink-0 items-center justify-center rounded-full border bg-fd-card shadow hover:bg-fd-accent";
+  return (
+    <div className="flex items-end gap-2">
+      <button
+        type="button"
+        aria-label="Back"
+        onClick={() => step(-1)}
+        className={arrow}
+      >
+        <ChevronLeft className="size-5" />
+      </button>
+      <div
+        ref={ref}
+        className="pointer-events-none -mt-60 flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pt-60 pb-3"
+      >
+        {Children.map(children, (child, i) => (
+          <div className="pointer-events-auto shrink-0" data-slot={slots?.[i]}>
+            {child}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={onMore}
+          className="pointer-events-auto mb-6 h-[95px] w-[71px] shrink-0 rounded-lg border border-dashed text-xs hover:bg-fd-accent"
+        >
+          {STEP} more
+        </button>
+      </div>
+      <button
+        type="button"
+        aria-label="Forward"
+        onClick={() => step(1)}
+        className={arrow}
+      >
+        <ChevronRight className="size-5" />
+      </button>
+    </div>
+  );
+}
 
 /** Shop items with their slot number (1-based). */
 function numberSlots(items: ShopItem[]): { item: ShopItem; slot: number }[] {
@@ -172,28 +271,36 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
     });
   const [shops, setShops] = useState(8);
   const [jokersOnly, setJokersOnly] = useState(false);
+  const [layout, setLayout] = useState<"band" | "grid">("band");
+  /** A slot to bring into view (the seek box's "Go there"). */
+  const [jump, setJump] = useState<number | undefined>();
   const [seek, setSeek] = useState("");
   const mods = useMemo(() => ({ vouchers }), [vouchers]);
   const items = useMemo(
     () => numberSlots(shopQueue(settings, count, mods)),
     [settings, count, mods],
   );
-  // Jokers by name, for the seek box.
-  const jokerNames = useMemo(
+  // Everything the shop can roll by name, for the seek box.
+  const seekable = useMemo(
     () =>
-      new Map(
-        Object.entries(art.items)
-          .filter(([, it]) => it.kind === "joker")
-          .map(([key, it]) => [it.name.toLowerCase(), key]),
-      ),
+      Object.entries(art.items)
+        .filter(([, it]) => SEEK_KINDS.has(it.kind))
+        .map(([key, it]) => ({ key, name: it.name, norm: normName(it.name) }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [art],
   );
-  const seekKey = jokerNames.get(seek.trim().toLowerCase());
-  // Where that joker shows up in the shop, looking well past what's on screen.
+  // Loose matching: "family" finds The Family. An exact name, or the only match, is picked.
+  const query = normName(seek);
+  const matches = query ? seekable.filter((x) => x.norm.includes(query)) : [];
+  const picked =
+    matches.find((x) => x.norm === query || x.norm === `the${query}`) ??
+    (matches.length === 1 ? matches[0] : undefined);
+  const seekKey = picked?.key;
+  // Where it shows up in the shop, looking well past what's on screen.
   const seekSlots = useMemo(() => {
     if (!seekKey) return [];
     return numberSlots(shopQueue(settings, SEEK_SLOTS, mods))
-      .filter(({ item }) => item.kind === "joker" && item.key === seekKey)
+      .filter(({ item }) => item.kind !== "card" && item.key === seekKey)
       .map(({ slot }) => slot);
   }, [settings, mods, seekKey]);
   const shown = items.filter(
@@ -266,54 +373,73 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
           />
           Jokers only
         </label>
+        <Toggle
+          value={layout}
+          options={[
+            ["band", "Band"],
+            ["grid", "Grid"],
+          ]}
+          onChange={setLayout}
+        />
         <label className="flex items-center gap-2">
           Seek
           <input
-            list="seed-reader-jokers"
             value={seek}
             onChange={(e) => setSeek(e.target.value)}
-            placeholder="a joker, e.g. Blueprint"
-            className="w-56 rounded-lg border bg-fd-background px-3 py-1.5"
+            placeholder="a joker or consumable, e.g. family"
+            className="w-64 rounded-lg border bg-fd-background px-3 py-1.5"
           />
-          <datalist id="seed-reader-jokers">
-            {[...jokerNames.keys()].sort().map((n) => (
-              <option
-                key={n}
-                value={art.items[jokerNames.get(n) ?? ""]?.name}
-              />
-            ))}
-          </datalist>
         </label>
-        {seekKey && (
+        {query && !picked && (
+          <span className="flex flex-wrap items-center gap-1">
+            {matches.length === 0
+              ? "No card by that name."
+              : matches.slice(0, 8).map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setSeek(m.name)}
+                    className="rounded-full border px-2 py-0.5 text-xs hover:bg-fd-accent"
+                  >
+                    {m.name}
+                  </button>
+                ))}
+            {matches.length > 8 && `and ${matches.length - 8} more`}
+          </span>
+        )}
+        {picked && (
           <span>
+            <b>{picked.name}</b>
+            {": "}
             {seekSlots.length === 0 ? (
               `Not in the first ${SEEK_SLOTS} shop slots.`
             ) : (
               <>
-                Next at shop slot <b>{seekSlots[0]}</b>
+                next at shop slot <b>{seekSlots[0]}</b>
                 {seekSlots.length > 1 &&
                   `, then ${seekSlots.slice(1, 6).join(", ")}${seekSlots.length > 6 ? ", …" : ""}`}
-                {seekSlots[0] > count && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCount(Math.ceil(seekSlots[0] / STEP) * STEP)
-                    }
-                    className="ml-2 rounded border px-2 py-0.5 hover:bg-fd-accent"
-                  >
-                    Show up to there
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCount((c) =>
+                      Math.max(c, Math.ceil(seekSlots[0] / STEP) * STEP),
+                    );
+                    setJump(seekSlots[0]);
+                  }}
+                  className="ml-2 rounded border px-2 py-0.5 hover:bg-fd-accent"
+                >
+                  Go there
+                </button>
               </>
             )}
           </span>
         )}
       </div>
-      <Grid>
-        {shown.map(({ item, slot }, i) => {
+      {(() => {
+        const cards = shown.map(({ item, slot }, i) => {
           const found =
             seekKey !== undefined &&
-            item.kind === "joker" &&
+            item.kind !== "card" &&
             item.key === seekKey;
           if (item.kind === "joker")
             return (
@@ -328,8 +454,15 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
               />
             );
           if (item.kind === "consumable")
-            // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-            return <ItemCard key={i} itemKey={item.key} index={slot} />;
+            return (
+              <ItemCard
+                // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
+                key={i}
+                itemKey={item.key}
+                index={slot}
+                highlight={found}
+              />
+            );
           return (
             <PlayingCardCard
               // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
@@ -340,9 +473,23 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
               index={slot}
             />
           );
-        })}
-      </Grid>
-      <More onClick={() => setCount((c) => c + STEP)} />
+        });
+        return layout === "band" ? (
+          <Band
+            onMore={() => setCount((c) => c + STEP)}
+            slots={shown.map((x) => x.slot)}
+            jump={jump}
+            onJumped={() => setJump(undefined)}
+          >
+            {cards}
+          </Band>
+        ) : (
+          <>
+            <Grid>{cards}</Grid>
+            <More onClick={() => setCount((c) => c + STEP)} />
+          </>
+        );
+      })()}
 
       <h2 className="mt-4 text-lg font-semibold">Booster packs</h2>
       <Note>
