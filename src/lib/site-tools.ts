@@ -20,4 +20,15 @@ export const LOG_PARSER: SiteTool = {
   },
 };
 
-export const SITE_TOOLS: SiteTool[] = [LOG_PARSER];
+export const SEED_READER: SiteTool = {
+  href: "/seed-reader",
+  frontmatter: {
+    title: "Seed reader",
+    description:
+      "Enter a seed and see every shop slot and every joker, consumable, voucher and tag queue it rolls with The Order.",
+    tags: ["tool", "multiplayer"],
+    icon: ["voucher:crystal_ball"],
+  },
+};
+
+export const SITE_TOOLS: SiteTool[] = [SEED_READER, LOG_PARSER];

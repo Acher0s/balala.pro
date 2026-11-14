@@ -11,6 +11,7 @@
     "format": "biome format --write",
     "test": "vitest run",
     "import-game": "node scripts/import-game.ts",
+    "import-seed-pools": "node scripts/import-seed-pools.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

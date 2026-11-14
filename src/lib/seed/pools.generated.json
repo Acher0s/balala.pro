@@ -1,0 +1,841 @@
+{
+  "version": "1.0.1o-FULL",
+  "jokers": {
+    "1": [
+      "j_joker",
+      "j_greedy_joker",
+      "j_lusty_joker",
+      "j_wrathful_joker",
+      "j_gluttenous_joker",
+      "j_jolly",
+      "j_zany",
+      "j_mad",
+      "j_crazy",
+      "j_droll",
+      "j_sly",
+      "j_wily",
+      "j_clever",
+      "j_devious",
+      "j_crafty",
+      "j_half",
+      "j_credit_card",
+      "j_banner",
+      "j_mystic_summit",
+      "j_8_ball",
+      "j_misprint",
+      "j_raised_fist",
+      "j_chaos",
+      "j_scary_face",
+      "j_abstract",
+      "j_delayed_grat",
+      "j_gros_michel",
+      "j_even_steven",
+      "j_odd_todd",
+      "j_scholar",
+      "j_business",
+      "j_supernova",
+      "j_ride_the_bus",
+      "j_egg",
+      "j_runner",
+      "j_ice_cream",
+      "j_splash",
+      "j_blue_joker",
+      "j_faceless",
+      "j_green_joker",
+      "j_superposition",
+      "j_todo_list",
+      "j_cavendish",
+      "j_red_card",
+      "j_square",
+      "j_riff_raff",
+      "j_photograph",
+      "j_reserved_parking",
+      "j_mail",
+      "j_hallucination",
+      "j_fortune_teller",
+      "j_juggler",
+      "j_drunkard",
+      "j_golden",
+      "j_popcorn",
+      "j_walkie_talkie",
+      "j_smiley",
+      "j_ticket",
+      "j_swashbuckler",
+      "j_hanging_chad",
+      "j_shoot_the_moon"
+    ],
+    "2": [
+      "j_stencil",
+      "j_four_fingers",
+      "j_mime",
+      "j_ceremonial",
+      "j_marble",
+      "j_loyalty_card",
+      "j_dusk",
+      "j_fibonacci",
+      "j_steel_joker",
+      "j_hack",
+      "j_pareidolia",
+      "j_space",
+      "j_burglar",
+      "j_blackboard",
+      "j_sixth_sense",
+      "j_constellation",
+      "j_hiker",
+      "j_card_sharp",
+      "j_madness",
+      "j_seance",
+      "j_vampire",
+      "j_shortcut",
+      "j_hologram",
+      "j_cloud_9",
+      "j_rocket",
+      "j_midas_mask",
+      "j_luchador",
+      "j_gift",
+      "j_turtle_bean",
+      "j_erosion",
+      "j_to_the_moon",
+      "j_stone",
+      "j_lucky_cat",
+      "j_bull",
+      "j_diet_cola",
+      "j_trading",
+      "j_flash",
+      "j_trousers",
+      "j_ramen",
+      "j_selzer",
+      "j_castle",
+      "j_mr_bones",
+      "j_acrobat",
+      "j_sock_and_buskin",
+      "j_troubadour",
+      "j_certificate",
+      "j_smeared",
+      "j_throwback",
+      "j_rough_gem",
+      "j_bloodstone",
+      "j_arrowhead",
+      "j_onyx_agate",
+      "j_glass",
+      "j_ring_master",
+      "j_flower_pot",
+      "j_merry_andy",
+      "j_oops",
+      "j_idol",
+      "j_seeing_double",
+      "j_matador",
+      "j_satellite",
+      "j_cartomancer",
+      "j_astronomer",
+      "j_bootstraps"
+    ],
+    "3": [
+      "j_dna",
+      "j_vagabond",
+      "j_baron",
+      "j_obelisk",
+      "j_baseball",
+      "j_ancient",
+      "j_campfire",
+      "j_blueprint",
+      "j_wee",
+      "j_hit_the_road",
+      "j_duo",
+      "j_trio",
+      "j_family",
+      "j_order",
+      "j_tribe",
+      "j_stuntman",
+      "j_invisible",
+      "j_brainstorm",
+      "j_drivers_license",
+      "j_burnt"
+    ],
+    "4": ["j_caino", "j_triboulet", "j_yorick", "j_chicot", "j_perkeo"]
+  },
+  "tarots": [
+    "c_fool",
+    "c_magician",
+    "c_high_priestess",
+    "c_empress",
+    "c_emperor",
+    "c_heirophant",
+    "c_lovers",
+    "c_chariot",
+    "c_justice",
+    "c_hermit",
+    "c_wheel_of_fortune",
+    "c_strength",
+    "c_hanged_man",
+    "c_death",
+    "c_temperance",
+    "c_devil",
+    "c_tower",
+    "c_star",
+    "c_moon",
+    "c_sun",
+    "c_judgement",
+    "c_world"
+  ],
+  "planets": [
+    {
+      "key": "c_mercury",
+      "softlock": false
+    },
+    {
+      "key": "c_venus",
+      "softlock": false
+    },
+    {
+      "key": "c_earth",
+      "softlock": false
+    },
+    {
+      "key": "c_mars",
+      "softlock": false
+    },
+    {
+      "key": "c_jupiter",
+      "softlock": false
+    },
+    {
+      "key": "c_saturn",
+      "softlock": false
+    },
+    {
+      "key": "c_uranus",
+      "softlock": false
+    },
+    {
+      "key": "c_neptune",
+      "softlock": false
+    },
+    {
+      "key": "c_pluto",
+      "softlock": false
+    },
+    {
+      "key": "c_planet_x",
+      "softlock": true
+    },
+    {
+      "key": "c_ceres",
+      "softlock": true
+    },
+    {
+      "key": "c_eris",
+      "softlock": true
+    }
+  ],
+  "spectrals": [
+    {
+      "key": "c_familiar",
+      "hidden": false
+    },
+    {
+      "key": "c_grim",
+      "hidden": false
+    },
+    {
+      "key": "c_incantation",
+      "hidden": false
+    },
+    {
+      "key": "c_talisman",
+      "hidden": false
+    },
+    {
+      "key": "c_aura",
+      "hidden": false
+    },
+    {
+      "key": "c_wraith",
+      "hidden": false
+    },
+    {
+      "key": "c_sigil",
+      "hidden": false
+    },
+    {
+      "key": "c_ouija",
+      "hidden": false
+    },
+    {
+      "key": "c_ectoplasm",
+      "hidden": false
+    },
+    {
+      "key": "c_immolate",
+      "hidden": false
+    },
+    {
+      "key": "c_ankh",
+      "hidden": false
+    },
+    {
+      "key": "c_deja_vu",
+      "hidden": false
+    },
+    {
+      "key": "c_hex",
+      "hidden": false
+    },
+    {
+      "key": "c_trance",
+      "hidden": false
+    },
+    {
+      "key": "c_medium",
+      "hidden": false
+    },
+    {
+      "key": "c_cryptid",
+      "hidden": false
+    },
+    {
+      "key": "c_soul",
+      "hidden": true
+    },
+    {
+      "key": "c_black_hole",
+      "hidden": true
+    }
+  ],
+  "vouchers": [
+    {
+      "key": "v_overstock_norm",
+      "requires": []
+    },
+    {
+      "key": "v_overstock_plus",
+      "requires": ["v_overstock_norm"]
+    },
+    {
+      "key": "v_clearance_sale",
+      "requires": []
+    },
+    {
+      "key": "v_liquidation",
+      "requires": ["v_clearance_sale"]
+    },
+    {
+      "key": "v_hone",
+      "requires": []
+    },
+    {
+      "key": "v_glow_up",
+      "requires": ["v_hone"]
+    },
+    {
+      "key": "v_reroll_surplus",
+      "requires": []
+    },
+    {
+      "key": "v_reroll_glut",
+      "requires": ["v_reroll_surplus"]
+    },
+    {
+      "key": "v_crystal_ball",
+      "requires": []
+    },
+    {
+      "key": "v_omen_globe",
+      "requires": ["v_crystal_ball"]
+    },
+    {
+      "key": "v_telescope",
+      "requires": []
+    },
+    {
+      "key": "v_observatory",
+      "requires": ["v_telescope"]
+    },
+    {
+      "key": "v_grabber",
+      "requires": []
+    },
+    {
+      "key": "v_nacho_tong",
+      "requires": ["v_grabber"]
+    },
+    {
+      "key": "v_wasteful",
+      "requires": []
+    },
+    {
+      "key": "v_recyclomancy",
+      "requires": ["v_wasteful"]
+    },
+    {
+      "key": "v_tarot_merchant",
+      "requires": []
+    },
+    {
+      "key": "v_tarot_tycoon",
+      "requires": ["v_tarot_merchant"]
+    },
+    {
+      "key": "v_planet_merchant",
+      "requires": []
+    },
+    {
+      "key": "v_planet_tycoon",
+      "requires": ["v_planet_merchant"]
+    },
+    {
+      "key": "v_seed_money",
+      "requires": []
+    },
+    {
+      "key": "v_money_tree",
+      "requires": ["v_seed_money"]
+    },
+    {
+      "key": "v_blank",
+      "requires": []
+    },
+    {
+      "key": "v_antimatter",
+      "requires": ["v_blank"]
+    },
+    {
+      "key": "v_magic_trick",
+      "requires": []
+    },
+    {
+      "key": "v_illusion",
+      "requires": ["v_magic_trick"]
+    },
+    {
+      "key": "v_hieroglyph",
+      "requires": []
+    },
+    {
+      "key": "v_petroglyph",
+      "requires": ["v_hieroglyph"]
+    },
+    {
+      "key": "v_directors_cut",
+      "requires": []
+    },
+    {
+      "key": "v_retcon",
+      "requires": ["v_directors_cut"]
+    },
+    {
+      "key": "v_paint_brush",
+      "requires": []
+    },
+    {
+      "key": "v_palette",
+      "requires": ["v_paint_brush"]
+    }
+  ],
+  "boosters": [
+    {
+      "key": "p_arcana_normal_1",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_normal_2",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_normal_3",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_normal_4",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_jumbo_1",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_jumbo_2",
+      "kind": "Arcana",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_arcana_mega_1",
+      "kind": "Arcana",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_arcana_mega_2",
+      "kind": "Arcana",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_celestial_normal_1",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_normal_2",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_normal_3",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_normal_4",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_jumbo_1",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_jumbo_2",
+      "kind": "Celestial",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_celestial_mega_1",
+      "kind": "Celestial",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_celestial_mega_2",
+      "kind": "Celestial",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_standard_normal_1",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_normal_2",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_normal_3",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_normal_4",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 3,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_jumbo_1",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_jumbo_2",
+      "kind": "Standard",
+      "weight": 1,
+      "size": 5,
+      "choose": 1
+    },
+    {
+      "key": "p_standard_mega_1",
+      "kind": "Standard",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_standard_mega_2",
+      "kind": "Standard",
+      "weight": 0.25,
+      "size": 5,
+      "choose": 2
+    },
+    {
+      "key": "p_buffoon_normal_1",
+      "kind": "Buffoon",
+      "weight": 0.6,
+      "size": 2,
+      "choose": 1
+    },
+    {
+      "key": "p_buffoon_normal_2",
+      "kind": "Buffoon",
+      "weight": 0.6,
+      "size": 2,
+      "choose": 1
+    },
+    {
+      "key": "p_buffoon_jumbo_1",
+      "kind": "Buffoon",
+      "weight": 0.6,
+      "size": 4,
+      "choose": 1
+    },
+    {
+      "key": "p_buffoon_mega_1",
+      "kind": "Buffoon",
+      "weight": 0.15,
+      "size": 4,
+      "choose": 2
+    },
+    {
+      "key": "p_spectral_normal_1",
+      "kind": "Spectral",
+      "weight": 0.3,
+      "size": 2,
+      "choose": 1
+    },
+    {
+      "key": "p_spectral_normal_2",
+      "kind": "Spectral",
+      "weight": 0.3,
+      "size": 2,
+      "choose": 1
+    },
+    {
+      "key": "p_spectral_jumbo_1",
+      "kind": "Spectral",
+      "weight": 0.3,
+      "size": 4,
+      "choose": 1
+    },
+    {
+      "key": "p_spectral_mega_1",
+      "kind": "Spectral",
+      "weight": 0.07,
+      "size": 4,
+      "choose": 2
+    }
+  ],
+  "enhancements": [
+    "m_bonus",
+    "m_mult",
+    "m_wild",
+    "m_glass",
+    "m_steel",
+    "m_stone",
+    "m_gold",
+    "m_lucky"
+  ],
+  "noEternal": [
+    "j_gros_michel",
+    "j_ice_cream",
+    "j_cavendish",
+    "j_luchador",
+    "j_turtle_bean",
+    "j_diet_cola",
+    "j_popcorn",
+    "j_ramen",
+    "j_selzer",
+    "j_mr_bones",
+    "j_invisible"
+  ],
+  "noPerishable": [
+    "j_ceremonial",
+    "j_ride_the_bus",
+    "j_runner",
+    "j_constellation",
+    "j_green_joker",
+    "j_red_card",
+    "j_madness",
+    "j_square",
+    "j_vampire",
+    "j_hologram",
+    "j_rocket",
+    "j_obelisk",
+    "j_lucky_cat",
+    "j_flash",
+    "j_trousers",
+    "j_castle",
+    "j_glass",
+    "j_wee"
+  ],
+  "tags": [
+    {
+      "key": "tag_uncommon"
+    },
+    {
+      "key": "tag_rare"
+    },
+    {
+      "key": "tag_negative",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_foil"
+    },
+    {
+      "key": "tag_holo"
+    },
+    {
+      "key": "tag_polychrome"
+    },
+    {
+      "key": "tag_investment"
+    },
+    {
+      "key": "tag_voucher"
+    },
+    {
+      "key": "tag_boss"
+    },
+    {
+      "key": "tag_standard",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_charm"
+    },
+    {
+      "key": "tag_meteor",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_buffoon",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_handy",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_garbage",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_ethereal",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_coupon"
+    },
+    {
+      "key": "tag_double"
+    },
+    {
+      "key": "tag_juggle"
+    },
+    {
+      "key": "tag_d_six"
+    },
+    {
+      "key": "tag_top_up",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_skip"
+    },
+    {
+      "key": "tag_orbital",
+      "minAnte": 2
+    },
+    {
+      "key": "tag_economy"
+    }
+  ],
+  "cards": [
+    "C_2",
+    "C_3",
+    "C_4",
+    "C_5",
+    "C_6",
+    "C_7",
+    "C_8",
+    "C_9",
+    "C_A",
+    "C_J",
+    "C_K",
+    "C_Q",
+    "C_T",
+    "D_2",
+    "D_3",
+    "D_4",
+    "D_5",
+    "D_6",
+    "D_7",
+    "D_8",
+    "D_9",
+    "D_A",
+    "D_J",
+    "D_K",
+    "D_Q",
+    "D_T",
+    "H_2",
+    "H_3",
+    "H_4",
+    "H_5",
+    "H_6",
+    "H_7",
+    "H_8",
+    "H_9",
+    "H_A",
+    "H_J",
+    "H_K",
+    "H_Q",
+    "H_T",
+    "S_2",
+    "S_3",
+    "S_4",
+    "S_5",
+    "S_6",
+    "S_7",
+    "S_8",
+    "S_9",
+    "S_A",
+    "S_J",
+    "S_K",
+    "S_Q",
+    "S_T"
+  ]
+}
