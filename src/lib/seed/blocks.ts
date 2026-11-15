@@ -670,8 +670,12 @@ export function findBlocks(
     for (const k of pack) if (k) s.owned.add(k);
   };
 
-  const commit = (source: string, found: typeof skips) => {
-    const held = heldKeys();
+  const commit = (
+    source: string,
+    found: typeof skips,
+    sure = false,
+    held: Set<string> = heldKeys(),
+  ) => {
     for (const s of found) {
       const avatar = s.reason === "owned" && avatarNow(s.key);
       if (s.reason === "owned" && !held.has(s.key) && !avatar) continue; // on screen, not held
@@ -687,9 +691,10 @@ export function findBlocks(
             : avatar && !held.has(s.key)
               ? "Probably a lobby avatar (Multiplayer 1.0.5 bug)"
               : undefined,
-        sure: false,
+        sure,
       };
       hits.push(hit);
+      if (sure) continue;
       const f = familyOf(s.key, source);
       pending.set(f, [...(pending.get(f) ?? []), hit]);
     }
@@ -707,21 +712,41 @@ export function findBlocks(
 
   /**
    * Rolls a queue on until `key` comes up (what took the rolls in between isn't in the log),
-   * and goes on from there. Nothing is recorded for those rolls. False if it doesn't come up.
+   * and goes on from there. False if it doesn't come up. The cards the game must have passed
+   * over on the way are known from the card the log shows, so the ones the player held (or
+   * that were locked) are recorded as blocked, and sure: the second Campfire skipped while the
+   * first was held, found when the Brainstorm after it is bought.
    */
-  const resync = (set: string, key: string): boolean => {
+  const resync = (
+    set: string,
+    key: string,
+    /** What was held when the shop was rolled (cards sold since still blocked it). */
+    heldThen?: Set<string>,
+  ): boolean => {
     const rarity = RARITY.get(key);
     if (!CONSUMABLE_SETS.has(set) && !rarity) return false;
     const fork = sim.fork();
+    const passed: typeof skips = [];
     for (let n = 0; n < 10; n++) {
       syncOwned(fork);
+      for (const k of heldThen ?? []) fork.owned.add(k);
+      skips = [];
       const got = CONSUMABLE_SETS.has(set)
         ? fork.consumable(set as ConsumableSet)
         : fork.otherJoker(rarity).key;
+      passed.push(...skips);
       if (got === key) {
         skips = [];
         sim = fork;
         trace?.(`  resync ${set}: ${n + 1} rolls on`);
+        // Only a short way on: further, the replay was out of line and the in-between is a guess.
+        if (n < 3)
+          commit(
+            set === "Joker" ? "Shop" : `${set} (shop)`,
+            passed,
+            true,
+            new Set([...heldKeys(), ...(heldThen ?? [])]),
+          );
         return true;
       }
     }
@@ -933,7 +958,10 @@ export function findBlocks(
    * joker (seen in a real match: both slots, then the rerolls are the usual cards). The code
    * says the tag triggers once (tag.triggered), so this is from the log, not the Lua.
    */
+  /** What the player held when the shop on screen was rolled. */
+  let heldAtShop = new Set<string>();
   const rollShop = (forced?: 2 | 3) => {
+    heldAtShop = heldKeys();
     shop = [];
     for (let i = 0; i < shopSize(); i++)
       shop.push(
@@ -1139,7 +1167,7 @@ export function findBlocks(
             missedShop.push({ key: shop[slot] as string, at: shopEvent });
           if (at < 0) {
             at = slot;
-            resync(set, key);
+            resync(set, key, heldAtShop);
           }
           shop.splice(at, 1);
           if (set === "Joker")
