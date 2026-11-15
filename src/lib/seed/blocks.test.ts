@@ -11,6 +11,7 @@ import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import fd54z7xn from "./fixtures/fd54z7xn-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
 import iuy9b53e from "./fixtures/iuy9b53e-log.json";
+import nkrwq99v from "./fixtures/nkrwq99v-log.json";
 import qgisur8i from "./fixtures/qgisur8i-log.json";
 import viwlatit from "./fixtures/viwlatit-log.json";
 import x3uf2auh from "./fixtures/x3uf2auh-log.json";
@@ -228,6 +229,17 @@ describe("evaluateHand", () => {
 });
 
 describe("lobby avatars (Multiplayer 1.0.5 bug)", () => {
+  it("replays a Magic Deck match with Omen Globe once Burglar is worked out", () => {
+    // Omen Globe's Spectrals in Arcana Packs, a skipped Standard Pack's Glass Card that never
+    // joined the deck, a bought Lovers the game didn't count as held.
+    const events = nkrwq99v.events as LogEvent[];
+    const read = matchSettings(events);
+    if (!read.ok) throw new Error(read.error);
+    const r = findBlocksAuto(events, read.settings);
+    expect(r.avatars.map((a) => a.key)).toEqual(["j_burglar"]);
+    expect(r.firstMiss).toBeUndefined();
+  });
+
   it("finds the avatar that kept a joker out of the shop", () => {
     // The player confirmed Hiker. Only jokers the avatar picker offers are tried.
     const events = fd54z7xn.events as LogEvent[];

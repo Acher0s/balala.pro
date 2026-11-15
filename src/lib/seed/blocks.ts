@@ -588,6 +588,88 @@ function vanishedJokers(events: readonly LogEvent[]): Map<number, string[]> {
   return out;
 }
 
+/**
+ * Consumables bought to keep that the log never shows again, while the player later buys or
+ * picks the same card without Showman: the game didn't count the first as held (it offered
+ * the card again), so it left without a log event. Returns the events of those buys.
+ * (NKRWQ99V: a Lovers bought at #313 and never used, then offered four more times.)
+ */
+function unheldBuys(events: readonly LogEvent[]): Set<number> {
+  const out = new Set<number>();
+  const kept = new Map<number, { key: string; at: number }>();
+  const seen = new Set<number>();
+  let showman = false;
+  events.forEach(([, op, args], i) => {
+    const a = (args ?? []) as unknown[];
+    const r = a[2] as Ref | undefined;
+    if (op === "play")
+      showman = ((a[2] as string[]) ?? []).some((t) =>
+        t.startsWith("j_ring_master"),
+      );
+    const id =
+      Array.isArray(r) && typeof r[0] === "number" ? Math.abs(r[0]) : 0;
+    if (op === "use" || op === "sell") seen.add(id);
+    if (op === "reorder")
+      for (const m of (a[2] as unknown[][]) ?? [])
+        if (Array.isArray(m[0])) seen.add(Math.abs(m[0][0] as number));
+    if (
+      (op === "buy" || op === "pack_pick") &&
+      Array.isArray(r) &&
+      (r[0] as number) < 0
+    ) {
+      const key = r[2] as string;
+      if (!showman)
+        for (const [k, c] of kept)
+          if (c.key === key && !seen.has(k)) {
+            out.add(c.at);
+            kept.delete(k);
+          }
+      if (op === "buy" && CONSUMABLE_SETS.has(r[1] as string) && a[4] !== true)
+        kept.set(id, { key, at: i });
+    }
+  });
+  // A buy only counts if its card was never shown again at all.
+  for (const [k, c] of kept) if (seen.has(k)) out.delete(c.at);
+  return out;
+}
+
+/**
+ * A softlocked planet (Planet X, Ceres, Eris) the log shows proves its hand was played before
+ * the card was rolled. When the replay's reading of the hands missed it (Ouija turns the hand
+ * into one rank without the log saying which cards), the hand counts as played from the roll
+ * that showed the card: the shop's cashout or reroll for a buy, the pack's opening for a pick,
+ * or the sighting itself otherwise. Returns the events to count the hands at, and which.
+ */
+function softlockEvidence(events: readonly LogEvent[]): Map<number, string[]> {
+  const out = new Map<number, string[]>();
+  const keys = new Map<number, string>();
+  const done = new Set<string>();
+  let shopRoll = 0;
+  let packRoll = 0;
+  events.forEach(([, op, args], i) => {
+    if (op === "cashout" || op === "reroll") shopRoll = i;
+    if (op === "open_pack") packRoll = i;
+    const a = (args ?? []) as unknown[];
+    const refs = op === "pack_skip" ? ((a[0] as unknown[]) ?? []) : [a[2]];
+    for (const r of refs) {
+      if (!Array.isArray(r) || typeof r[0] !== "number") continue;
+      if (r[0] < 0 && typeof r[2] === "string") keys.set(-r[0], r[2]);
+      const key = r[0] < 0 ? (r[2] as string) : keys.get(r[0]);
+      const soft = SOFTLOCKS.find((x) => x.planet === key);
+      if (!soft || done.has(soft.hand)) continue;
+      done.add(soft.hand);
+      const at =
+        op === "buy"
+          ? shopRoll
+          : op === "pack_pick" || op === "pack_skip"
+            ? packRoll
+            : i;
+      out.set(at, [...(out.get(at) ?? []), soft.hand]);
+    }
+  });
+  return out;
+}
+
 /** The queue a card was rolled from, as far as checking it goes. */
 function familyOf(key: string, source: string): string {
   // Each rarity is its own queue.
@@ -1004,9 +1086,20 @@ export function findBlocks(
       const j = roll(source, (s) => s.otherJoker(rarity));
       trace?.(`  ${source} made ${j.key}`);
       jokers.set(synthetic++, { key: j.key, edition: j.edition });
+      order.push(j.key);
       expectedNew.push(j.key);
     }
   };
+
+  /**
+   * The jokers' order as the player left it: each hand sets it, then buys and made jokers go on
+   * the end, sales and rearranging (reorder) change it. Blueprint and Brainstorm copy by
+   * position, so this is the order at a blind's start (a player can move Blueprint next to
+   * Cartomancer for the blind and back before the first hand).
+   */
+  let order: string[] = [];
+  const orderAtBlind = (from: number): string[] =>
+    order.length === jokers.size ? order : nextJokerOrder(from);
 
   /** The jokers in order, as the next hand shows them (the log has no order before that). */
   const nextJokerOrder = (from: number): string[] => {
@@ -1158,6 +1251,11 @@ export function findBlocks(
   };
 
   const vanish = vanishedJokers(events);
+  // Small World allows duplicates, so buying a card already held proves nothing there.
+  const unheld = settings.ruleset.smallWorld
+    ? new Set<number>()
+    : unheldBuys(events);
+  const evidence = softlockEvidence(events);
   for (const [r, keys] of Object.entries(settings.ruleset.added.jokers ?? {}))
     for (const k of keys ?? [])
       if (Number(r) < 4) RARITY.set(k, Number(r) as 1 | 2 | 3);
@@ -1192,8 +1290,11 @@ export function findBlocks(
     const [, op, args] = e;
     const a = (args ?? []) as unknown[];
     eventAt = i;
+    for (const h of evidence.get(i) ?? []) played.add(h);
     for (const k of vanish.get(i) ?? []) {
       removeJoker(-1, k);
+      const o = order.lastIndexOf(k);
+      if (o >= 0) order.splice(o, 1);
       // Gros Michel goes extinct at the end of a round: Cavendish is in the next shop.
       if (k === "j_gros_michel") extinct = true;
     }
@@ -1217,7 +1318,7 @@ export function findBlocks(
         nextBlind =
           key === "bl_small" ? "big" : key === "bl_big" ? "boss" : "small";
         // setting_blind, joker by joker (copies included).
-        for (const k of acting(nextJokerOrder(i))) {
+        for (const k of acting(orderAtBlind(i))) {
           if (k === "j_riff_raff") makeJokers("Riff-raff", 2, 1);
           if (k === "j_cartomancer") makeConsumable("Cartomancer", "Tarot");
         }
@@ -1269,11 +1370,13 @@ export function findBlocks(
             resync(set, key, heldAtShop);
           }
           shop.splice(at, 1);
-          if (set === "Joker")
+          if (set === "Joker") {
             jokers.set(got.id, { key, edition: got.edition });
-          else if (CONSUMABLE_SETS.has(set)) {
+            order.push(key);
+          } else if (CONSUMABLE_SETS.has(set)) {
             if (a[4] === true) applyUse(key, []);
-            else consumables.set(got.id, { set, key, edition: got.edition });
+            else if (!unheld.has(i))
+              consumables.set(got.id, { set, key, edition: got.edition });
           }
         } else if (got?.card) shop.splice(slot, 1);
         break;
@@ -1293,7 +1396,17 @@ export function findBlocks(
             pack.push(joker);
             noteRolled(joker, packEvent);
           } else if (kind === "arcana")
-            pack.push(roll(name, (s) => s.packConsumable("Tarot")));
+            // Omen Globe: each card is a Spectral when "omen_globe" rolls over 0.8 (Steamodded's
+            // Arcana Pack create_card).
+            pack.push(
+              roll(name, (s) =>
+                s.packConsumable(
+                  vouchers.has("v_omen_globe") && s.chance("omen_globe") > 0.8
+                    ? "Spectral"
+                    : "Tarot",
+                ),
+              ),
+            );
           else if (kind === "spectral")
             pack.push(roll(name, (s) => s.packConsumable("Spectral")));
           else if (kind === "celestial") {
@@ -1324,9 +1437,10 @@ export function findBlocks(
             suspects(key);
           }
           if (at >= 0) pack.splice(at, 1);
-          if (set === "Joker")
+          if (set === "Joker") {
             jokers.set(got.id, { key, edition: got.edition });
-          else applyUse(key, targets);
+            order.push(key);
+          } else applyUse(key, targets);
         }
         picksLeft--;
         if (picksLeft <= 0) pack = [];
@@ -1335,6 +1449,9 @@ export function findBlocks(
       case "pack_skip": {
         for (const ref of (a[0] as unknown[]) ?? []) {
           const got = learn(ref);
+          // A skipped pack's playing cards never join the deck (its Glass Card doesn't open
+          // Glass Joker).
+          if (got?.card && got.fresh) got.card.alive = false;
           if (!got?.item) continue;
           let at = pack.indexOf(got.item.key);
           if (at < 0 && got.item.set === "Planet") at = pack.indexOf("");
@@ -1363,12 +1480,15 @@ export function findBlocks(
       case "sell": {
         const got = a[0] === 4 ? learn(a[2]) : seeConsumable(a[2]);
         confirmJoker(got);
+        if (a[0] === 4 && typeof a[1] === "number") order.splice(a[1] - 1, 1);
         if (!got?.item) break;
         if (a[0] === 4) removeJoker(got.id, got.item.key);
         else consumables.delete(got.id);
         break;
       }
       case "reorder":
+        if (a[0] === 4 && Array.isArray(a[1]) && a[1].length === order.length)
+          order = (a[1] as number[]).map((p) => order[p - 1]);
         for (const m of (a[2] as unknown[][]) ?? []) {
           const got = a[0] === 5 ? seeConsumable(m[0]) : learn(m[0]);
           confirmJoker(got);
@@ -1414,6 +1534,7 @@ export function findBlocks(
             jokers.set(synthetic++, { key, edition });
           }
         const keys = tokens.map((t) => t.key);
+        order = [...keys];
         const roles = acting(keys);
         const { name, scoring } = evaluateHand(hand, keys);
         played.add(name);
@@ -1638,7 +1759,8 @@ export function findBlocksAuto(
       const gain = misses(base) - misses(report);
       // Only jokers that can be avatars are tried, so one miss less is enough, unless the
       // replay is out of line anyway (many misses), where one could be chance.
-      const enough = gain >= (misses(base) > 20 ? 3 : 1);
+      // The match's pair, found in the other player's log, needs no more than that.
+      const enough = gain >= (!guess.known && misses(base) > 20 ? 3 : 1);
       if (!enough) continue;
       // Fewer misses wins. On a tie the match's known pair wins (one look blocks both), then
       // fewer avatars.

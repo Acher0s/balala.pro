@@ -223,6 +223,21 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   next blind. The log only shows it gone at the next hand, which was too late for Riff-raff's
   room (4T4U9DGU: Gros Michel went extinct, Riff-raff made two jokers, not one) and for
   Cavendish being in the next shop.
+- NKRWQ99V (Magic Deck), both logs from about 40% of shop buys to all of them:
+  - Omen Globe: each Arcana Pack card is a Spectral when "omen_globe" rolls over 0.8
+    (Steamodded's Arcana Pack create_card), from the Spectral pack queue.
+  - A skipped Standard Pack's playing cards never join the deck: its Glass Card had opened
+    Glass Joker.
+  - A consumable bought to keep that the log never shows again, while the same card is later
+    bought or picked again without Showman, wasn't counted as held by the game (it offered that
+    Lovers four more times), so the replay drops it at the buy. Not on Small World (duplicates).
+  - The jokers' order is followed through buys, sales, made jokers and rearranging, for
+    Blueprint and Brainstorm at a blind's start (Blueprint moved next to Cartomancer for the
+    PvP Blind and back before the first hand). It used to come from the next hand.
+  - A softlocked planet the log shows proves its hand was played before the roll that showed it
+    (Ouija turns the hand into one rank without naming the cards, so a Flush House can be
+    missed): the hand counts as played from that shop's cashout or reroll, or the pack's opening.
+  - The match's avatar found in one log needs only one miss less in the other.
 - Overstock (and Overstock Plus) redeemed in a shop goes through `change_shop_size`: the shop
   grows by one and every empty slot is filled (`joker_max - #cards`), so a slot bought before
   the voucher is rolled again too. The replay used to add one slot; with that fixed, FZZUAJBR
