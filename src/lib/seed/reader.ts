@@ -73,6 +73,34 @@ export interface ReaderSettings {
    * Joker, Lucky Cat and Golden Ticket are only in the pool while it does.
    */
   enhancements?: readonly string[];
+  /**
+   * Planet X, Ceres and Eris whose hand hasn't been played yet (their softlock): never picked
+   * while listed. Left out, they're read as unlocked.
+   */
+  softlocked?: readonly string[];
+  /**
+   * Gros Michel went extinct (G.GAME.pool_flags.gros_michel_extinct): Cavendish's
+   * yes_pool_flag, Gros Michel's no_pool_flag. Until then Cavendish is never picked, and after
+   * it Gros Michel isn't.
+   */
+  grosMichelExtinct?: boolean;
+  /** Internal: both pool-flag jokers open (for reporting what a lock passed by). */
+  poolFlagsOpen?: boolean;
+}
+
+/** Why a roll passed a card by: it exists in the run, or its in_pool condition isn't met. */
+export type SkipReason = "owned" | "locked";
+/** Told about every card a roll lands on and passes by, with the stream it was rolled on. */
+export type SkipHook = (
+  key: string,
+  reason: SkipReason,
+  stream: string,
+) => void;
+
+/** A pool to report skips from: `open` is the same pool with every lock opened. */
+interface Watch {
+  open: readonly string[];
+  onSkip: SkipHook;
 }
 
 /** Shop rates that vouchers and decks change, from a given shop slot on. */
@@ -293,7 +321,43 @@ function unavailableKeys(settings: ReaderSettings): Set<string> {
   const has = new Set(settings.enhancements ?? []);
   for (const [joker, gate] of Object.entries(POOLS.enhancementGates))
     if (!has.has(gate)) keys.add(joker);
+  for (const planet of settings.softlocked ?? []) keys.add(planet);
+  if (!settings.poolFlagsOpen)
+    keys.add(settings.grosMichelExtinct ? "j_gros_michel" : "j_cavendish");
   return keys;
+}
+
+/** Every enhancement a joker's slot waits for. */
+export const GATE_ENHANCEMENTS = [
+  ...new Set(Object.values(POOLS.enhancementGates)),
+];
+
+/** The pools with every lock open (gates, Penny Pincher, softlocks): bans only. */
+function openPools(settings: ReaderSettings): Pools {
+  return buildPools({
+    ...settings,
+    pincherUnlocked: true,
+    enhancements: GATE_ENHANCEMENTS,
+    softlocked: [],
+    poolFlagsOpen: true,
+  });
+}
+
+/** Tells `watch` about a card a roll landed on at `index` of `pool`, if it's passed by. */
+function report(
+  watch: Watch | undefined,
+  pool: readonly string[],
+  index: number,
+  owned: ReadonlySet<string> | undefined,
+  stream: string,
+) {
+  if (!watch) return;
+  const center = pool[index];
+  const real = watch.open[index];
+  if (center === UNAVAILABLE) {
+    if (real !== undefined && real !== UNAVAILABLE)
+      watch.onSkip(real, "locked", stream);
+  } else if (owned?.has(center)) watch.onSkip(center, "owned", stream);
 }
 
 /** The pools as get_current_pool builds them, with the bans and the ruleset's additions. */
@@ -403,12 +467,18 @@ function drawFrom(
   pool: readonly string[],
   key: string,
   owned?: ReadonlySet<string>,
+  watch?: Watch,
 ): string {
   const gone = (c: string) => c === UNAVAILABLE || (owned?.has(c) ?? false);
-  let center = rng.element(pool, key);
+  const pick = (stream: string) => {
+    const i = rng.index(pool.length, stream);
+    report(watch, pool, i, owned, stream);
+    return pool[i];
+  };
+  let center = pick(key);
   for (let it = 2; gone(center); it++) {
-    center = rng.element(pool, key);
-    if (it > 1000) center = rng.element(pool, `${key}_resample${it}`);
+    center = pick(key);
+    if (it > 1000) center = pick(`${key}_resample${it}`);
   }
   return center;
 }
@@ -426,6 +496,27 @@ class Game {
     this.rng = new SeedRng(normalizeSeed(settings.seed));
     this.pools = buildPools(settings);
     this.stake = settings.stake;
+  }
+
+  /** Reports every card a roll passes by, from `open` (the pools with every lock open). */
+  watch?: { open: Pools; onSkip: SkipHook };
+
+  /** The watch for one of the pools, if anything is watching. */
+  watchOf(pick: (p: Pools) => readonly string[]): Watch | undefined {
+    return (
+      this.watch && { open: pick(this.watch.open), onSkip: this.watch.onSkip }
+    );
+  }
+
+  /** A copy whose streams and owned cards go on from here without touching this one. */
+  clone(): Game {
+    const copy = Object.create(Game.prototype) as Game;
+    Object.assign(copy, this, {
+      rng: this.rng.clone(),
+      owned:
+        this.owned instanceof NoneSet ? new NoneSet() : new Set(this.owned),
+    });
+    return copy;
   }
 
   /**
@@ -446,8 +537,14 @@ class Game {
         perishable = true;
       if (this.stake >= 8 && this.rng.random(`_rent${pk}`) > 0.7) rental = true;
       const s = eternal || perishable || rental ? "_sticker" : "";
-      let key = this.rng.element(pool, pk + s);
-      if (it > 1000) key = this.rng.element(pool, `${pk}${s}_resample${it}`);
+      const watch = this.watchOf((p) => p.jokers[rarity]);
+      const pick = (stream: string) => {
+        const i = this.rng.index(pool.length, stream);
+        report(watch, pool, i, this.owned, stream);
+        return pool[i];
+      };
+      let key = pick(pk + s);
+      if (it > 1000) key = pick(`${pk}${s}_resample${it}`);
       if (key !== UNAVAILABLE && !this.owned.has(key)) {
         const edition = pollEdition(this.rng, `edi${pk}${s}`, {
           rate: editionRate,
@@ -475,8 +572,11 @@ class Game {
   plainJoker(rarity: Rarity, editionRate = 1): JokerRoll {
     const pk = rarity === 4 ? "Joker4" : `Joker${rarity}0`;
     const pool = this.pools.jokers[rarity];
+    const watch = this.watchOf((p) => p.jokers[rarity]);
     for (;;) {
-      const key = this.rng.element(pool, pk);
+      const i = this.rng.index(pool.length, pk);
+      report(watch, pool, i, this.owned, pk);
+      const key = pool[i];
       if (key !== UNAVAILABLE && !this.owned.has(key))
         return {
           key,
@@ -696,9 +796,12 @@ export function voucherQueue(
   /** Whether the voucher `key` offered in `ante` is bought; true buys all of them. */
   bought: boolean | ((ante: number, key: string) => boolean),
   owned: readonly string[] = [],
+  /** Told about a roll that lands on a slot passed by because its vouchers are owned. */
+  onOwned?: (ante: number, keys: string[]) => void,
 ): string[][] {
   const game = new Game(settings);
   const have = new Set(owned);
+  const all = [...POOLS.vouchers, ...(settings.ruleset.added.vouchers ?? [])];
   const culledBans = bannedKeys(settings);
   // Small World culls after start_run has rolled the first ante's vouchers.
   const firstBans = bannedKeys(settings, true);
@@ -719,19 +822,31 @@ export function voucherQueue(
         : v.key,
     );
     const culled = cull(pool);
+    const sources = cullSources(
+      pool,
+      all.map((v) => v.key),
+    );
     const size = pool.filter((v) => v !== UNAVAILABLE).length;
     const offered: string[] = [];
+    const pick = (stream: string) => {
+      const i = game.rng.index(culled.length, stream);
+      if (culled[i] === UNAVAILABLE && onOwned) {
+        const mine = sources[i].filter((k) => have.has(k));
+        if (mine.length > 0) onOwned(ante, mine);
+      }
+      return culled[i];
+    };
     for (let i = 0; i < Math.min(size, perAnte); i++) {
       // The mod's guard: stop when no slot is left that this ante hasn't offered.
       if (!culled.some((v) => v !== UNAVAILABLE && !offered.includes(v))) break;
-      let center = game.rng.element(culled, "Voucher0");
+      let center = pick("Voucher0");
       for (
         let it = 2;
         center === UNAVAILABLE || offered.includes(center);
         it++
       ) {
-        center = game.rng.element(culled, "Voucher0");
-        if (it > 1000) center = game.rng.element(culled, `Voucher0${it}`);
+        center = pick("Voucher0");
+        if (it > 1000) center = pick(`Voucher0${it}`);
       }
       offered.push(center);
     }
@@ -739,6 +854,22 @@ export function voucherQueue(
     for (const v of offered)
       if (bought === true || (typeof bought === "function" && bought(ante, v)))
         have.add(v);
+  }
+  return out;
+}
+
+/** For each entry `cull(pool)` gives, the keys of `keys` it stands for. */
+function cullSources(pool: string[], keys: string[]): string[][] {
+  const out: string[][] = [];
+  for (let i = 0; i < pool.length; i += 2) {
+    const first = pool[i];
+    const second = pool[i + 1];
+    if (second === undefined) out.push([keys[i]]);
+    else if (first !== UNAVAILABLE && second !== UNAVAILABLE)
+      out.push([keys[i]], [keys[i + 1]]);
+    else if (first !== UNAVAILABLE) out.push([keys[i]]);
+    else if (second !== UNAVAILABLE) out.push([keys[i + 1]]);
+    else out.push([keys[i], keys[i + 1]]);
   }
   return out;
 }
@@ -839,11 +970,94 @@ export class ShopSim {
 
   /** The deck's enhancements changed (a Glass Card bought, …): gated jokers follow. */
   setEnhancements(enhancements: readonly string[]): void {
-    this.settings = { ...this.settings, enhancements };
+    this.setLocks({ enhancements });
+  }
+
+  /** The deck's enhancements or the softlocked planets changed: the pools follow. */
+  setLocks(
+    locks: Pick<
+      ReaderSettings,
+      "enhancements" | "softlocked" | "grosMichelExtinct"
+    >,
+  ): void {
+    this.settings = { ...this.settings, ...locks };
     this.locked = buildPools({ ...this.settings, pincherUnlocked: false });
     this.unlocked = this.settings.ruleset.pennyPincher
       ? buildPools({ ...this.settings, pincherUnlocked: true })
       : this.locked;
+  }
+
+  /**
+   * Reports every card a roll lands on and passes by from now on: one that exists in the run
+   * ("owned"), or one whose in_pool says no yet ("locked": a gated joker, Penny Pincher, a
+   * softlocked planet). Bans aren't reported.
+   */
+  watch(onSkip: SkipHook | undefined): void {
+    this.game.watch = onSkip && {
+      open: openPools(this.settings),
+      onSkip,
+    };
+  }
+
+  /** A copy that rolls on from here without moving this one's streams. */
+  fork(): ShopSim {
+    const copy = Object.create(ShopSim.prototype) as ShopSim;
+    Object.assign(copy, this, {
+      game: this.game.clone(),
+      mods: { ...this.mods, vouchers: { ...this.mods.vouchers } },
+    });
+    return copy;
+  }
+
+  /**
+   * A Tarot, Planet or Spectral made outside the shop and packs (The Emperor, Cartomancer,
+   * Vagabond, Purple Seals, Séance, …): under The Order it takes the shop's queue.
+   */
+  consumable(set: ConsumableSet): string {
+    this.selectPools(this.slotNo + 1);
+    const { game } = this;
+    return drawFrom(
+      game.rng,
+      game.pools[set],
+      `${set}${set}0`,
+      game.owned,
+      game.watchOf((p) => p[set]),
+    );
+  }
+
+  /**
+   * One card of an Arcana (Tarot), Celestial (Planet) or Spectral Pack: The Soul / Black Hole
+   * roll on "soul_<set>0" first (skipped while one exists), then the pack queue.
+   */
+  packConsumable(set: ConsumableSet): string {
+    this.selectPools(this.slotNo + 1);
+    const { game } = this;
+    const rng = game.rng;
+    let forced: string | undefined;
+    const soulKey = `soul_${set}0`;
+    if (!this.banned.has("c_soul")) {
+      if ((set === "Tarot" || set === "Spectral") && !game.owned.has("c_soul"))
+        if (rng.random(soulKey) > 0.997) forced = "c_soul";
+      if (
+        (set === "Planet" || set === "Spectral") &&
+        !game.owned.has("c_black_hole")
+      )
+        if (rng.random(soulKey) > 0.997) forced = "c_black_hole";
+    }
+    return (
+      forced ??
+      drawFrom(
+        rng,
+        game.pools[set],
+        `${set}${set}_pack0`,
+        game.owned,
+        game.watchOf((p) => p[set]),
+      )
+    );
+  }
+
+  private get banned(): Set<string> {
+    return bannedKeys(this.settings);
   }
 
   /** Cards that exist in the run: the shop and packs skip them. */
@@ -900,6 +1114,17 @@ export class ShopSim {
     };
   }
 
+  /**
+   * The Uncommon or Rare Tag's joker in the next shop (api/the_order/tags.lua): a forced rarity,
+   * made in G.shop_jokers, so like any shop joker it rolls its stickers first and on Black Stake
+   * and up can come from the sticker queue.
+   */
+  tagJoker(rarity: 2 | 3): ShopJoker {
+    const slot = ++this.slotNo;
+    this.selectPools(slot);
+    return this.game.shopJoker(rarity, this.editionRate(slot));
+  }
+
   /** The next shop slot. */
   next(): ShopItem {
     const slot = ++this.slotNo;
@@ -951,7 +1176,13 @@ export class ShopSim {
       return {
         kind: "consumable",
         set: type,
-        key: drawFrom(rng, game.pools[type], `${type}${type}0`, game.owned),
+        key: drawFrom(
+          rng,
+          game.pools[type],
+          `${type}${type}0`,
+          game.owned,
+          game.watchOf((p) => p[type]),
+        ),
       };
     // Base / Enhanced keep their "sho" key_append under The Order.
     const enhancement =

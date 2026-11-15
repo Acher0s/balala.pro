@@ -165,3 +165,41 @@ reader now models:
 Later in that match the replay drifts, from things the log doesn't record: how full the joker
 row was (Riff-raff and Judgement need room) and consumables made by The Emperor, High Priestess,
 Vagabond and the like, which take from the shop's Tarot and Planet queues.
+
+## What did I block? (`blocks.ts`, /what-did-i-block)
+
+The match log on balatromp.com (`/api/proxy/runs/<id>/replay`, one gzipped event list per
+player, readable once the player clicks Share) records what the player did, not what the shop
+showed. The tool rolls the shop, packs and made cards again in the log's order, with what the
+player held at each point, and reports every card a roll landed on and passed by: because the
+player had it (orange), or because its `in_pool` wasn't met yet (blue): a gated joker, Penny
+Pincher before the first PvP blind, Planet X / Ceres / Eris before their hand, Cavendish before
+Gros Michel goes extinct. Cards only on screen (the shop's other slots, a pack) are skipped too,
+but aren't reported. Vouchers: a roll that lands on a pair the player owns.
+
+- Held jokers come from buys, pack picks and sells, corrected by the joker list every `play`
+  event carries (that's how Riff-raff's jokers and destroyed jokers show up). Held consumables
+  come from buys and from the first time a made one is used, sold or moved.
+- Riff-raff (at the blind), Judgement, Wraith, The Soul and Top-up Tag roll from the stickerless
+  queue (`Joker<r>0`); shop and pack jokers roll their stickers first and take the joker from
+  `Joker<r>0_sticker` when one hits, even a joker that can't wear it (Invisible Joker rolled
+  Eternal looks stickerless but came from the sticker queue: `lovely/TheOrder.toml`, "stable
+  shop"). Uncommon / Rare Tags make their joker in `G.shop_jokers`, so they roll stickers too.
+- Made consumables (The Emperor, The High Priestess, Séance, Cartomancer, Vagabond, Purple Seals,
+  …) take the shop's queue. The log shows them only when they're used or sold, so each is rolled
+  at the card that made it when that's in the log, else right before it's first seen in a
+  blind, or before the shop when first seen in a shop. A made card rolled ahead of the one the
+  log shows is kept as held until it shows up (dropped after a shop it doesn't); The Fool's copy
+  isn't rolled.
+- When a card the log shows isn't where the replay put it, its queue is rolled on until it comes
+  up, and the replay goes on from there. Each reported card says whether the next card the log
+  showed from that queue matched ("sure") or not ("maybe").
+- Played hands are read from the cards (rank and suit from their first sighting, then Strength,
+  Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
+  come from the cards' refs and the enhancing Tarots.
+
+Not modelled: the Voucher Tag's extra voucher roll, Omen Globe, Hallucination's timing, tags
+other than Top-up / Uncommon / Rare, cards destroyed without a log event (glass breaking), and
+which planet Telescope gives. On the FZZUAJBR match the replay matches about 90% of pack cards
+and 80% of made cards, but only about half the shop buys after Ante 3: the shop drifts once
+cards the log doesn't show (made and kept, or made and destroyed) have taken rolls.

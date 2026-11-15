@@ -64,7 +64,7 @@ const KINDS: ItemKind[] = [
 ];
 
 /** Card art and text for the reader, keyed the way the game names things, from the site's data. */
-function seedArt(): SeedArt {
+export function seedArt(): SeedArt {
   const wanted = wantedKeys();
   const items: Record<string, ArtItem> = {};
   for (const kind of KINDS)

@@ -67,7 +67,12 @@ export class SeedRng {
    * is list[floor(random * length)].
    */
   element<T>(list: readonly T[], key: string): T {
-    return list[seededRandint(this.pseudoseed(key), 1, list.length) - 1];
+    return list[this.index(list.length, key)];
+  }
+
+  /** The 0-based index pseudorandom_element picks from a list of `length`. */
+  index(length: number, key: string): number {
+    return seededRandint(this.pseudoseed(key), 1, length) - 1;
   }
 
   /** The stream's current state, as the game saves it in G.GAME.pseudorandom. */

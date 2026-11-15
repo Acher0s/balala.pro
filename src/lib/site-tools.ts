@@ -31,4 +31,15 @@ export const SEED_READER: SiteTool = {
   },
 };
 
-export const SITE_TOOLS: SiteTool[] = [SEED_READER, LOG_PARSER];
+export const BLOCK_CHECK: SiteTool = {
+  href: "/what-did-i-block",
+  frontmatter: {
+    title: "What did I block?",
+    description:
+      "Paste a shared match link and see every joker, consumable and voucher each player's rolls skipped because they had it, or because it wasn't unlocked yet.",
+    tags: ["tool", "multiplayer"],
+    icon: ["joker:ring_master"],
+  },
+};
+
+export const SITE_TOOLS: SiteTool[] = [SEED_READER, BLOCK_CHECK, LOG_PARSER];

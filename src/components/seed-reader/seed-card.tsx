@@ -146,6 +146,8 @@ export function ItemCard({
   dim,
   highlight,
   onBlock,
+  ring,
+  extra,
 }: {
   itemKey: string;
   edition?: string;
@@ -157,6 +159,10 @@ export function ItemCard({
   highlight?: boolean;
   /** Clicking blocks the card (the queue skips it from here on). */
   onBlock?: () => void;
+  /** An outline around the card, in this colour; dashed for something less certain. */
+  ring?: { colour: string; dashed?: boolean };
+  /** More in the hover card, under the effect. */
+  extra?: ReactNode;
 }) {
   const art = useArt();
   // After a click blocks the card, its hover card stays closed until the pointer leaves it.
@@ -189,6 +195,12 @@ export function ItemCard({
   return (
     <span
       className={`group relative flex w-[71px] flex-col items-center gap-1 rounded-md ${dim ? "opacity-40" : ""} ${highlight ? "outline outline-2 outline-offset-2 outline-fd-primary" : ""}`}
+      style={
+        ring && {
+          outline: `3px ${ring.dashed ? "dashed" : "solid"} ${ring.colour}`,
+          outlineOffset: 3,
+        }
+      }
     >
       <button
         type="button"
@@ -241,6 +253,11 @@ export function ItemCard({
         {ed && (
           <span className="mt-1 border-t border-white/20 pt-1">
             <EffectText lines={ed.text} />
+          </span>
+        )}
+        {extra && (
+          <span className="mt-1 border-t border-white/20 pt-1 text-xs text-white">
+            {extra}
           </span>
         )}
         {onBlock && (
