@@ -495,29 +495,39 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
     () => numberSlots(shopQueue(settings, count, mods)),
     [settings, count, mods],
   );
-  // Everything the shop can roll by name, for the seek box.
-  const seekable = useMemo(
-    () =>
-      Object.entries(art.items)
-        .filter(([, it]) => SEEK_KINDS.has(it.kind))
-        .map(([key, it]) => ({ key, name: it.name, norm: normName(it.name) }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [art],
-  );
+  // Everything the shop can roll by name, for the seek box. A mod's rework of a card (the
+  // mod's Bloodstone, Hanging Chad, Golden Ticket, …) has the vanilla card's name and only one
+  // of them is in a ruleset's pools, so a name stands for every card that has it.
+  const seekable = useMemo(() => {
+    const byName = new Map<
+      string,
+      { keys: string[]; name: string; norm: string }
+    >();
+    for (const [key, it] of Object.entries(art.items)) {
+      if (!SEEK_KINDS.has(it.kind)) continue;
+      const norm = normName(it.name);
+      const entry = byName.get(norm) ?? { keys: [], name: it.name, norm };
+      entry.keys.push(key);
+      byName.set(norm, entry);
+    }
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [art]);
   // Loose matching: "family" finds The Family. An exact name, or the only match, is picked.
   const query = normName(seek);
   const matches = query ? seekable.filter((x) => x.norm.includes(query)) : [];
   const picked =
     matches.find((x) => x.norm === query || x.norm === `the${query}`) ??
     (matches.length === 1 ? matches[0] : undefined);
-  const seekKey = picked?.key;
+  /** The sought name (normalised), and the cards that have it. */
+  const seekKey = picked?.norm;
+  const seekKeys = picked?.keys;
   // Where it shows up in the shop, looking well past what's on screen.
   const seekSlots = useMemo(() => {
-    if (!seekKey) return [];
+    if (!seekKeys) return [];
     return numberSlots(shopQueue(settings, SEEK_SLOTS, mods))
-      .filter(({ item }) => item.kind !== "card" && item.key === seekKey)
+      .filter(({ item }) => item.kind !== "card" && seekKeys.includes(item.key))
       .map(({ slot }) => slot);
-  }, [settings, mods, seekKey]);
+  }, [settings, mods, seekKeys]);
   // Bring the i-th slot with the sought card into view (wrapping round after the last).
   const goTo = (i: number) => {
     if (!seekKey || seekSlots.length === 0) return;
@@ -605,7 +615,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
               ? "No card by that name."
               : matches.slice(0, 8).map((m) => (
                   <button
-                    key={m.key}
+                    key={m.norm}
                     type="button"
                     onClick={() => setSeek(m.name)}
                     className="rounded-full border px-2 py-0.5 text-xs hover:bg-fd-accent"
@@ -647,9 +657,9 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
       {(() => {
         const cards = shown.map(({ item, slot }, i) => {
           const found =
-            seekKey !== undefined &&
+            seekKeys !== undefined &&
             item.kind !== "card" &&
-            item.key === seekKey;
+            seekKeys.includes(item.key);
           if (item.kind === "joker")
             return (
               <ItemCard
