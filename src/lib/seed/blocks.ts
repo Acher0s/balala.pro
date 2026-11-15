@@ -575,6 +575,21 @@ export function findBlocks(
   let shopEvent = 0;
   let packEvent = 0;
   /** A joker the log shows from a pack the replay rolled differently: its jokers are suspects. */
+  /**
+   * The jokers each queue (rarity) rolled since the log last showed it in line: when it then
+   * misses, any of them that can be an avatar may have been blocked (Chaos the Clown rolled in
+   * shops nobody bought from, two Commons before the miss).
+   */
+  const rolledSince = new Map<string, { key: string; at: number }[]>();
+  const noteRolled = (key: string | null | undefined, at: number) => {
+    if (!key?.startsWith("j_")) return;
+    const f = familyOf(key, "");
+    rolledSince.set(f, [...(rolledSince.get(f) ?? []), { key, at }]);
+  };
+  const suspects = (bought: string) => {
+    for (const r of rolledSince.get(familyOf(bought, "")) ?? [])
+      missedShop.push(r);
+  };
   const missedInPack = () => {
     for (const k of pack)
       if (k.startsWith("j_")) missedShop.push({ key: k, at: packEvent });
@@ -613,6 +628,7 @@ export function findBlocks(
     if (ok) {
       a.matched++;
       inLine.set(family, place());
+      rolledSince.delete(family);
     } else {
       firstMiss ??= place();
       inLine.delete(family);
@@ -964,7 +980,9 @@ export function findBlocks(
 
   const shopSlot = () => {
     const item = roll("Shop", (s) => s.next());
-    return item.kind === "card" ? null : item.key;
+    const key = item.kind === "card" ? null : item.key;
+    noteRolled(key, shopEvent);
+    return key;
   };
 
   /**
@@ -993,8 +1011,10 @@ export function findBlocks(
     redeemed.push({ ante: bossesBeaten + 1, key });
     if ((SHOP_VOUCHERS as readonly string[]).includes(key) && sim.mods.vouchers)
       sim.mods.vouchers[key as ShopVoucher] = sim.slots + 1;
+    // change_shop_size: the shop grows by one and every empty slot is filled, so slots bought
+    // before the Overstock are rolled again too.
     if (key === "v_overstock_norm" || key === "v_overstock_plus")
-      shop.push(shopSlot());
+      while (inShop && shop.length < shopSize()) shop.push(shopSlot());
   };
 
   /** A Tarot, Planet or Spectral used: on cards, or making cards. */
@@ -1179,6 +1199,7 @@ export function findBlocks(
           check(agreement.shop, at >= 0, familyOf(key, "Shop"));
           if (at < 0 && shop[slot]?.startsWith("j_"))
             missedShop.push({ key: shop[slot] as string, at: shopEvent });
+          if (at < 0 && set === "Joker") suspects(key);
           if (at < 0) {
             at = slot;
             resync(set, key, heldAtShop);
@@ -1203,9 +1224,11 @@ export function findBlocks(
         pack = [];
         picksLeft = info.choose;
         for (let n = 0; n < info.size; n++) {
-          if (kind === "buffoon")
-            pack.push(roll(name, (s) => s.buffoonCard()).key);
-          else if (kind === "arcana")
+          if (kind === "buffoon") {
+            const joker = roll(name, (s) => s.buffoonCard()).key;
+            pack.push(joker);
+            noteRolled(joker, packEvent);
+          } else if (kind === "arcana")
             pack.push(roll(name, (s) => s.packConsumable("Tarot")));
           else if (kind === "spectral")
             pack.push(roll(name, (s) => s.packConsumable("Spectral")));
@@ -1232,7 +1255,10 @@ export function findBlocks(
           let at = pack.indexOf(key);
           if (at < 0 && set === "Planet") at = pack.indexOf("");
           check(agreement.packs, at >= 0, familyOf(key, "Pack"));
-          if (at < 0 && set === "Joker") missedInPack();
+          if (at < 0 && set === "Joker") {
+            missedInPack();
+            suspects(key);
+          }
           if (at >= 0) pack.splice(at, 1);
           if (set === "Joker")
             jokers.set(got.id, { key, edition: got.edition });
@@ -1249,7 +1275,10 @@ export function findBlocks(
           let at = pack.indexOf(got.item.key);
           if (at < 0 && got.item.set === "Planet") at = pack.indexOf("");
           check(agreement.packs, at >= 0, familyOf(got.item.key, "Pack"));
-          if (at < 0 && got.item.set === "Joker") missedInPack();
+          if (at < 0 && got.item.set === "Joker") {
+            missedInPack();
+            suspects(got.item.key);
+          }
           if (at >= 0) pack.splice(at, 1);
         }
         pack = [];
@@ -1376,6 +1405,11 @@ export function findBlocks(
     }
   });
 
+  // Skips after the last card their queue showed: nothing came after to check them against, so
+  // they're sure when that queue was in line at its last check (the replay never lost it).
+  for (const [family, waiting] of pending)
+    if (inLine.has(family)) for (const h of waiting) h.sure = true;
+
   // Vouchers: each ante's offers, with what the player had redeemed by then.
   voucherQueue(
     settings,
@@ -1494,6 +1528,8 @@ export function findBlocksAuto(
   events: readonly LogEvent[],
   settings: ReaderSettings,
   known: readonly string[] = [],
+  /** Try only `known` (the match's pair), not this log's own suspects. */
+  onlyKnown = false,
 ): BlockReport {
   const base = findBlocks(events, settings);
   const lobby = events.find((e) => e[1] === "lobby_info")?.[2] as
@@ -1511,10 +1547,14 @@ export function findBlocksAuto(
     ...(known.length
       ? [{ set: known.filter((k) => AVATARS.has(k)), known: true }]
       : []),
-    ...keys.map((k) => ({ set: [k], known: false })),
-    ...keys.flatMap((k, i) =>
-      keys.slice(i + 1).map((l) => ({ set: [k, l], known: false })),
-    ),
+    ...(onlyKnown
+      ? []
+      : [
+          ...keys.map((k) => ({ set: [k], known: false })),
+          ...keys.flatMap((k, i) =>
+            keys.slice(i + 1).map((l) => ({ set: [k, l], known: false })),
+          ),
+        ]),
   ];
 
   let best: { report: BlockReport; known: boolean } | undefined;
@@ -1554,9 +1594,10 @@ export function findBlocksAuto(
 }
 
 /**
- * findBlocksAuto for every log of a match. Both players have the same two avatars, so what was
- * found in either log (up to two jokers) is tried in each as the match's pair, and kept where
- * it does at least as well.
+ * findBlocksAuto for every log of a match. Both players have the same two avatars, so the
+ * jokers either log points to are tried as the match's avatars (each one, and each pair) in
+ * every log, each log from its own moment; the set with the fewest misses over the whole match
+ * wins, and on a tie it beats the logs' separate guesses (one pair explains both).
  */
 export function findBlocksMatch(
   logs: readonly { events: readonly LogEvent[]; settings: ReaderSettings }[],
@@ -1564,14 +1605,27 @@ export function findBlocksMatch(
   const first = logs.map((l) => findBlocksAuto(l.events, l.settings));
   const found = [
     ...new Set(first.flatMap((r) => r.avatars.map((a) => a.key))),
-  ].slice(0, 2);
+  ].slice(0, 4);
   if (!found.length) return first;
-  return logs.map((l, i) => {
-    const again = findBlocksAuto(l.events, l.settings, found);
-    return misses(again) <= misses(first[i]) && again.avatars.length
-      ? again
-      : first[i];
-  });
+  const total = (rs: BlockReport[]) => rs.reduce((n, r) => n + misses(r), 0);
+  const sets = [
+    ...found.map((k) => [k]),
+    ...found.flatMap((k, i) => found.slice(i + 1).map((l) => [k, l])),
+  ];
+  let best = first;
+  let bestShared = false;
+  for (const set of sets) {
+    const rs = logs.map((l) => findBlocksAuto(l.events, l.settings, set, true));
+    if (
+      total(rs) < total(best) ||
+      (total(rs) === total(best) && !bestShared) ||
+      (total(rs) === total(best) && set.length < (best[0]?.avatars.length ?? 0))
+    ) {
+      best = rs;
+      bestShared = true;
+    }
+  }
+  return best;
 }
 
 function packName(key: string): string {

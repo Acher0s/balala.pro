@@ -51,6 +51,14 @@ describe("what did I block (FZZUAJBR)", () => {
     expect(matchSettings(off).ok).toBe(false);
   });
 
+  it("replays the whole log once the lobby avatar is worked out", () => {
+    // Overstock bought after a buy refills every empty slot (change_shop_size), and an avatar
+    // (a 1.0.5 bug) kept a Common out: with both, nothing is out of line.
+    const auto = findBlocksAuto(events, read.settings);
+    expect(auto.avatars.length).toBeGreaterThan(0);
+    expect(auto.firstMiss).toBeUndefined();
+  });
+
   it("follows the log: shop, pack and made cards are where the replay puts them", () => {
     const { shop, packs, made, jokers } = report.agreement;
     // Vagabond's and the Purple Seals' Tarots are made as they happen, so the shop holds

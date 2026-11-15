@@ -217,6 +217,10 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   planet is the last hand's, by key, so a matching planet with a Blue Seal in the deck takes no
   roll), and 8 Ball: each scoring 8, again for each retrigger (Red Seal, Seltzer, the mod's
   Hanging Chad on the first two scoring cards), rolls `8ball` < odds/4 while there's room.
+- Overstock (and Overstock Plus) redeemed in a shop goes through `change_shop_size`: the shop
+  grows by one and every empty slot is filled (`joker_max - #cards`), so a slot bought before
+  the voucher is rolled again too. The replay used to add one slot; with that fixed, FZZUAJBR
+  went from 37/56 and 33/61 shop buys to all of them, and Expanded from 237 misses to 130.
 - Cards made unseen: Incantation, Familiar, Grim and Cryptid add playing cards the log shows
   only once they're drawn (Marble Joker's Stone Cards likewise). A card first shown already
   enhanced (not picked, bought, skipped in a pack, or used on) counts from the last such card's
@@ -249,7 +253,8 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   second Campfire, skipped while the first was held, which was sold right before Brainstorm was
   bought from that shop). Each reported card is "sure" when the next card the log showed from
   that queue matched, or when that queue (each joker rarity is one) was just shown in line in
-  the same shop or blind; otherwise "maybe".
+  the same shop or blind, or, after the last card its queue showed, when that last check was in
+  line; otherwise "maybe".
 - Played hands are read from the cards (rank and suit from their first sighting, then Strength,
   Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
   come from the cards' refs and the enhancing Tarots.
