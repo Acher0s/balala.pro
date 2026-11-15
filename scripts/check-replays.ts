@@ -17,6 +17,7 @@ import { basename, join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import {
   findBlocks,
+  findBlocksAuto,
   type LogEvent,
   matchSettings,
 } from "../src/lib/seed/blocks";
@@ -83,10 +84,14 @@ for (const source of sources)
       continue;
     }
     const lines: string[] = [];
+    // Lobby avatars (a 1.0.5 bug) are worked out first; the trace replays with them.
+    const auto = findBlocksAuto(events, read.settings);
     const { agreement: a, firstMiss } = findBlocks(
       events,
       read.settings,
       traceDir ? (l) => lines.push(l) : undefined,
+      undefined,
+      auto.avatars,
     );
     if (traceDir)
       writeFileSync(join(traceDir, `${name}.txt`), lines.join("\n"));
@@ -94,6 +99,6 @@ for (const source of sources)
       `${x.matched}/${x.checked}`;
     const s = read.settings;
     console.log(
-      `${name.padEnd(22)} ${s.seed} deck ${s.deck ?? "-"} stake ${s.stake}  shop ${f(a.shop)}  packs ${f(a.packs)}  made ${f(a.made)}  jokers ${f(a.jokers)}  first miss: ${firstMiss ?? "none"}`,
+      `${name.padEnd(22)} ${s.seed} deck ${s.deck ?? "-"} stake ${s.stake}  shop ${f(a.shop)}  packs ${f(a.packs)}  made ${f(a.made)}  jokers ${f(a.jokers)}  first miss: ${firstMiss ?? "none"}${auto.avatars.length ? `  avatars: ${auto.avatars.map((v) => `${v.key}${v.from ? ` from #${v.from}` : ""}`).join(", ")}` : ""}`,
     );
   }

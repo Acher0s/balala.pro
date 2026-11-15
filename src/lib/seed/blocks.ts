@@ -34,6 +34,14 @@ export interface MatchPlayerLog {
 
 export type BlockReason = "held" | "locked";
 
+/** A joker blocked from event `from` on because it was seen as a lobby avatar. */
+export interface AvatarBlock {
+  key: string;
+  from: number;
+  /** Where in the run that is. */
+  place?: string;
+}
+
 export interface BlockHit {
   key: string;
   reason: BlockReason;
@@ -68,6 +76,13 @@ export interface BlockReport {
   };
   /** The first place a card wasn't where the replay put it. */
   firstMiss?: string;
+  /**
+   * Jokers the replay had in a shop slot where the player bought something else, with the
+   * event that rolled that shop.
+   */
+  missedShop: { key: string; at: number }[];
+  /** Jokers taken to be blocked by the lobby's avatars from an event on (findBlocksAuto). */
+  avatars: AvatarBlock[];
 }
 
 export type MatchSettings =
@@ -453,7 +468,19 @@ export function findBlocks(
    * the replay doesn't make happened there (scripts/probe-replays.ts).
    */
   probe?: { at: number; stream: string; n: number },
+  /**
+   * Jokers blocked from an event on because the player looked at them as lobby avatars (a
+   * bug in Multiplayer 1.0.5: the avatar card stays in G.GAME.used_jokers for the rest of the
+   * run). findBlocksAuto finds them.
+   */
+  avatars: readonly AvatarBlock[] = [],
 ): BlockReport {
+  const missedShop: { key: string; at: number }[] = [];
+  const avatarsOut = avatars.map((a) => ({ ...a }));
+  let eventAt = 0;
+  let shopEvent = 0;
+  const avatarNow = (key: string) =>
+    avatars.some((a) => a.key === key && eventAt >= a.from);
   const hits: BlockHit[] = [];
   const agreement = {
     shop: { checked: 0, matched: 0 },
@@ -539,6 +566,7 @@ export function findBlocks(
     if ([...jokers.values()].some((j) => j.key === "j_ring_master")) return;
     for (const k of heldKeys()) s.owned.add(k);
     if (using) s.owned.add(using);
+    for (const a of avatars) if (eventAt >= a.from) s.owned.add(a.key);
     for (const k of shop) if (k) s.owned.add(k);
     for (const k of pack) if (k) s.owned.add(k);
   };
@@ -546,14 +574,20 @@ export function findBlocks(
   const commit = (source: string, found: typeof skips) => {
     const held = heldKeys();
     for (const s of found) {
-      if (s.reason === "owned" && !held.has(s.key)) continue; // on screen, not held
+      const avatar = s.reason === "owned" && avatarNow(s.key);
+      if (s.reason === "owned" && !held.has(s.key) && !avatar) continue; // on screen, not held
       const hit: BlockHit = {
         key: s.key,
         reason: s.reason === "owned" ? "held" : "locked",
         source,
         ante,
         place: place(),
-        why: s.reason === "locked" ? why(s.key) : undefined,
+        why:
+          s.reason === "locked"
+            ? why(s.key)
+            : avatar && !held.has(s.key)
+              ? "Probably a lobby avatar (Multiplayer 1.0.5 bug)"
+              : undefined,
         sure: false,
       };
       hits.push(hit);
@@ -933,6 +967,9 @@ export function findBlocks(
   events.forEach((e, i) => {
     const [, op, args] = e;
     const a = (args ?? []) as unknown[];
+    eventAt = i;
+    if (op === "cashout" || op === "reroll") shopEvent = i;
+    for (const a of avatarsOut) if (a.from === i) a.place = place();
     updateLocks();
     if (probe && probe.at === i) sim.skip(probe.stream, probe.n);
     if (trace && op !== "money_delta" && op !== "hand_scored")
@@ -995,6 +1032,8 @@ export function findBlocks(
           const { key, set } = got.item;
           let at = shop[slot] === key ? slot : shop.indexOf(key);
           check(agreement.shop, at >= 0, familyOf(key, "Shop"));
+          if (at < 0 && shop[slot]?.startsWith("j_"))
+            missedShop.push({ key: shop[slot] as string, at: shopEvent });
           if (at < 0) {
             at = slot;
             resync(set, key);
@@ -1208,7 +1247,70 @@ export function findBlocks(
     },
   );
 
-  return { settings, hits, agreement, firstMiss };
+  return {
+    settings,
+    hits,
+    agreement,
+    firstMiss,
+    missedShop,
+    avatars: avatarsOut,
+  };
+}
+
+const misses = (r: BlockReport) =>
+  Object.values(r.agreement).reduce((n, a) => n + a.checked - a.matched, 0);
+
+/** Versions with the lobby-avatar bug (fixed in the next update). */
+const AVATAR_BUG = new Set(["1.0.5"]);
+
+/**
+ * findBlocks, with the lobby-avatar bug worked out. In Multiplayer 1.0.5, looking at the
+ * players' avatars in the lobby info leaves those jokers in G.GAME.used_jokers, so the shop
+ * and packs skip them from then on. The log doesn't say when (or whether) anyone looked, so
+ * this only speculates where nothing else explains a miss: each joker the replay had in a
+ * slot where the player bought something else is tried as blocked, from the start of the run
+ * or from the shop where it first missed, alone or with one other (each player has an
+ * avatar; a match on record had both blocked). The block is kept only when it takes away two
+ * misses or more, or all of them.
+ */
+export function findBlocksAuto(
+  events: readonly LogEvent[],
+  settings: ReaderSettings,
+): BlockReport {
+  const base = findBlocks(events, settings);
+  const lobby = events.find((e) => e[1] === "lobby_info")?.[2] as
+    | { options?: { mod_version?: string } }
+    | undefined;
+  if (!AVATAR_BUG.has(lobby?.options?.mod_version ?? "")) return base;
+  const options = new Map<string, AvatarBlock[]>();
+  for (const m of base.missedShop)
+    if (!options.has(m.key) && options.size < 4)
+      // The later start first: on a tie it's kept, as it claims fewer blocked rolls.
+      options.set(m.key, [
+        ...(m.at > 0 ? [{ key: m.key, from: m.at }] : []),
+        { key: m.key, from: 0 },
+      ]);
+  const each = [...options.values()];
+  const sets: AvatarBlock[][] = [
+    ...each.flat().map((a) => [a]),
+    ...each.flatMap((as, i) =>
+      each
+        .slice(i + 1)
+        .flatMap((bs) => as.flatMap((a) => bs.map((b) => [a, b]))),
+    ),
+  ];
+  let best = base;
+  for (const set of sets) {
+    const r = findBlocks(events, settings, undefined, undefined, set);
+    // Fewer misses wins; on a tie, fewer avatars.
+    if (
+      misses(r) < misses(best) ||
+      (misses(r) === misses(best) && r.avatars.length < best.avatars.length)
+    )
+      best = r;
+  }
+  const gain = misses(base) - misses(best);
+  return gain >= 2 || (gain > 0 && misses(best) === 0) ? best : base;
 }
 
 function packName(key: string): string {

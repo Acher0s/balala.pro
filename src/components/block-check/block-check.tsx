@@ -14,7 +14,7 @@ import {
   type BlockHit,
   type BlockReason,
   type BlockReport,
-  findBlocks,
+  findBlocksAuto,
   type MatchPlayerLog,
   matchSettings,
 } from "@/lib/seed/blocks";
@@ -256,7 +256,7 @@ function Player({ log }: { log: MatchPlayerLog }) {
     if (!log.events || !isReadable(log)) return undefined;
     const s = matchSettings(log.events);
     if (!s.ok) return { error: s.error };
-    return findBlocks(log.events, s.settings);
+    return findBlocksAuto(log.events, s.settings);
   }, [log]);
 
   return (
@@ -303,6 +303,22 @@ function Report({
         {report.firstMiss &&
           ` It first lost the thread at ${report.firstMiss}.`}
       </p>
+      {report.avatars.length > 0 && (
+        <p className="text-sm text-fd-muted-foreground">
+          Probably blocked by a lobby avatar (a bug in Multiplayer 1.0.5: after
+          looking at the avatars in the lobby info, those jokers stop showing
+          up):{" "}
+          {report.avatars.map((a, i) => (
+            <span key={a.key}>
+              {i > 0 && ", "}
+              <Name k={a.key} />
+              {a.from > 0 && a.place ? ` (from ${a.place})` : ""}
+            </span>
+          ))}
+          . The log doesn't record this: it's a guess from cards that went
+          missing with no other cause, so it can be wrong.
+        </p>
+      )}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

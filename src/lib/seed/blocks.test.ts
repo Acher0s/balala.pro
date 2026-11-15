@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   evaluateHand,
   findBlocks,
+  findBlocksAuto,
   type LogEvent,
   matchSettings,
 } from "./blocks";
 import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
+import fd54z7xn from "./fixtures/fd54z7xn-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
 import qgisur8i from "./fixtures/qgisur8i-log.json";
 import viwlatit from "./fixtures/viwlatit-log.json";
@@ -211,5 +213,26 @@ describe("evaluateHand", () => {
     expect(evaluateHand(smeared, ["j_smeared"]).name).toBe("High Card");
     smeared[4] = c("King", "Spades", "m_wild");
     expect(evaluateHand(smeared, ["j_smeared"]).name).toBe("Flush");
+  });
+});
+
+describe("lobby avatars (Multiplayer 1.0.5 bug)", () => {
+  it("finds the avatars that kept jokers out of the shop", () => {
+    const events = fd54z7xn.events as LogEvent[];
+    const read = matchSettings(events);
+    if (!read.ok) throw new Error(read.error);
+    expect(findBlocks(events, read.settings).firstMiss).toBeDefined();
+    const r = findBlocksAuto(events, read.settings);
+    expect(r.avatars.map((a) => a.key).sort()).toEqual([
+      "j_hiker",
+      "j_mp_bloodstone",
+    ]);
+    expect(r.firstMiss).toBeUndefined();
+  });
+  it("leaves a match that needs no avatars alone", () => {
+    const events = x3uf2auh.events as LogEvent[];
+    const read = matchSettings(events);
+    if (!read.ok) throw new Error(read.error);
+    expect(findBlocksAuto(events, read.settings).avatars).toEqual([]);
   });
 });
