@@ -332,6 +332,13 @@ function Report({
         {report.firstMiss &&
           ` It first lost the thread at ${report.firstMiss}.`}
       </p>
+      {report.settings.ruleset.smallWorld && (
+        <p className="text-sm text-fd-muted-foreground">
+          Small World allows duplicates (as if you always had Showman), so
+          nothing is skipped because you had it. Only cards that weren't
+          unlocked yet can be blocked.
+        </p>
+      )}
       {report.avatars.length > 0 && (
         <p className="text-sm text-fd-muted-foreground">
           Probably blocked by the lobby avatars, from{" "}
