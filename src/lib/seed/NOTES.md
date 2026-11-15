@@ -244,8 +244,12 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   Gambling, Pizza, Conjoined Joker or Speedrun sits in your game while they hold it. Not
   modelled (it needs the opponent's log), and not confirmed to make the pools skip it.
 - When a card the log shows isn't where the replay put it, its queue is rolled on until it comes
-  up, and the replay goes on from there. Each reported card says whether the next card the log
-  showed from that queue matched ("sure") or not ("maybe").
+  up, and the replay goes on from there. The held cards passed over on the way (within three
+  draws) are reported as blocked, using what was held when the shop was rolled (FZZUAJBR: the
+  second Campfire, skipped while the first was held, which was sold right before Brainstorm was
+  bought from that shop). Each reported card is "sure" when the next card the log showed from
+  that queue matched, or when that queue (each joker rarity is one) was just shown in line in
+  the same shop or blind; otherwise "maybe".
 - Played hands are read from the cards (rank and suit from their first sighting, then Strength,
   Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
   come from the cards' refs and the enhancing Tarots.
