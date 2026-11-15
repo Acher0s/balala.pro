@@ -217,10 +217,15 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   planet is the last hand's, by key, so a matching planet with a Blue Seal in the deck takes no
   roll), and 8 Ball: each scoring 8, again for each retrigger (Red Seal, Seltzer, the mod's
   Hanging Chad on the first two scoring cards), rolls `8ball` < odds/4 while there's room.
+- Cards made unseen: Incantation, Familiar, Grim and Cryptid add playing cards the log shows
+  only once they're drawn (Marble Joker's Stone Cards likewise). A card first shown already
+  enhanced (not picked, bought, skipped in a pack, or used on) counts from the last such card's
+  use, or from the start, for the enhancement-gated jokers. Seen in IUY9B53E: an Incantation's
+  Steel Card put Steel Joker in the pool long before the card was drawn.
 - Only logs from Multiplayer PvP 1.0.5 are read. Older logs (1.0.3, 1.0.4) have no blind key
   on `select_blind`, no joker list on `play`, and open packs through `use`.
-- The log numbers the mod's stakes after Gold (Planet 9, Spectral 10, Spectral+ 11); the
-  reader calls Spectral+ 9.
+- The log numbers the mod's stakes after Gold (Planet 9, Spectral 10, Spectral+ 11). For the
+  stickers, Planet is the reader's Orange (7), Spectral its Gold (8), Spectral+ its 9.
 - Lobby avatars (a bug in Multiplayer 1.0.5, fixed in the next update): a player who looks at
   the lobby info, at any time in the run, leaves both players' avatar jokers in
   `G.GAME.used_jokers`, so their own shop and packs skip both from then on. The other player

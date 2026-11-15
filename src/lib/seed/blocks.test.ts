@@ -10,6 +10,7 @@ import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import fd54z7xn from "./fixtures/fd54z7xn-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
+import iuy9b53e from "./fixtures/iuy9b53e-log.json";
 import qgisur8i from "./fixtures/qgisur8i-log.json";
 import viwlatit from "./fixtures/viwlatit-log.json";
 import x3uf2auh from "./fixtures/x3uf2auh-log.json";
@@ -132,6 +133,8 @@ describe("whole matches that replay without a miss", () => {
     ["QGISUR8I", qgisur8i],
     // Magic Deck on Black Stake, 8 Ball.
     ["BGMJZ5AC", bgmjz5ac],
+    // Incantation's unseen Steel Card opens Steel Joker before the card is drawn.
+    ["IUY9B53E", iuy9b53e],
   ] as const;
   for (const [seed, fixture] of cases)
     it(seed, () => {

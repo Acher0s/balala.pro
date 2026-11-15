@@ -137,9 +137,7 @@ export function matchSettings(events: readonly LogEvent[]): MatchSettings {
       seed: run.seed,
       ruleset,
       gameMode: patch.gameMode,
-      // The game numbers the mod's stakes after Gold: Planet 9, Spectral 10, Spectral+ 11.
-      // The reader calls Spectral+ 9.
-      stake: run.stake === 11 ? 9 : (run.stake ?? 1),
+      stake: readerStake(run.stake ?? 1),
       deck,
       pincherUnlocked: false,
       enhancements: [],
@@ -177,6 +175,16 @@ const DECK_START: Record<
   b_mp_orange: { consumables: ["c_hanged_man", "c_hanged_man"] },
   b_mp_oracle: { vouchers: ["v_clearance_sale"], consumables: ["c_medium"] },
 };
+
+/**
+ * The reader's stake for the log's. The game numbers the mod's stakes after Gold
+ * (objects/stakes, loaded in that order): Planet 9 (Eternals and Perishables, like Orange),
+ * Spectral 10 (and Rentals, like Gold), Spectral+ 11 (the reader's 9). Only the stickers matter
+ * to the rolls.
+ */
+function readerStake(stake: number): number {
+  return stake === 9 ? 7 : stake === 10 ? 8 : stake === 11 ? 9 : stake;
+}
 
 /** The deck's key: the log has the key ("b_mp_violet") or the name ("Magic Deck"). */
 function deckKey(deck: string | undefined): string | undefined {
@@ -435,6 +443,91 @@ interface HeldConsumable {
   unseen?: boolean;
   /** The replay before it rolled this card; absent for a card made without a roll. */
   before?: ShopSim;
+}
+
+/** Cards that put new playing cards in the deck, which the log shows only once drawn. */
+const CARD_MAKERS = new Set([
+  "c_familiar",
+  "c_grim",
+  "c_incantation",
+  "c_cryptid",
+]);
+
+/**
+ * Playing cards the log first shows already enhanced, though not as a pick or a buy: they were
+ * made unseen (Incantation, Familiar, Grim, Cryptid; Marble Joker's Stone Cards), so the deck
+ * had that enhancement from the last such card's use (or from the start if there was none).
+ * The enhancement-gated jokers follow it: an Incantation's Steel Card opens Steel Joker
+ * before the card is ever drawn.
+ */
+export function hiddenEnhanced(
+  events: readonly LogEvent[],
+): { id: number; enhancement: string; from: number }[] {
+  const out: { id: number; enhancement: string; from: number }[] = [];
+  const keys = new Map<number, string>();
+  let maker = 0;
+  let marble = 0;
+  const keyOf = (ref: unknown) => {
+    if (!Array.isArray(ref) || typeof ref[0] !== "number") return undefined;
+    if (ref[0] < 0 && typeof ref[2] === "string") {
+      keys.set(-ref[0], ref[2]);
+      return ref[2];
+    }
+    return keys.get(ref[0]);
+  };
+  const scan = (value: unknown, at: number, skip?: unknown) => {
+    if (!Array.isArray(value) || value === skip) return;
+    if (
+      value[0] !== undefined &&
+      typeof value[0] === "number" &&
+      value[1] === "pc"
+    ) {
+      if (value[0] >= 0) return;
+      const e = mod(value as Ref, "e:");
+      if (e)
+        out.push({
+          id: -value[0],
+          enhancement: e,
+          from: e === "m_stone" ? Math.max(maker, marble) : maker,
+        });
+      return;
+    }
+    for (const v of value) scan(v, at, skip);
+  };
+  events.forEach(([, op, args], i) => {
+    const a = (args ?? []) as unknown[];
+    if (op === "use" || op === "pack_pick") {
+      const key = keyOf(a[2]);
+      if (key && CARD_MAKERS.has(key)) maker = i;
+    }
+    if (op === "select_blind") {
+      for (let j = i; j < events.length; j++)
+        if (events[j][1] === "play") {
+          if (
+            ((events[j][2] as unknown[])[2] as string[]).some((t) =>
+              t.startsWith("j_marble"),
+            )
+          )
+            marble = i;
+          break;
+        }
+    }
+    // A card picked or bought is seen as it arrives, a skipped pack's cards never join the
+    // deck, and the cards a Tarot or Spectral is used on may show it done already: none count.
+    if (
+      [
+        "lobby_info",
+        "run_info",
+        "deck_snapshot",
+        "use",
+        "pack_pick",
+        "pack_skip",
+      ].includes(op)
+    )
+      return;
+    scan(a, i, op === "buy" ? a[2] : undefined);
+  });
+  return out;
 }
 
 /** The queue a card was rolled from, as far as checking it goes. */
@@ -723,10 +816,14 @@ export function findBlocks(
 
   // Jokers -----------------------------------------------------------------
 
+  const hidden = hiddenEnhanced(events);
   const updateLocks = () => {
     const enh = new Set<string>();
     for (const c of cards.values())
       if (c.alive && c.enhancement) enh.add(c.enhancement);
+    for (const h of hidden)
+      if (eventAt >= h.from && (cards.get(h.id)?.alive ?? true))
+        enh.add(h.enhancement);
     sim.setLocks({
       enhancements: [...enh],
       grosMichelExtinct: extinct,
