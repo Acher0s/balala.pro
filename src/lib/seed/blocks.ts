@@ -530,6 +530,64 @@ export function hiddenEnhanced(
   return out;
 }
 
+/**
+ * Jokers that leave between two hands without being sold (Gros Michel going extinct, Popcorn or
+ * Turtle Bean running out, Ankh or Hex, Ceremonial Dagger, Madness): the log only shows them
+ * gone at the next hand. Each is taken off at the first point it could have gone: an Ankh or
+ * Hex used in between, else the end of the round (cashout), else the next blind. Returns the
+ * event they're taken off before, and which.
+ */
+function vanishedJokers(events: readonly LogEvent[]): Map<number, string[]> {
+  const out = new Map<number, string[]>();
+  const keys = new Map<number, string>();
+  const keyOf = (ref: unknown) => {
+    if (!Array.isArray(ref) || typeof ref[0] !== "number") return undefined;
+    if (ref[0] < 0 && ref[1] === "Joker") keys.set(-ref[0], ref[2] as string);
+    return ref[0] < 0 ? (ref[2] as string) : keys.get(ref[0]);
+  };
+  let last: { at: number; keys: string[] } | undefined;
+  let sold: string[] = [];
+  let cut: number | undefined;
+  events.forEach(([, op, args], i) => {
+    const a = (args ?? []) as unknown[];
+    if (op === "buy" || op === "pack_pick") keyOf(a[2]);
+    if (op === "reorder")
+      for (const m of (a[2] as unknown[][]) ?? []) keyOf(m[0]);
+    if (op === "sell" && a[0] === 4) {
+      const k = keyOf(a[2]);
+      if (k) sold.push(k);
+    }
+    if (op === "use") {
+      const k =
+        Array.isArray(a[2]) && (a[2][0] as number) < 0
+          ? (a[2][2] as string)
+          : undefined;
+      if (k === "c_ankh" || k === "c_hex") cut ??= i;
+    }
+    if (op === "cashout" || op === "select_blind") cut ??= i;
+    if (op !== "play") return;
+    const now = ((a[2] as string[]) ?? []).map((t) => t.split("|")[0]);
+    if (last && cut !== undefined) {
+      const left = [...now];
+      const gone: string[] = [];
+      for (const k of last.keys) {
+        const at = left.indexOf(k);
+        if (at >= 0) left.splice(at, 1);
+        else {
+          const s = sold.indexOf(k);
+          if (s >= 0) sold.splice(s, 1);
+          else gone.push(k);
+        }
+      }
+      if (gone.length) out.set(cut, [...(out.get(cut) ?? []), ...gone]);
+    }
+    last = { at: i, keys: now };
+    sold = [];
+    cut = undefined;
+  });
+  return out;
+}
+
 /** The queue a card was rolled from, as far as checking it goes. */
 function familyOf(key: string, source: string): string {
   // Each rarity is its own queue.
@@ -1099,6 +1157,7 @@ export function findBlocks(
     jokers.set(id, { key, edition });
   };
 
+  const vanish = vanishedJokers(events);
   for (const [r, keys] of Object.entries(settings.ruleset.added.jokers ?? {}))
     for (const k of keys ?? [])
       if (Number(r) < 4) RARITY.set(k, Number(r) as 1 | 2 | 3);
@@ -1133,6 +1192,11 @@ export function findBlocks(
     const [, op, args] = e;
     const a = (args ?? []) as unknown[];
     eventAt = i;
+    for (const k of vanish.get(i) ?? []) {
+      removeJoker(-1, k);
+      // Gros Michel goes extinct at the end of a round: Cavendish is in the next shop.
+      if (k === "j_gros_michel") extinct = true;
+    }
     if (op === "cashout" || op === "reroll") shopEvent = i;
     for (const a of avatarsOut) if (a.from === i) a.place = place();
     updateLocks();

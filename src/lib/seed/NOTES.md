@@ -217,6 +217,12 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   planet is the last hand's, by key, so a matching planet with a Blue Seal in the deck takes no
   roll), and 8 Ball: each scoring 8, again for each retrigger (Red Seal, Seltzer, the mod's
   Hanging Chad on the first two scoring cards), rolls `8ball` < odds/4 while there's room.
+- A joker that leaves between two hands without being sold (Gros Michel going extinct, Popcorn
+  or Turtle Bean running out, Ankh or Hex, Ceremonial Dagger, Madness) is taken off at the first
+  point it could have gone: an Ankh or Hex used in between, else the end of the round, else the
+  next blind. The log only shows it gone at the next hand, which was too late for Riff-raff's
+  room (4T4U9DGU: Gros Michel went extinct, Riff-raff made two jokers, not one) and for
+  Cavendish being in the next shop.
 - Overstock (and Overstock Plus) redeemed in a shop goes through `change_shop_size`: the shop
   grows by one and every empty slot is filled (`joker_max - #cards`), so a slot bought before
   the voucher is rolled again too. The replay used to add one slot; with that fixed, FZZUAJBR
