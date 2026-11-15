@@ -207,6 +207,23 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   triggers once, so how it does this isn't understood; a match with Overstock and one of these
   tags would show whether it's every slot or two.
 - A made joker sold or moved before the next hand counts as shown.
+- The card being used still exists while it makes cards (it leaves its slot in
+  `G.FUNCS.use_card`, but is destroyed only after its use), so The Emperor never makes an
+  Emperor and The High Priestess never a High Priestess: its key is skipped like a held card's.
+  Seen in a real match (QGISUR8I), where it fixed every Tarot after Ante 1.
+- Hands are evaluated in full (`evaluateHand`: vanilla's hand order and scoring cards, with
+  Four Fingers, Shortcut, Smeared, Wild, Stone and Splash). That gives the softlocked planets,
+  Séance's Straight Flush, Superposition's Ace in a Straight, the last hand (a Blue Seal's
+  planet is the last hand's, by key, so a matching planet with a Blue Seal in the deck takes no
+  roll), and 8 Ball: each scoring 8, again for each retrigger (Red Seal, Seltzer, the mod's
+  Hanging Chad on the first two scoring cards), rolls `8ball` < odds/4 while there's room.
+- Only logs from Multiplayer PvP 1.0.5 are read. Older logs (1.0.3, 1.0.4) have no blind key
+  on `select_blind`, no joker list on `play`, and open packs through `use`.
+- The log numbers the mod's stakes after Gold (Planet 9, Spectral 10, Spectral+ 11); the
+  reader calls Spectral+ 9.
+- MultiplayerAPI's phantom cards (`api/synced/phantom.lua`): a copy of the opponent's Let's Go
+  Gambling, Pizza, Conjoined Joker or Speedrun sits in your game while they hold it. Not
+  modelled (it needs the opponent's log), and not confirmed to make the pools skip it.
 - When a card the log shows isn't where the replay put it, its queue is rolled on until it comes
   up, and the replay goes on from there. Each reported card says whether the next card the log
   showed from that queue matched ("sure") or not ("maybe").
@@ -214,7 +231,7 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
   come from the cards' refs and the enhancing Tarots.
 
-Not modelled: 8 Ball (needs which cards score), Perkeo, tags other than Top-up / Uncommon / Rare,
+Not modelled: Dusk's retrigger for 8 Ball (needs hands left), Perkeo, tags other than Top-up / Uncommon / Rare,
 the Voucher Tag's extra voucher roll, Omen Globe, Glass Cards breaking, which planet Telescope
 gives, the Cocktail and Gradient Decks' effects.
 
@@ -223,4 +240,14 @@ Deck stake 6, DKH5GTRX Orange Deck, X3UF2AUH Cocktail Deck, 63MG6TIQ Red Deck st
 with no miss; FD54Z7XN (Plasma Deck, stake 4) misses two Uncommon shop jokers in Ante 4, not
 explained yet. FZZUAJBR holds through Ante 4, then a Penny Pincher bought in Ante 5 comes two
 Common rolls later than the replay has it.
+
+Across one player's whole history (87 matches pulled while logged in, both sides of each, all
+on 1.0.5 except 36 older logs that can't be read): Expanded 42 logs, 20 with no miss, 1,855 of
+2,125 checks matched; Balanced 6 logs, 4 with no miss, 176 of 236; Small World 85 logs, 33
+with no miss, 5,579 of 7,089 (its deck vouchers swapped by the cull aren't modelled). The most
+common first miss left in Expanded is a shop Uncommon. In five logs the replay shows Burglar
+where the real shop had the next Uncommon of the queue; yet in the same match the other
+player's replay, rolling the same shop, is right with Burglar there. So it's something per
+player that isn't found yet (not a ban: treating Burglar as unavailable makes as many logs
+worse as it fixes).
 

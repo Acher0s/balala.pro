@@ -21,6 +21,37 @@ replay put them.
    save the full file while logged in (`/api/proxy/runs/<id>/replay`, the page explains it).
    Ask the user for more matches whenever the ones at hand don't cover what changed (a deck,
    a stake, a tag, a joker).
+   To pull all of a player's own matches at once (both sides), they paste this into their
+   browser's console on balatromp.com while logged in (Firefox asks them to type
+   `allow pasting` first). It downloads `balatromp-my-matches.json`, which
+   `check-replays.ts` reads as is. The site's login is a token in `localStorage.bmp_token`,
+   sent as a Bearer header (its `apiFetch`); the script sends it only to balatromp.com, like
+   the site does. Never ask for the token or cookies.
+
+   ```js
+   (async () => {
+     const auth = { Authorization: `Bearer ${localStorage.getItem("bmp_token")}` };
+     const api = (p) => fetch("/api/proxy" + p, { headers: auth })
+       .then((r) => { if (!r.ok) throw new Error(`${p} ${r.status}`); return r.json(); });
+     const ids = [];
+     for (let page = 1; ; page++) {
+       const { runs = [], total = 0 } = await api(`/runs/mine?page=${page}&pageSize=20`);
+       ids.push(...runs.map((r) => r.id));
+       console.log(`list ${ids.length}/${total}`);
+       if (!runs.length || ids.length >= total) break;
+     }
+     const out = [];
+     for (const [i, id] of ids.entries()) {
+       try { out.push({ id, replay: await api(`/runs/${id}/replay`) }); }
+       catch (e) { console.warn(id, e.message); }
+       console.log(`replay ${i + 1}/${ids.length}`);
+     }
+     const a = document.createElement("a");
+     a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: "application/json" }));
+     a.download = "balatromp-my-matches.json";
+     a.click();
+   })();
+   ```
 2. **Measure.** `npx tsx scripts/check-replays.ts` (the fixtures), or with links, ids or
    saved files. It prints shop / packs / made / jokers agreement and the first miss.
 3. **Trace.** `npx tsx scripts/check-replays.ts --trace <dir> <match>` writes every event
@@ -32,14 +63,27 @@ replay put them.
    `rarity0`, `_etperJoker20`, …), so a miss on one queue is caused by that queue only. Ask:
    what in between could take from it? Candidates are in the table below; the Lua is the
    authority (see "Sources").
-5. **Test a hypothesis cheaply.** Put a temporary switch in `blocks.ts`
+5. **Let the probe find the spot.** `npx tsx scripts/probe-replays.ts <source> --family Tarot`
+   (or `Planet`, `Spectral`, `joker`; `--from-start` for queues checked rarely) reruns each
+   log with one or two extra draws on the queue's stream before every event since the last
+   good check, and prints the spots that fix the most checks. A clear winner names the event;
+   a long run of equal spots means the missing draw is anywhere in there, so look at what
+   those events have in common. If a single extra draw helps nowhere, the replay is drawing
+   the right number but skipping differently (owned / on screen / locked): look at what's
+   held. This found the used Emperor skipping its own key.
+
+   Many logs at once: write a small script (scratch folder) that runs `findBlocks` over every
+   log of a pulled file, groups the first misses by queue, and prints the jokers and cards
+   seen between the last good check and the miss. What recurs across logs is the lead.
+6. **Test a hypothesis cheaply.** Put a temporary switch in `blocks.ts`
    (`if (process.env.X) …`), rerun the one match with and without it, and keep the variant
    that turns misses into `ok` everywhere after. Remove the switch before committing. (This is
    how the Rare Tag filling both opening slots was found: one switch took a match from 10/48
    shop to 48/48.)
-6. **Lock it in.** Add the match as a fixture
+7. **Lock it in.** Add the match as a fixture
    (`npx tsx scripts/make-replay-fixture.ts <match> src/lib/seed/fixtures/<seed>-log.json "" "<what it covers>"`,
-   then check the file has no names) and a case in `blocks.test.ts`: either "replays without
+   then check the file has no names: compare against every `displayName` in the pulled file,
+   ignoring numeric names and short names that only match inside game words) and a case in `blocks.test.ts`: either "replays without
    a miss" or a floor on its agreement. Write what you learned in NOTES.md, and update this
    skill if the process changed.
 
@@ -50,7 +94,7 @@ Recorded by MultiplayerAPI `api/replay/` (`opcodes.lua`, `generic_codes.lua`, `c
 
 | opcode | args | used for |
 |---|---|---|
-| `lobby_info`, `run_info` | ruleset, game mode, The Order, mod version; deck, seed, stake | `matchSettings` |
+| `lobby_info`, `run_info` | ruleset, game mode, The Order, mod version; deck (key or name), seed, stake (mod stakes after Gold: 9 Planet, 10 Spectral, 11 Spectral+) | `matchSettings` |
 | `select_blind` / `skip_blind` | blind key / — | ante, setting_blind creators, skip tags |
 | `cashout`, `reroll`, `leave_shop` | — | shop rolls |
 | `buy` | area, slot, card ref, cost, bought-and-used | shop checks |
@@ -60,6 +104,10 @@ Recorded by MultiplayerAPI `api/replay/` (`opcodes.lua`, `generic_codes.lua`, `c
 | `reorder` | area, …, moves | first sightings of made cards |
 | `discard`, `play` | positions, card refs (+ joker tokens `key\|edition` on `play`) | Purple Seals, hand shapes, joker snapshot |
 | `money_delta` | the amount (every `ease_dollars`) | money, for Vagabond |
+
+Logs before 1.0.5 differ (no blind key, no joker tokens on `play`, packs opened via `use`) and
+are refused by `matchSettings`; a new version gets its own `PatchDef` and is only read once
+it's measured.
 
 A ref's first sighting has a negative id and says what it is (`[-id,"pc",suit,rank,"e:…","ed:…","s:…"]`
 or `[-id,set,key]`); later ones are `[id, mods…]`. The log has **no shop contents and no card
@@ -88,13 +136,16 @@ their key_append (`Joker<r>0`, rarity on `rarity0`); shop and pack jokers roll s
 | Sixth Sense | destroying_card, first hand a single 6, not copied | consumables | `SpectralSpectral0` |
 | Hallucination | open_booster, `halu0` < odds/2 | consumables | `TarotTarot0` |
 | Purple Seal | each discarded card | consumables | `TarotTarot0` |
-| The Emperor / High Priestess | use: min(2, free slots), the used card already gone | consumables | Tarot / Planet |
-| The Fool, Blue Seal, starting decks | by key, no roll | consumables | — |
+| 8 Ball | individual: each scoring 8, again per retrigger (Red Seal, Seltzer, the mod's Hanging Chad on scoring cards 1–2), copies; `8ball` < odds/4 | consumables | `TarotTarot0` |
+| The Emperor / High Priestess | use: min(2, free slots); the used card is out of its slot but still exists, so its key is skipped | consumables | Tarot / Planet |
+| The Fool, Blue Seal (last hand's planet), starting decks | by key, no roll | consumables | — |
 
 Room is `#held + made-this-event < limit` (2, +1 Crystal Ball, +negatives, deck changes).
 Blueprint copies the joker to its right, Brainstorm the first; the joker order comes from the
-next `play` snapshot. Not modelled yet (each would show as misses on its queue): 8 Ball (needs
-which cards score), Perkeo, Certificate / Marble / DNA (playing cards only, no effect on these
+next `play` snapshot. Hands go through `evaluateHand` (name and scoring cards). Not modelled
+yet (each would show as misses on its queue): Dusk's 8 Ball retrigger, Perkeo, phantom copies of
+the opponent's Let's Go Gambling / Pizza / Conjoined / Speedrun (MPAPI `api/synced/phantom.lua`;
+needs the other side's log, which a pulled file has), Certificate / Marble / DNA (playing cards only, no effect on these
 queues), tags other than Top-up / Uncommon / Rare, the Voucher Tag, Omen Globe, Glass breaking,
 Cocktail Deck's mixed effects, Gradient Deck.
 
@@ -116,7 +167,7 @@ Cocktail Deck's mixed effects, Gradient Deck.
    - Steamodded `src/utils.lua` (`pseudorandom_probability`, `poll_rarity`), `lovely/tag.toml`.
 4. **Change behind a patch.** Data changes go in a new `PatchDef`. Logic that changes between
    versions becomes a field the code branches on; old matches must keep replaying the same.
-   `matchSettings` picks the patch from `mod_version` once there is more than one.
+   `matchSettings` picks the patch whose id is `pvp-<mod_version>` and refuses any other.
 5. **Measure** every fixture and a few new matches on the new version; nothing that was
    `ok` should turn into a `MISS`.
 
@@ -129,7 +180,7 @@ Cocktail Deck's mixed effects, Gradient Deck.
 | `src/lib/seed/replay-file.ts` | Reading balatromp.com's replay JSON (server and browser) |
 | `src/app/api/what-did-i-block/[id]/route.ts` | Fetches a shared match |
 | `src/components/block-check/` | The page, including opening a saved file |
-| `scripts/check-replays.ts`, `scripts/make-replay-fixture.ts` | The loop above |
+| `scripts/check-replays.ts`, `scripts/probe-replays.ts`, `scripts/make-replay-fixture.ts` | The loop above |
 | `src/lib/seed/fixtures/*-log.json`, `blocks.test.ts` | Real matches and their expectations |
 
 ## Rules

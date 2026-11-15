@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { findBlocks, type LogEvent, matchSettings } from "./blocks";
+import {
+  evaluateHand,
+  findBlocks,
+  type LogEvent,
+  matchSettings,
+} from "./blocks";
+import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
+import qgisur8i from "./fixtures/qgisur8i-log.json";
 import viwlatit from "./fixtures/viwlatit-log.json";
 import x3uf2auh from "./fixtures/x3uf2auh-log.json";
 import { jokerQueue, type ReaderSettings, shopQueue } from "./reader";
@@ -119,6 +126,10 @@ describe("whole matches that replay without a miss", () => {
     ["DKH5GTRX", dkh5gtrx],
     // Showman, Judgement's joker sold before the next hand.
     ["X3UF2AUH", x3uf2auh],
+    // The Emperor picked from an Arcana Pack: what it makes skips The Emperor itself.
+    ["QGISUR8I", qgisur8i],
+    // Magic Deck on Black Stake, 8 Ball.
+    ["BGMJZ5AC", bgmjz5ac],
   ] as const;
   for (const [seed, fixture] of cases)
     it(seed, () => {
@@ -146,5 +157,59 @@ describe("replay files", () => {
     expect(
       isReadable({ name: "", shared: true, events: log.events as LogEvent[] }),
     ).toBe(true);
+  });
+});
+
+describe("evaluateHand", () => {
+  const c = (rank: string, suit: string, enhancement?: string) => ({
+    rank,
+    suit,
+    enhancement,
+    alive: true,
+  });
+  it("names hands and the cards that score", () => {
+    const fh = [
+      c("King", "Hearts"),
+      c("King", "Hearts"),
+      c("Jack", "Hearts"),
+      c("Jack", "Hearts", "m_lucky"),
+      c("Jack", "Hearts"),
+    ];
+    expect(evaluateHand(fh, []).name).toBe("Flush House");
+    const pair = [c("8", "Spades"), c("8", "Clubs"), c("2", "Hearts")];
+    const r = evaluateHand(pair, []);
+    expect(r.name).toBe("Pair");
+    expect(r.scoring.map((x) => x.rank)).toEqual(["8", "8"]);
+    expect(evaluateHand(pair, ["j_splash"]).scoring).toHaveLength(3);
+    const high = [c("3", "Spades"), c("Ace", "Clubs"), c("9", "Hearts")];
+    expect(evaluateHand(high, []).scoring.map((x) => x.rank)).toEqual(["Ace"]);
+  });
+  it("follows Four Fingers, Shortcut, Smeared, Wild and Stone Cards", () => {
+    const four = [
+      c("2", "Spades"),
+      c("3", "Spades"),
+      c("4", "Spades"),
+      c("5", "Spades"),
+    ];
+    expect(evaluateHand(four, []).name).toBe("High Card");
+    expect(evaluateHand(four, ["j_four_fingers"]).name).toBe("Straight Flush");
+    const gappy = [
+      c("2", "Hearts"),
+      c("4", "Clubs"),
+      c("6", "Spades"),
+      c("8", "Diamonds"),
+      c("10", "Hearts"),
+    ];
+    expect(evaluateHand(gappy, ["j_shortcut"]).name).toBe("Straight");
+    const smeared = [
+      c("2", "Hearts"),
+      c("5", "Diamonds"),
+      c("9", "Hearts"),
+      c("Jack", "Diamonds"),
+      c("King", "Hearts", "m_stone"),
+    ];
+    expect(evaluateHand(smeared, ["j_smeared"]).name).toBe("High Card");
+    smeared[4] = c("King", "Spades", "m_wild");
+    expect(evaluateHand(smeared, ["j_smeared"]).name).toBe("Flush");
   });
 });

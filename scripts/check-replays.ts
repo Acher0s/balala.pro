@@ -34,7 +34,10 @@ const gunzip = async (b: Uint8Array) => gunzipSync(b).toString("utf8");
 
 /** Each readable player log in a source, named for the output. */
 async function load(source: string): Promise<[string, LogEvent[]][]> {
-  let data: ReplayResponse | { events: LogEvent[] };
+  let data:
+    | ReplayResponse
+    | { events: LogEvent[] }
+    | { id: string; replay: ReplayResponse }[];
   const id = !existsSync(source) && UUID.exec(source)?.[0];
   if (id) {
     const res = await fetch(
@@ -44,6 +47,18 @@ async function load(source: string): Promise<[string, LogEvent[]][]> {
     data = (await res.json()) as ReplayResponse;
   } else data = JSON.parse(readFileSync(source, "utf8"));
   const name = id ? id.slice(0, 8) : basename(source, ".json");
+  // Many matches in one file: [{ id, replay }], as the console script in the skill saves them.
+  if (Array.isArray(data)) {
+    const all: [string, LogEvent[]][] = [];
+    for (const m of data) {
+      const { logs } = await readReplay(m.replay, gunzip);
+      logs.forEach((l, i) => {
+        if (isReadable(l) && l.events)
+          all.push([`${m.id.slice(0, 8)}#${i}`, l.events]);
+      });
+    }
+    return all;
+  }
   if ("events" in data) return [[name, data.events]];
   const { logs } = await readReplay(data, gunzip);
   return logs.flatMap((l, i) =>

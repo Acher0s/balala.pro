@@ -93,7 +93,15 @@ export function matchSettings(events: readonly LogEvent[]): MatchSettings {
       error:
         "This match was played without The Order; only Order matches can be read.",
     };
-  const patch = PATCHES[0];
+  // The patch the match was played on. Logs from before 1.0.5 have no blind keys and no joker
+  // list on each hand, and the reader has no pools for those versions.
+  const version = lobby.options?.mod_version;
+  const patch = PATCHES.find((p) => p.id === `pvp-${version}`);
+  if (!patch)
+    return {
+      ok: false,
+      error: `This match was played on Multiplayer ${version ?? "(unknown)"}; only ${PATCHES.map((p) => p.label.replace(/^Multiplayer PvP /, "")).join(", ")} can be read.`,
+    };
   const rulesetId = (lobby.ruleset ?? "").replace(/^ruleset_mp_/, "");
   const ruleset = patch.rulesets.find((r) => r.id === rulesetId);
   if (!ruleset)
@@ -114,7 +122,9 @@ export function matchSettings(events: readonly LogEvent[]): MatchSettings {
       seed: run.seed,
       ruleset,
       gameMode: patch.gameMode,
-      stake: run.stake ?? 1,
+      // The game numbers the mod's stakes after Gold: Planet 9, Spectral 10, Spectral+ 11.
+      // The reader calls Spectral+ 9.
+      stake: run.stake === 11 ? 9 : (run.stake ?? 1),
       deck,
       pincherUnlocked: false,
       enhancements: [],
@@ -256,25 +266,6 @@ function blindName(key: string): string {
   return `The ${words.join(" ")}`;
 }
 
-/** Five played cards' hand, for the three softlocked hands only. */
-function softHand(cards: PlayingCard[], smeared: boolean): string | undefined {
-  if (cards.length !== 5) return undefined;
-  const ranked = cards.filter((c) => c.enhancement !== "m_stone");
-  if (ranked.length !== 5) return undefined;
-  const counts = new Map<string, number>();
-  for (const c of ranked) counts.set(c.rank, (counts.get(c.rank) ?? 0) + 1);
-  const shape = [...counts.values()].sort((a, b) => b - a).join("");
-  const suitOf = (s: string) =>
-    smeared ? (s === "Hearts" || s === "Diamonds" ? "red" : "black") : s;
-  const suits = new Set(
-    ranked.filter((c) => c.enhancement !== "m_wild").map((c) => suitOf(c.suit)),
-  );
-  const flush = suits.size <= 1;
-  if (shape === "5") return flush ? "Flush Five" : "Five of a Kind";
-  if (shape === "32" && flush) return "Flush House";
-  return undefined;
-}
-
 /** The joker each slot acts as: Blueprint copies the one to its right, Brainstorm the first. */
 function acting(keys: readonly string[]): string[] {
   const at = (i: number, depth: number): string | undefined => {
@@ -287,41 +278,129 @@ function acting(keys: readonly string[]): string[] {
   return keys.flatMap((_, i) => at(i, 0) ?? []);
 }
 
-/** Whether played cards hold a Straight and a Flush (vanilla's get_straight / get_flush). */
-function shape(cards: readonly PlayingCard[], jokers: readonly string[]) {
+/** The planet each hand levels, for a Blue Seal's planet. */
+const PLANET_OF: Record<string, string> = {
+  "High Card": "c_pluto",
+  Pair: "c_mercury",
+  "Two Pair": "c_uranus",
+  "Three of a Kind": "c_venus",
+  Straight: "c_saturn",
+  Flush: "c_jupiter",
+  "Full House": "c_earth",
+  "Four of a Kind": "c_mars",
+  "Straight Flush": "c_neptune",
+  "Five of a Kind": "c_planet_x",
+  "Flush House": "c_ceres",
+  "Flush Five": "c_eris",
+};
+
+/**
+ * The hand played cards make and the cards that score (vanilla's evaluate_poker_hand,
+ * get_X_same, get_flush, get_straight, with Four Fingers, Shortcut, Smeared, Wild and Stone
+ * Cards, and Splash).
+ */
+export function evaluateHand(
+  cards: readonly PlayingCard[],
+  jokers: readonly string[],
+): { name: string; scoring: PlayingCard[] } {
   const need = jokers.includes("j_four_fingers") ? 4 : 5;
   const gap = jokers.includes("j_shortcut") ? 2 : 1;
   const smeared = jokers.includes("j_smeared");
   const ranked = cards.filter((c) => c.enhancement !== "m_stone");
-  const values = new Set<number>();
-  for (const c of ranked) {
-    const v = RANKS.indexOf(c.rank) + 2;
-    values.add(v);
-    if (v === 14) values.add(1);
-  }
-  let straight = false;
-  let run = 0;
-  let last = -10;
-  for (let v = 1; v <= 14; v++) {
-    if (!values.has(v)) continue;
-    run = v - last <= gap ? run + 1 : 1;
-    last = v;
-    if (run >= need) straight = true;
-  }
+  const value = (c: PlayingCard) => RANKS.indexOf(c.rank) + 2;
+
+  const groups = new Map<number, PlayingCard[]>();
+  for (const c of ranked)
+    groups.set(value(c), [...(groups.get(value(c)) ?? []), c]);
+  const same = (n: number) =>
+    [...groups.values()].filter((g) => g.length === n);
+  const five = same(5);
+  const four = same(4);
+  const three = same(3);
+  const pairs = same(2);
+
   const suitOf = (s: string) =>
     smeared ? (s === "Hearts" || s === "Diamonds" ? "red" : "black") : s;
-  let flush = false;
-  for (const suit of ["Spades", "Hearts", "Clubs", "Diamonds"]) {
-    const n = ranked.filter(
-      (c) => c.enhancement === "m_wild" || suitOf(c.suit) === suitOf(suit),
-    ).length;
-    if (n >= need && cards.length >= need) flush = true;
+  let flush: PlayingCard[] = [];
+  if (cards.length >= need)
+    for (const suit of ["Spades", "Hearts", "Clubs", "Diamonds"]) {
+      const of = ranked.filter(
+        (c) => c.enhancement === "m_wild" || suitOf(c.suit) === suitOf(suit),
+      );
+      if (of.length >= need) {
+        flush = of;
+        break;
+      }
+    }
+
+  let straight: PlayingCard[] = [];
+  if (cards.length >= need) {
+    const values = new Set<number>();
+    for (const c of ranked) {
+      values.add(value(c));
+      if (value(c) === 14) values.add(1);
+    }
+    let run: number[] = [];
+    let best: number[] = [];
+    for (let v = 1; v <= 14; v++) {
+      if (!values.has(v)) continue;
+      run = run.length && v - run[run.length - 1] <= gap ? [...run, v] : [v];
+      if (run.length >= need && run.length >= best.length) best = run;
+    }
+    if (best.length >= need)
+      straight = ranked.filter(
+        (c) => best.includes(value(c)) || (value(c) === 14 && best.includes(1)),
+      );
   }
-  return {
-    straight: straight && cards.length >= need,
-    flush,
-    ace: ranked.some((c) => c.rank === "Ace"),
+
+  const name =
+    five.length && flush.length
+      ? "Flush Five"
+      : three.length && pairs.length && flush.length
+        ? "Flush House"
+        : five.length
+          ? "Five of a Kind"
+          : straight.length && flush.length
+            ? "Straight Flush"
+            : four.length
+              ? "Four of a Kind"
+              : three.length && pairs.length
+                ? "Full House"
+                : flush.length
+                  ? "Flush"
+                  : straight.length
+                    ? "Straight"
+                    : three.length
+                      ? "Three of a Kind"
+                      : pairs.length >= 2
+                        ? "Two Pair"
+                        : pairs.length
+                          ? "Pair"
+                          : "High Card";
+  const byHand: Record<string, PlayingCard[]> = {
+    "Flush Five": [...flush, ...five.flat()],
+    "Flush House": [...flush, ...three.flat(), ...pairs.flat()],
+    "Five of a Kind": five.flat(),
+    "Straight Flush": [...straight, ...flush],
+    "Four of a Kind": four.flat(),
+    "Full House": [...three.flat(), ...pairs.flat()],
+    Flush: flush,
+    Straight: straight,
+    "Three of a Kind": three.flat(),
+    "Two Pair": pairs.flat(),
+    Pair: pairs.flat(),
+    "High Card": ranked.length
+      ? [ranked.reduce((a, c) => (value(c) > value(a) ? c : a))]
+      : [],
   };
+  const scores = new Set(byHand[name]);
+  const scoring = cards.filter(
+    (c) =>
+      scores.has(c) ||
+      c.enhancement === "m_stone" ||
+      jokers.includes("j_splash"),
+  );
+  return { name, scoring };
 }
 
 /** What a Spectral does to a card's seal. */
@@ -369,6 +448,11 @@ export function findBlocks(
   settings: ReaderSettings,
   /** Debugging: called with a line for every event, roll and check. */
   trace?: (line: string) => void,
+  /**
+   * Debugging: move a stream on by `n` draws right before event `at`, to test whether a draw
+   * the replay doesn't make happened there (scripts/probe-replays.ts).
+   */
+  probe?: { at: number; stream: string; n: number },
 ): BlockReport {
   const hits: BlockHit[] = [];
   const agreement = {
@@ -410,6 +494,8 @@ export function findBlocks(
   const redeemed: { ante: number; key: string }[] = [];
   let synthetic = 1e9;
   let lastTarotPlanet: string | undefined;
+  /** G.GAME.last_hand_played: a Blue Seal makes its planet. */
+  let lastHand: string | undefined;
 
   // What's on screen.
   let shop: (string | null)[] = [];
@@ -441,11 +527,18 @@ export function findBlocks(
     return undefined;
   };
 
+  /**
+   * The consumable being used: it's out of its slot but still exists until its use is over,
+   * so what it makes skips its key (The Emperor never makes an Emperor).
+   */
+  let using: string | undefined;
+
   /** Sets what the game skips, from what's held and on screen. */
   const syncOwned = (s: ShopSim) => {
     s.owned.clear();
     if ([...jokers.values()].some((j) => j.key === "j_ring_master")) return;
     for (const k of heldKeys()) s.owned.add(k);
+    if (using) s.owned.add(using);
     for (const k of shop) if (k) s.owned.add(k);
     for (const k of pack) if (k) s.owned.add(k);
   };
@@ -570,17 +663,19 @@ export function findBlocks(
       if (same[1].before) check(agreement.made, true, set);
       return;
     }
-    if (CONSUMABLE_SETS.has(set)) {
+    const blueSeal =
+      set === "Planet" &&
+      lastHand !== undefined &&
+      PLANET_OF[lastHand] === key &&
+      [...cards.values()].some((c) => c.alive && c.seal === "Blue");
+    if (blueSeal) {
+      // A Blue Seal's planet: the last hand's, by key.
+    } else if (CONSUMABLE_SETS.has(set)) {
       const wrong = unseen.find(([, c]) => c.set === set && c.before);
       if (wrong) {
         consumables.delete(wrong[0]);
         check(agreement.made, false, set);
         if (!realign(wrong[1], key)) resync(set, key);
-      } else if (
-        set === "Planet" &&
-        [...cards.values()].some((c) => c.alive && c.seal === "Blue")
-      ) {
-        // A Blue Seal's planet: the last hand's, not rolled.
       } else check(agreement.made, resync(set, key), set);
     }
     consumables.set(id, { set, key, edition });
@@ -725,6 +820,15 @@ export function findBlocks(
 
   /** A Tarot, Planet or Spectral used: on cards, or making cards. */
   const applyUse = (key: string, targets: ReturnType<typeof learn>[]) => {
+    using = key;
+    try {
+      applyEffects(key, targets);
+    } finally {
+      using = undefined;
+    }
+    if (TAROTS.has(key) || PLANETS.has(key)) lastTarotPlanet = key;
+  };
+  const applyEffects = (key: string, targets: ReturnType<typeof learn>[]) => {
     const hit = targets.flatMap((t) => (t?.card ? [t.card] : []));
     if (ENHANCES[key]) for (const c of hit) c.enhancement = ENHANCES[key];
     if (SUITS[key]) for (const c of hit) c.suit = SUITS[key];
@@ -759,7 +863,6 @@ export function findBlocks(
         key: lastTarotPlanet,
         unseen: true,
       });
-    if (TAROTS.has(key) || PLANETS.has(key)) lastTarotPlanet = key;
   };
 
   const removeJoker = (id: number, key?: string) => {
@@ -831,6 +934,7 @@ export function findBlocks(
     const [, op, args] = e;
     const a = (args ?? []) as unknown[];
     updateLocks();
+    if (probe && probe.at === i) sim.skip(probe.stream, probe.n);
     if (trace && op !== "money_delta" && op !== "hand_scored")
       trace(`#${i} ${op} $${dollars} ${JSON.stringify(args).slice(0, 150)}`);
     switch (op) {
@@ -1030,17 +1134,43 @@ export function findBlocks(
             jokers.set(synthetic++, { key, edition });
           }
         const keys = tokens.map((t) => t.key);
-        const h = softHand(hand, keys.includes("j_smeared"));
-        if (h) played.add(h);
+        const roles = acting(keys);
+        const { name, scoring } = evaluateHand(hand, keys);
+        played.add(name);
+        lastHand = name;
+        trace?.(
+          `  hand: ${hand.map((c) => `${c.rank}${c.suit[0]}${c.enhancement ? `(${c.enhancement.slice(2)})` : ""}${c.seal ? `[${c.seal}]` : ""}`).join(" ")} = ${name}`,
+        );
+        // individual: 8 Ball, for every scoring 8 and every retrigger (Red Seal, Seltzer, the
+        // mod's Hanging Chad on the first two scoring cards), while there's room.
+        const balls = roles.filter((k) => k === "j_8_ball").length;
+        if (balls)
+          scoring.forEach((c, at) => {
+            if (c.rank !== "8" || c.enhancement === "m_stone") return;
+            const reps =
+              1 +
+              (c.seal === "Red" ? 1 : 0) +
+              roles.filter((k) => k === "j_mp_seltzer" || k === "j_selzer")
+                .length +
+              (at < 2
+                ? roles.filter((k) => k === "j_mp_hanging_chad").length
+                : 0);
+            for (let r = 0; r < reps * balls; r++)
+              if (consumableRoom() > 0 && sim.chance("8ball") < odds() / 4)
+                makeConsumable("8 Ball", "Tarot");
+          });
         // joker_main, joker by joker (copies included). The money is what it was before the
         // hand: what the hand earns is added after.
-        const { straight, flush, ace } = shape(hand, keys);
-        for (const k of acting(keys)) {
+        for (const k of roles) {
           if (k === "j_vagabond" && dollars <= 4)
             makeConsumable("Vagabond", "Tarot");
-          if (k === "j_superposition" && straight && ace)
+          if (
+            k === "j_superposition" &&
+            /Straight/.test(name) &&
+            scoring.some((c) => c.rank === "Ace")
+          )
             makeConsumable("Superposition", "Tarot");
-          if (k === "j_seance" && straight && flush)
+          if (k === "j_seance" && name === "Straight Flush")
             makeConsumable("Séance", "Spectral");
         }
         // destroying_card: Sixth Sense (not copied).
