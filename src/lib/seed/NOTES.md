@@ -226,7 +226,8 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   `G.GAME.used_jokers`, so their own shop and packs skip both from then on. The other player
   isn't affected unless they look too. The log records neither the avatars nor the look, so
   `findBlocksAuto` only speculates where nothing else explains a miss: the jokers the replay had
-  where the player bought something else, among the 63 the avatar picker offers (`AVATARS`;
+  where the player bought something else, or in a pack that showed a joker the replay didn't
+  have, among the 63 the avatar picker offers (`AVATARS`;
   Obelisk, Bloodstone, Cloud 9 and the like can't be avatars), are tried as the avatars, one or
   two, blocked together from the first shop either of them missed in (or from the start). A
   guess is kept when it takes away a miss (three in a log with over 20, where one could be
@@ -261,5 +262,7 @@ with no miss, 5,579 of 7,089 (its deck vouchers swapped by the cull aren't model
 common first miss in Expanded was a shop Uncommon, Burglar in five logs: the lobby-avatar bug
 above (Burglar is that player's avatar). With avatars worked out per match: Expanded 24 of 43
 logs with no miss (with FD54Z7XN), 1,984 of 2,230 checks; Balanced 180 of 236. Guessed
-avatars: Burglar, Hiker, Baron (in both logs of its match), Joker, Fortune Teller, Chaos.
+avatars: Burglar, Hiker, Baron (in both logs of its match), Joker, Fortune Teller, Chaos. With
+packs searched too (Buffoon Packs showed avatars as well): Expanded 28 of 43 logs with no miss,
+1,989 of 2,230; pairs found in both logs of a match: Lucky Cat and Showman, Joker and Stone Joker.
 

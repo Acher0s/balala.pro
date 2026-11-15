@@ -77,8 +77,8 @@ export interface BlockReport {
   /** The first place a card wasn't where the replay put it. */
   firstMiss?: string;
   /**
-   * Jokers the replay had in a shop slot where the player bought something else, with the
-   * event that rolled that shop.
+   * Jokers the replay had in a shop slot where the player bought something else, or in a pack
+   * that showed a joker the replay didn't have, with the event that rolled that shop or pack.
    */
   missedShop: { key: string; at: number }[];
   /** Jokers taken to be blocked by the lobby's avatars from an event on (findBlocksAuto). */
@@ -479,6 +479,12 @@ export function findBlocks(
   const avatarsOut = avatars.map((a) => ({ ...a }));
   let eventAt = 0;
   let shopEvent = 0;
+  let packEvent = 0;
+  /** A joker the log shows from a pack the replay rolled differently: its jokers are suspects. */
+  const missedInPack = () => {
+    for (const k of pack)
+      if (k.startsWith("j_")) missedShop.push({ key: k, at: packEvent });
+  };
   const avatarNow = (key: string) =>
     avatars.some((a) => a.key === key && eventAt >= a.from);
   const hits: BlockHit[] = [];
@@ -1049,6 +1055,7 @@ export function findBlocks(
         break;
       }
       case "open_pack": {
+        packEvent = i;
         const got = learn(a[2]);
         const key = got?.item?.key ?? "";
         const info = PACK_INFO.get(key) ?? { size: 0, choose: 0 };
@@ -1086,6 +1093,7 @@ export function findBlocks(
           let at = pack.indexOf(key);
           if (at < 0 && set === "Planet") at = pack.indexOf("");
           check(agreement.packs, at >= 0, familyOf(key, "Pack"));
+          if (at < 0 && set === "Joker") missedInPack();
           if (at >= 0) pack.splice(at, 1);
           if (set === "Joker")
             jokers.set(got.id, { key, edition: got.edition });
@@ -1102,6 +1110,7 @@ export function findBlocks(
           let at = pack.indexOf(got.item.key);
           if (at < 0 && got.item.set === "Planet") at = pack.indexOf("");
           check(agreement.packs, at >= 0, familyOf(got.item.key, "Pack"));
+          if (at < 0 && got.item.set === "Joker") missedInPack();
           if (at >= 0) pack.splice(at, 1);
         }
         pack = [];
@@ -1358,7 +1367,7 @@ export function findBlocksAuto(
   for (const m of base.missedShop)
     if (AVATARS.has(m.key) && !firstMissAt.has(m.key))
       firstMissAt.set(m.key, m.at);
-  const keys = [...firstMissAt.keys()].slice(0, 4);
+  const keys = [...firstMissAt.keys()].slice(0, 5);
   const guesses: { set: string[]; known: boolean }[] = [
     ...(known.length
       ? [{ set: known.filter((k) => AVATARS.has(k)), known: true }]
