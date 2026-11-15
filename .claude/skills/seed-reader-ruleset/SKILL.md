@@ -10,6 +10,10 @@ The Seed reader ports Balatro's RNG and the mod's pool rules to TypeScript. A wr
 work is mostly reading the mod's Lua carefully. Read `src/lib/seed/NOTES.md` first: it records how
 the current rulesets were derived and what is still unconfirmed.
 
+"What did I block?" replays match logs on top of the reader: after any change here, run
+`npx tsx scripts/check-replays.ts` and follow the `bmp-replay-update` skill if a fixture
+gets worse.
+
 ## Where things live
 
 | File | What it holds |

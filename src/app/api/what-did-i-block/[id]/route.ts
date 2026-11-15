@@ -1,22 +1,13 @@
 import { gunzipSync } from "node:zlib";
 import { NextResponse } from "next/server";
-import type { MatchPlayerLog } from "@/lib/seed/blocks";
+import { type ReplayResponse, readReplay } from "@/lib/seed/replay-file";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface ReplayResponse {
-  run?: { status?: string; modId?: string };
-  logs?: {
-    displayName?: string;
-    shared?: boolean;
-    status?: string;
-    compressedEvents?: string | null;
-  }[];
-}
-
 /**
- * A match's replay logs from balatromp.com, unpacked: each player's events, or null where that
- * player hasn't shared their log (they click "Share" on the match page first).
+ * A match's replay logs from balatromp.com, unpacked: each player's events. A player who
+ * hasn't shared their log (they click "Share" on the match page first) comes back cut down to
+ * the blinds they played; the page shows that as not shared.
  */
 export async function GET(
   _request: Request,
@@ -54,26 +45,10 @@ export async function GET(
       { status: res.status === 403 || res.status === 401 ? 403 : 502 },
     );
   const data = (await res.json()) as ReplayResponse;
-  const logs: MatchPlayerLog[] = (data.logs ?? []).map((l) => {
-    let events: MatchPlayerLog["events"] = null;
-    if (l.compressedEvents)
-      try {
-        events = JSON.parse(
-          gunzipSync(Buffer.from(l.compressedEvents, "base64")).toString(
-            "utf8",
-          ),
-        );
-      } catch {
-        events = null;
-      }
-    return {
-      name: l.displayName ?? "Player",
-      shared: l.shared ?? false,
-      events,
-    };
-  });
-  return NextResponse.json(
-    { status: data.run?.status ?? "unknown", logs },
-    { headers: { "Cache-Control": "public, max-age=300" } },
+  const out = await readReplay(data, async (bytes) =>
+    gunzipSync(bytes).toString("utf8"),
   );
+  return NextResponse.json(out, {
+    headers: { "Cache-Control": "public, max-age=300" },
+  });
 }

@@ -179,18 +179,34 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
 
 - Held jokers come from buys, pack picks and sells, corrected by the joker list every `play`
   event carries (that's how Riff-raff's jokers and destroyed jokers show up). Held consumables
-  come from buys and from the first time a made one is used, sold or moved.
+  come from buys, from the cards the replay makes and from the deck; the log confirms a made
+  one the first time it's used, sold or moved.
+- A log the player hasn't shared still comes back from the API, cut down to the blinds played
+  (no `run_info`). Logged in, a player sees both sides of their own matches: the page can open
+  the replay file they save from `/api/proxy/runs/<id>/replay` (read in the browser, not
+  uploaded). Not yet checked that the logged-in file has the other side's full events.
 - Riff-raff (at the blind), Judgement, Wraith, The Soul and Top-up Tag roll from the stickerless
   queue (`Joker<r>0`); shop and pack jokers roll their stickers first and take the joker from
   `Joker<r>0_sticker` when one hits, even a joker that can't wear it (Invisible Joker rolled
   Eternal looks stickerless but came from the sticker queue: `lovely/TheOrder.toml`, "stable
   shop"). Uncommon / Rare Tags make their joker in `G.shop_jokers`, so they roll stickers too.
-- Made consumables (The Emperor, The High Priestess, Séance, Cartomancer, Vagabond, Purple Seals,
-  …) take the shop's queue. The log shows them only when they're used or sold, so each is rolled
-  at the card that made it when that's in the log, else right before it's first seen in a
-  blind, or before the shop when first seen in a shop. A made card rolled ahead of the one the
-  log shows is kept as held until it shows up (dropped after a shop it doesn't); The Fool's copy
-  isn't rolled.
+- Made consumables are rolled when the game makes them, with the game's room check (held +
+  made in the same event < 2, +1 Crystal Ball, +negatives): Vagabond (money ≤ $4 before the
+  hand; money is $4 plus every `money_delta`), Cartomancer, Séance (Straight Flush),
+  Superposition, Sixth Sense, Hallucination (`halu0`), Purple Seals on discard, The Emperor and
+  The High Priestess (min(2, free slots), the used card already out of its slot). Blueprint and
+  Brainstorm copies count, in the joker order of the next hand. The Fool's copy, a Blue Seal's
+  planet and a deck's starting consumables are made by key, without a roll. A made card the log
+  shows is checked against what the replay made; if the replay made another card there, the
+  queue is moved on by as many draws as it takes to make the shown one from where it was rolled.
+- Decks: starting vouchers and consumables (`DECK_START`: Magic, Nebula, Ghost, Zodiac, Orange,
+  Oracle, …); the log names the deck by key or by name ("Magic Deck").
+- An Uncommon or Rare Tag fills every opening slot of the next shop with its joker. That's from
+  a real match (stake 6, Magic Deck: both slots were the tag's, the rerolls the usual cards; 10
+  of 48 shop buys matched with only the first slot, 48 of 48 with both). The Lua says the tag
+  triggers once, so how it does this isn't understood; a match with Overstock and one of these
+  tags would show whether it's every slot or two.
+- A made joker sold or moved before the next hand counts as shown.
 - When a card the log shows isn't where the replay put it, its queue is rolled on until it comes
   up, and the replay goes on from there. Each reported card says whether the next card the log
   showed from that queue matched ("sure") or not ("maybe").
@@ -198,8 +214,13 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
   come from the cards' refs and the enhancing Tarots.
 
-Not modelled: the Voucher Tag's extra voucher roll, Omen Globe, Hallucination's timing, tags
-other than Top-up / Uncommon / Rare, cards destroyed without a log event (glass breaking), and
-which planet Telescope gives. On the FZZUAJBR match the replay matches about 90% of pack cards
-and 80% of made cards, but only about half the shop buys after Ante 3: the shop drifts once
-cards the log doesn't show (made and kept, or made and destroyed) have taken rolls.
+Not modelled: 8 Ball (needs which cards score), Perkeo, tags other than Top-up / Uncommon / Rare,
+the Voucher Tag's extra voucher roll, Omen Globe, Glass Cards breaking, which planet Telescope
+gives, the Cocktail and Gradient Decks' effects.
+
+Agreement (`npx tsx scripts/check-replays.ts`): four ranked Expanded matches (VIWLATIT Magic
+Deck stake 6, DKH5GTRX Orange Deck, X3UF2AUH Cocktail Deck, 63MG6TIQ Red Deck stake 6) replay
+with no miss; FD54Z7XN (Plasma Deck, stake 4) misses two Uncommon shop jokers in Ante 4, not
+explained yet. FZZUAJBR holds through Ante 4, then a Penny Pincher bought in Ante 5 comes two
+Common rolls later than the replay has it.
+

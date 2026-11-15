@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ChangeEvent,
   type FormEvent,
   useContext,
   useEffect,
@@ -17,6 +18,12 @@ import {
   type MatchPlayerLog,
   matchSettings,
 } from "@/lib/seed/blocks";
+import {
+  browserGunzip,
+  isReadable,
+  type ReplayResponse,
+  readReplay,
+} from "@/lib/seed/replay-file";
 
 const COLOUR: Record<BlockReason, string> = {
   held: "#ff9a00",
@@ -70,6 +77,28 @@ export function BlockCheck({ art }: { art: SeedArt }) {
     }
   }, []);
 
+  /** A replay file the player saved while logged in: it has both sides of their own match. */
+  const openFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setLoaded({ state: "loading" });
+    try {
+      const data = JSON.parse(await file.text()) as ReplayResponse;
+      if (!Array.isArray(data.logs)) throw new Error("no logs");
+      const { logs } = await readReplay(data, browserGunzip);
+      setLoaded({ state: "done", logs });
+    } catch {
+      setLoaded({
+        state: "error",
+        error:
+          "That file isn't a match replay. Save the replay link's page as a .json file.",
+      });
+    }
+  };
+
+  const idForHelp = matchId(input);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const id = matchId(input);
@@ -110,6 +139,54 @@ export function BlockCheck({ art }: { art: SeedArt }) {
           isn't shared can't be read. Only matches played with The Order can be
           replayed.
         </p>
+        <details className="text-sm">
+          <summary className="cursor-pointer font-semibold">
+            Both sides of your own match
+          </summary>
+          <div className="mt-2 flex flex-col gap-2 text-fd-muted-foreground">
+            <p>
+              A shared link only shows the side of each player who clicked
+              Share. When you're logged in on balatromp.com you can see both
+              sides of your own matches, and you can bring them here:
+            </p>
+            <ol className="list-decimal pl-5">
+              <li>
+                Logged in on balatromp.com, open{" "}
+                {idForHelp ? (
+                  <a
+                    className="underline"
+                    href={`https://balatromp.com/api/proxy/runs/${idForHelp}/replay`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    this match's replay file
+                  </a>
+                ) : (
+                  <code>
+                    https://balatromp.com/api/proxy/runs/&lt;match id&gt;/replay
+                  </code>
+                )}
+                .
+              </li>
+              <li>
+                Save the page (Ctrl+S, or Cmd+S on a Mac) as a{" "}
+                <code>.json</code> file.
+              </li>
+              <li>
+                Open it here. It's read in your browser and isn't uploaded.
+              </li>
+            </ol>
+            <label className="w-fit cursor-pointer rounded-md border px-3 py-2 font-semibold text-fd-foreground">
+              Open a saved replay file…
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="sr-only"
+                onChange={openFile}
+              />
+            </label>
+          </div>
+        </details>
         {loaded.state === "error" && (
           <p className="text-sm text-red-500">{loaded.error}</p>
         )}
@@ -176,11 +253,11 @@ const KINDS = [
 function Player({ log }: { log: MatchPlayerLog }) {
   const [maybes, setMaybes] = useState(true);
   const result = useMemo((): { error: string } | BlockReport | undefined => {
-    if (!log.events) return undefined;
+    if (!log.events || !isReadable(log)) return undefined;
     const s = matchSettings(log.events);
     if (!s.ok) return { error: s.error };
     return findBlocks(log.events, s.settings);
-  }, [log.events]);
+  }, [log]);
 
   return (
     <section className="flex flex-col gap-3 rounded-xl border p-4">

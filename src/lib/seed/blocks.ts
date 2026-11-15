@@ -107,7 +107,7 @@ export function matchSettings(events: readonly LogEvent[]): MatchSettings {
       ok: false,
       error: `The ${gameModeId} game mode isn't supported yet.`,
     };
-  const deck = DECKS.find((d) => d.key === run.deck)?.id;
+  const deck = DECKS.find((d) => d.key === deckKey(run.deck))?.id;
   return {
     ok: true,
     settings: {
@@ -124,6 +124,46 @@ export function matchSettings(events: readonly LogEvent[]): MatchSettings {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * What a deck starts the run with, as far as the replay goes: vouchers (redeemed before the
+ * first ante's voucher is rolled), consumables (made by key, no roll), money and slots.
+ * Vanilla's from back.lua; the mod's from objects/decks/*.lua.
+ */
+const DECK_START: Record<
+  string,
+  {
+    vouchers?: string[];
+    consumables?: string[];
+    dollars?: number;
+    jokerSlots?: number;
+    consumableSlots?: number;
+  }
+> = {
+  b_magic: { vouchers: ["v_crystal_ball"], consumables: ["c_fool", "c_fool"] },
+  b_nebula: { vouchers: ["v_telescope"], consumableSlots: -1 },
+  b_ghost: { consumables: ["c_hex"] },
+  b_zodiac: {
+    vouchers: ["v_tarot_merchant", "v_planet_merchant", "v_overstock_norm"],
+  },
+  b_black: { jokerSlots: 1 },
+  b_painted: { jokerSlots: -1 },
+  b_yellow: { dollars: 10 },
+  b_mp_orange: { consumables: ["c_hanged_man", "c_hanged_man"] },
+  b_mp_oracle: { vouchers: ["v_clearance_sale"], consumables: ["c_medium"] },
+};
+
+/** The deck's key: the log has the key ("b_mp_violet") or the name ("Magic Deck"). */
+function deckKey(deck: string | undefined): string | undefined {
+  if (!deck) return undefined;
+  if (deck.startsWith("b_")) return deck;
+  const known = DECKS.find((d) => d.name === deck);
+  if (known) return known.key;
+  return `b_${deck
+    .replace(/ Deck$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")}`;
+}
 
 /** Softlocked planets and the hand that opens them. */
 const SOFTLOCKS = [
@@ -183,6 +223,7 @@ interface PlayingCard {
   rank: string;
   suit: string;
   enhancement?: string;
+  seal?: string;
   alive: boolean;
 }
 
@@ -234,126 +275,72 @@ function softHand(cards: PlayingCard[], smeared: boolean): string | undefined {
   return undefined;
 }
 
-/** A consumable made outside the shop and packs, and where the replay makes it. */
-interface Made {
-  id: number;
-  set: ConsumableSet;
-  key: string;
-  /** The Fool's copy: no roll. */
-  copy: boolean;
+/** The joker each slot acts as: Blueprint copies the one to its right, Brainstorm the first. */
+function acting(keys: readonly string[]): string[] {
+  const at = (i: number, depth: number): string | undefined => {
+    if (i >= keys.length || depth > keys.length) return undefined;
+    if (keys[i] === "j_blueprint") return at(i + 1, depth + 1);
+    if (keys[i] === "j_brainstorm")
+      return i === 0 ? undefined : at(0, depth + 1);
+    return keys[i];
+  };
+  return keys.flatMap((_, i) => at(i, 0) ?? []);
 }
 
-/**
- * Where each made consumable is rolled. It shows up in the log the first time it's used, sold
- * or moved, so it's put at the card that made it when that's in the log (The Emperor, The High
- * Priestess, Séance, The Fool, Cartomancer's blind), else right before it's first seen in a
- * blind, or before the shop is rolled when it's first seen in a shop.
- */
-function placeMade(events: readonly LogEvent[]): {
-  before: Map<number, Made[]>;
-  after: Map<number, Made[]>;
-} {
-  const before = new Map<number, Made[]>();
-  const after = new Map<number, Made[]>();
-  const push = (m: Map<number, Made[]>, i: number, made: Made) =>
-    m.set(i, [...(m.get(i) ?? []), made]);
-  const seen = new Set<number>();
-  let shopStart = -1;
-  let inShop = false;
-  let creators: { at: number; set?: string; key?: string; left: number }[] = [];
-  let lastUsed: string | undefined;
-
-  const nextJokers = (from: number) => {
-    for (let j = from; j < events.length; j++)
-      if (events[j][1] === "play")
-        return (events[j][2] as unknown[])[2] as string[];
-    return [];
+/** Whether played cards hold a Straight and a Flush (vanilla's get_straight / get_flush). */
+function shape(cards: readonly PlayingCard[], jokers: readonly string[]) {
+  const need = jokers.includes("j_four_fingers") ? 4 : 5;
+  const gap = jokers.includes("j_shortcut") ? 2 : 1;
+  const smeared = jokers.includes("j_smeared");
+  const ranked = cards.filter((c) => c.enhancement !== "m_stone");
+  const values = new Set<number>();
+  for (const c of ranked) {
+    const v = RANKS.indexOf(c.rank) + 2;
+    values.add(v);
+    if (v === 14) values.add(1);
+  }
+  let straight = false;
+  let run = 0;
+  let last = -10;
+  for (let v = 1; v <= 14; v++) {
+    if (!values.has(v)) continue;
+    run = v - last <= gap ? run + 1 : 1;
+    last = v;
+    if (run >= need) straight = true;
+  }
+  const suitOf = (s: string) =>
+    smeared ? (s === "Hearts" || s === "Diamonds" ? "red" : "black") : s;
+  let flush = false;
+  for (const suit of ["Spades", "Hearts", "Clubs", "Diamonds"]) {
+    const n = ranked.filter(
+      (c) => c.enhancement === "m_wild" || suitOf(c.suit) === suitOf(suit),
+    ).length;
+    if (n >= need && cards.length >= need) flush = true;
+  }
+  return {
+    straight: straight && cards.length >= need,
+    flush,
+    ace: ranked.some((c) => c.rank === "Ace"),
   };
+}
 
-  const sight = (i: number, ref: unknown, acquired: boolean) => {
-    if (!Array.isArray(ref) || typeof ref[0] !== "number") return;
-    const id = Math.abs(ref[0]);
-    if (ref[0] > 0 || seen.has(id)) return;
-    seen.add(id);
-    const set = ref[1] as string;
-    if (acquired || !CONSUMABLE_SETS.has(set)) return;
-    const key = ref[2] as string;
-    const made: Made = { id, set: set as ConsumableSet, key, copy: false };
-    const by = creators.find(
-      (c) => c.left > 0 && (c.key ? c.key === key : c.set === set),
-    );
-    if (by) {
-      by.left--;
-      made.copy = by.key !== undefined;
-      push(after, by.at, made);
-    } else if (inShop && shopStart >= 0) push(before, shopStart, made);
-    else push(before, i, made);
-  };
-  const sightAll = (i: number, refs: unknown) => {
-    if (Array.isArray(refs)) for (const r of refs) sight(i, r, false);
-  };
+/** What a Spectral does to a card's seal. */
+const SEALS: Record<string, string> = {
+  c_talisman: "Gold",
+  c_deja_vu: "Red",
+  c_trance: "Blue",
+  c_medium: "Purple",
+};
 
-  events.forEach((e, i) => {
-    const [, op, args] = e;
-    const a = args as unknown[];
-    switch (op) {
-      case "select_blind":
-        inShop = false;
-        creators = [];
-        if (nextJokers(i).some((j) => j.startsWith("j_cartomancer")))
-          creators.push({ at: i, set: "Tarot", left: 1 });
-        break;
-      case "cashout":
-        inShop = true;
-        shopStart = i;
-        creators = [];
-        break;
-      case "buy":
-        sight(i, a[2], true);
-        break;
-      case "pack_pick":
-        sight(i, a[2], true);
-        sightAll(i, a[3]);
-        break;
-      case "pack_skip":
-        for (const r of (a[0] as unknown[]) ?? []) sight(i, r, true);
-        break;
-      case "use": {
-        sight(i, a[2], false);
-        sightAll(i, a[3]);
-        const ref = a[2] as Ref;
-        const key = (ref[0] as number) < 0 ? (ref[2] as string) : undefined;
-        const used = key ?? usedKey(events, i);
-        if (used === "c_emperor")
-          creators.push({ at: i, set: "Tarot", left: 2 });
-        if (used === "c_high_priestess")
-          creators.push({ at: i, set: "Planet", left: 2 });
-        if (used === "c_seance")
-          creators.push({ at: i, set: "Spectral", left: 1 });
-        if (used === "c_fool" && lastUsed)
-          creators.push({ at: i, key: lastUsed, left: 1 });
-        if (
-          used &&
-          used !== "c_fool" &&
-          (used.startsWith("c_") || false) &&
-          isTarotOrPlanet(used)
-        )
-          lastUsed = used;
-        break;
-      }
-      case "sell":
-        sight(i, a[2], false);
-        break;
-      case "reorder":
-        for (const m of (a[2] as unknown[][]) ?? []) sight(i, m[0], false);
-        break;
-      case "play":
-      case "discard":
-        sightAll(i, a[1]);
-        break;
-    }
-  });
-  return { before, after };
+/** A consumable the player holds. */
+interface HeldConsumable {
+  set: string;
+  key: string;
+  edition?: string;
+  /** Made by the replay and not shown by the log yet. */
+  unseen?: boolean;
+  /** The replay before it rolled this card; absent for a card made without a roll. */
+  before?: ShopSim;
 }
 
 /** The queue a card was rolled from, as far as checking it goes. */
@@ -374,35 +361,14 @@ for (const r of [1, 2, 3] as const)
   for (const k of (pools.jokers as Record<string, string[]>)[r])
     RARITY.set(k, r);
 const PLANETS = new Set(pools.planets.map((p) => p.key));
-const isTarotOrPlanet = (k: string) => TAROTS.has(k) || PLANETS.has(k);
-
-/** The key of the card a `use` at `i` acts on, when it was seen before (positive id). */
-function usedKey(events: readonly LogEvent[], i: number): string | undefined {
-  const ref = (events[i][2] as unknown[])[2] as Ref;
-  const id = ref[0] as number;
-  for (let j = i - 1; j >= 0; j--) {
-    const found = findRef(events[j][2], -id);
-    if (found) return found[2] as string;
-  }
-  return undefined;
-}
-
-function findRef(value: unknown, id: number): Ref | undefined {
-  if (!Array.isArray(value)) return undefined;
-  if (value[0] === id && typeof value[1] === "string") return value as Ref;
-  for (const v of value) {
-    const r = findRef(v, id);
-    if (r) return r;
-  }
-  return undefined;
-}
-
 // ---------------------------------------------------------------------------
 
 /** Replays one player's log and lists what they blocked. */
 export function findBlocks(
   events: readonly LogEvent[],
   settings: ReaderSettings,
+  /** Debugging: called with a line for every event, roll and check. */
+  trace?: (line: string) => void,
 ): BlockReport {
   const hits: BlockHit[] = [];
   const agreement = {
@@ -420,11 +386,13 @@ export function findBlocks(
   let bossesBeaten = 0;
   let afterBoss = false;
   let nextBlind: "small" | "big" | "boss" = "small";
+  let handsThisRound = 0;
   const place = () =>
     `Ante ${ante} · ${inShop ? `Shop after ${blind}` : blind}`;
   // Hits waiting for the next card their queue shows, to know whether the replay was in line.
   const pending = new Map<string, BlockHit[]>();
   const check = (a: Agreement, ok: boolean, family: string) => {
+    trace?.(`  check ${family}: ${ok ? "ok" : "MISS"}`);
     a.checked++;
     if (ok) a.matched++;
     else firstMiss ??= place();
@@ -432,14 +400,16 @@ export function findBlocks(
     pending.delete(family);
   };
 
-  // What the player has.
+  // What the player has. Money starts at $4 and moves with every money_delta (ease_dollars).
+  let dollars = 4;
   const items = new Map<number, { set: string; key: string }>();
   const cards = new Map<number, PlayingCard>();
   const jokers = new Map<number, { key: string; edition?: string }>();
-  const consumables = new Map<number, string>();
+  const consumables = new Map<number, HeldConsumable>();
   const vouchers = new Set<string>();
   const redeemed: { ante: number; key: string }[] = [];
   let synthetic = 1e9;
+  let lastTarotPlanet: string | undefined;
 
   // What's on screen.
   let shop: (string | null)[] = [];
@@ -458,8 +428,7 @@ export function findBlocks(
   const heldKeys = () =>
     new Set([
       ...[...jokers.values()].map((j) => j.key),
-      ...consumables.values(),
-      ...unclaimed.map((u) => u.key),
+      ...[...consumables.values()].map((c) => c.key),
     ]);
 
   const why = (key: string): string | undefined => {
@@ -511,60 +480,12 @@ export function findBlocks(
   };
 
   /**
-   * Made consumables the replay has rolled but the log hasn't shown yet: the card that made
-   * them made more than one (The Emperor's two), or one was used later than the next. They're
-   * held until they show up, and dropped after a shop they don't show up in.
+   * Rolls a queue on until `key` comes up (what took the rolls in between isn't in the log),
+   * and goes on from there. Nothing is recorded for those rolls. False if it doesn't come up.
    */
-  let unclaimed: { set: ConsumableSet; key: string; shop: number }[] = [];
-  let shops = 0;
-
-  /**
-   * A made consumable the log shows: one already rolled, or the next roll of its queue. If the
-   * next roll isn't it, look a few rolls further (made cards the log doesn't show yet took the
-   * ones in between; they're kept for later) and go on from there.
-   */
-  const claimMade = (set: ConsumableSet, key: string): boolean => {
-    const at = unclaimed.findIndex((u) => u.set === set && u.key === key);
-    if (at >= 0) {
-      unclaimed.splice(at, 1);
-      return true;
-    }
-    const fork = sim.fork();
-    const extra: string[] = [];
-    const found: typeof skips = [];
-    for (let n = 0; n < 6; n++) {
-      syncOwned(fork);
-      for (const k of extra) fork.owned.add(k);
-      skips = [];
-      const got = fork.consumable(set);
-      found.push(...skips);
-      if (got === key) {
-        sim = fork;
-        skips = [];
-        for (const k of extra) unclaimed.push({ set, key: k, shop: shops });
-        // Keep the newest few: more than that means the replay is off, not that they're held.
-        while (unclaimed.filter((u) => u.set === set).length > 3)
-          unclaimed.splice(
-            unclaimed.findIndex((u) => u.set === set),
-            1,
-          );
-        commit(`${set} made`, found);
-        return true;
-      }
-      extra.push(got);
-    }
-    skips = [];
-    return false;
-  };
-
-  /**
-   * Puts a queue back in line after a card the log shows wasn't where the replay put it: roll
-   * that card's queue on until it comes up (what took the rolls in between isn't in the log),
-   * and go on from there. Nothing is recorded for those rolls.
-   */
-  const resync = (set: string, key: string) => {
+  const resync = (set: string, key: string): boolean => {
     const rarity = RARITY.get(key);
-    if (!CONSUMABLE_SETS.has(set) && !rarity) return;
+    if (!CONSUMABLE_SETS.has(set) && !rarity) return false;
     const fork = sim.fork();
     for (let n = 0; n < 10; n++) {
       syncOwned(fork);
@@ -574,11 +495,98 @@ export function findBlocks(
       if (got === key) {
         skips = [];
         sim = fork;
-        return;
+        trace?.(`  resync ${set}: ${n + 1} rolls on`);
+        return true;
       }
     }
     skips = [];
+    return false;
   };
+
+  // Consumables ------------------------------------------------------------
+
+  const startSlots = () => ({
+    jokers: start.jokerSlots,
+    consumables: start.consumableSlots,
+  });
+
+  const consumableLimit = () =>
+    2 +
+    (startSlots().consumables ?? 0) +
+    (vouchers.has("v_crystal_ball") ? 1 : 0) +
+    [...consumables.values()].filter((c) => c.edition === "negative").length;
+  const consumableRoom = () => consumableLimit() - consumables.size;
+
+  /** A consumable made by a joker, a seal or a Tarot, when there's room for it. */
+  const makeConsumable = (source: string, set: ConsumableSet) => {
+    if (consumableRoom() <= 0) return;
+    const before = sim.fork();
+    const key = roll(source, (s) => s.consumable(set));
+    consumables.set(synthetic++, { set, key, unseen: true, before });
+    trace?.(
+      `  ${source} made ${key} (held: ${[...consumables.values()].map((c) => c.key + (c.unseen ? "?" : "")).join(" ")})`,
+    );
+  };
+
+  /**
+   * The replay rolled `c` but the game had `key` there: the game's queue was some draws ahead
+   * (made by something the replay doesn't follow). Find how many from the roll, and move the
+   * queue on by as many.
+   */
+  const realign = (c: HeldConsumable, key: string): boolean => {
+    if (!c.before || !CONSUMABLE_SETS.has(c.set)) return false;
+    const set = c.set as ConsumableSet;
+    for (let k = 1; k <= 6; k++) {
+      const f = c.before.fork();
+      f.skip(`${set}${set}0`, k);
+      const got = f.consumable(set);
+      skips = [];
+      if (got === key) {
+        sim.skip(`${set}${set}0`, k);
+        trace?.(`  realign ${set}: ${k} ahead`);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /**
+   * A consumable the log shows for the first time without it being bought or picked: one the
+   * replay made (checked), a card made without a roll (The Fool, a Blue Seal), or one made by
+   * something the replay doesn't follow (the queue is rolled on until it comes up).
+   */
+  const sightMade = (
+    id: number,
+    set: string,
+    key: string,
+    edition?: string,
+  ) => {
+    if (consumables.has(id)) return;
+    const unseen = [...consumables].filter(([, c]) => c.unseen);
+    const same = unseen.find(([, c]) => c.key === key);
+    if (same) {
+      consumables.delete(same[0]);
+      consumables.set(id, { set, key, edition });
+      if (same[1].before) check(agreement.made, true, set);
+      return;
+    }
+    if (CONSUMABLE_SETS.has(set)) {
+      const wrong = unseen.find(([, c]) => c.set === set && c.before);
+      if (wrong) {
+        consumables.delete(wrong[0]);
+        check(agreement.made, false, set);
+        if (!realign(wrong[1], key)) resync(set, key);
+      } else if (
+        set === "Planet" &&
+        [...cards.values()].some((c) => c.alive && c.seal === "Blue")
+      ) {
+        // A Blue Seal's planet: the last hand's, not rolled.
+      } else check(agreement.made, resync(set, key), set);
+    }
+    consumables.set(id, { set, key, edition });
+  };
+
+  // Jokers -----------------------------------------------------------------
 
   const updateLocks = () => {
     const enh = new Set<string>();
@@ -604,15 +612,20 @@ export function findBlocks(
           suit: r[2] as string,
           rank: r[3] as string,
           enhancement: mod(r, "e:"),
+          seal: mod(r, "s:"),
           alive: true,
         });
       else items.set(id, { set: r[1] as string, key: r[2] as string });
     } else {
       const c = cards.get(id);
-      if (c) c.enhancement = mod(r, "e:");
+      if (c) {
+        c.enhancement = mod(r, "e:");
+        c.seal = mod(r, "s:");
+      }
     }
     return {
       id,
+      fresh: (r[0] as number) < 0,
       item: items.get(id),
       card: cards.get(id),
       edition: mod(r, "ed:"),
@@ -621,12 +634,22 @@ export function findBlocks(
   const learnAll = (refs: unknown) =>
     Array.isArray(refs) ? refs.map(learn) : [];
 
+  /** A consumable ref the log shows outside a buy or a pick. */
+  const seeConsumable = (ref: unknown) => {
+    const got = learn(ref);
+    if (got?.item && CONSUMABLE_SETS.has(got.item.set))
+      sightMade(got.id, got.item.set, got.item.key, got.edition);
+    return got;
+  };
+
   const jokerLimit = () =>
     5 +
+    (startSlots().jokers ?? 0) +
     (vouchers.has("v_antimatter") ? 1 : 0) +
     [...jokers.values()].filter((j) => j.edition === "negative").length;
   const room = () => jokerLimit() - jokers.size;
 
+  let expectedNew: string[] = [];
   const makeJokers = (
     source: string,
     n: number,
@@ -634,31 +657,61 @@ export function findBlocks(
   ) => {
     for (let i = 0; i < n && room() > 0; i++) {
       const j = roll(source, (s) => s.otherJoker(rarity));
+      trace?.(`  ${source} made ${j.key}`);
       jokers.set(synthetic++, { key: j.key, edition: j.edition });
       expectedNew.push(j.key);
     }
   };
-  let expectedNew: string[] = [];
+
+  /** The jokers in order, as the next hand shows them (the log has no order before that). */
+  const nextJokerOrder = (from: number): string[] => {
+    const held = [...jokers.values()].map((j) => j.key);
+    for (let j = from; j < events.length; j++)
+      if (events[j][1] === "play") {
+        // Only the jokers held now, in the hand's order; jokers made since are left out.
+        const left = [...held];
+        const order: string[] = [];
+        for (const t of (events[j][2] as unknown[])[2] as string[]) {
+          const at = left.indexOf(t.split("|")[0]);
+          if (at >= 0) order.push(...left.splice(at, 1));
+        }
+        return [...order, ...left];
+      }
+    return held;
+  };
+
+  /** Probability rolls: Oops! All 6s doubles the odds. */
+  const odds = () =>
+    2 ** [...jokers.values()].filter((j) => j.key === "j_oops").length;
+
+  // Shop -------------------------------------------------------------------
 
   const shopSize = () =>
     2 +
     (vouchers.has("v_overstock_norm") ? 1 : 0) +
     (vouchers.has("v_overstock_plus") ? 1 : 0);
 
+  const shopSlot = () => {
+    const item = roll("Shop", (s) => s.next());
+    return item.kind === "card" ? null : item.key;
+  };
+
+  /**
+   * The shop's slots. An Uncommon or Rare Tag fills every slot of the shop it opens with its
+   * joker (seen in a real match: both slots, then the rerolls are the usual cards). The code
+   * says the tag triggers once (tag.triggered), so this is from the log, not the Lua.
+   */
   const rollShop = (forced?: 2 | 3) => {
     shop = [];
-    for (let i = 0; i < shopSize(); i++) {
-      if (i === 0 && forced) {
-        shop.push(
-          roll(forced === 2 ? "Uncommon Tag" : "Rare Tag", (s) =>
-            s.tagJoker(forced),
-          ).key,
-        );
-        continue;
-      }
-      const item = roll("Shop", (s) => s.next());
-      shop.push(item.kind === "card" ? null : item.key);
-    }
+    for (let i = 0; i < shopSize(); i++)
+      shop.push(
+        forced
+          ? roll(forced === 2 ? "Uncommon Tag" : "Rare Tag", (s) =>
+              s.tagJoker(forced),
+            ).key
+          : shopSlot(),
+      );
+    trace?.(`${place()} shop: ${shop.join(" ")}`);
   };
 
   const redeem = (key: string) => {
@@ -667,18 +720,15 @@ export function findBlocks(
     if ((SHOP_VOUCHERS as readonly string[]).includes(key) && sim.mods.vouchers)
       sim.mods.vouchers[key as ShopVoucher] = sim.slots + 1;
     if (key === "v_overstock_norm" || key === "v_overstock_plus")
-      shop.push(
-        (() => {
-          const item = roll("Shop", (s) => s.next());
-          return item.kind === "card" ? null : item.key;
-        })(),
-      );
+      shop.push(shopSlot());
   };
 
+  /** A Tarot, Planet or Spectral used: on cards, or making cards. */
   const applyUse = (key: string, targets: ReturnType<typeof learn>[]) => {
     const hit = targets.flatMap((t) => (t?.card ? [t.card] : []));
     if (ENHANCES[key]) for (const c of hit) c.enhancement = ENHANCES[key];
     if (SUITS[key]) for (const c of hit) c.suit = SUITS[key];
+    if (SEALS[key]) for (const c of hit) c.seal = SEALS[key];
     if (key === "c_strength")
       for (const c of hit)
         c.rank = RANKS[(RANKS.indexOf(c.rank) + 1) % RANKS.length] ?? c.rank;
@@ -689,6 +739,27 @@ export function findBlocks(
       makeJokers("Judgement", 1, "judgement");
     if (key === "c_wraith" && room() > 0) makeJokers("Wraith", 1, 3);
     if (key === "c_soul" && room() > 0) makeJokers("The Soul", 1, 4);
+    // The used card has left its slot already (G.FUNCS.use_card), so it doesn't take room.
+    if (key === "c_emperor" || key === "c_high_priestess") {
+      const n = Math.min(2, consumableRoom());
+      for (let i = 0; i < n; i++)
+        makeConsumable(
+          key === "c_emperor" ? "The Emperor" : "The High Priestess",
+          key === "c_emperor" ? "Tarot" : "Planet",
+        );
+    }
+    if (
+      key === "c_fool" &&
+      lastTarotPlanet &&
+      lastTarotPlanet !== "c_fool" &&
+      consumableRoom() > 0
+    )
+      consumables.set(synthetic++, {
+        set: TAROTS.has(lastTarotPlanet) ? "Tarot" : "Planet",
+        key: lastTarotPlanet,
+        unseen: true,
+      });
+    if (TAROTS.has(key) || PLANETS.has(key)) lastTarotPlanet = key;
   };
 
   const removeJoker = (id: number, key?: string) => {
@@ -703,6 +774,15 @@ export function findBlocks(
         jokers.delete(k);
         return;
       }
+  };
+
+  /** A joker the replay made, shown by the log before the next hand (sold or moved). */
+  const confirmJoker = (got: ReturnType<typeof learn>) => {
+    if (!got?.fresh || got.item?.set !== "Joker") return;
+    const at = expectedNew.indexOf(got.item.key);
+    if (at < 0) return;
+    expectedNew.splice(at, 1);
+    check(agreement.jokers, true, "joker");
   };
 
   /** A joker in the log that the replay doesn't have yet: one it made, or one it missed. */
@@ -721,34 +801,56 @@ export function findBlocks(
     for (const k of keys ?? [])
       if (Number(r) < 4) RARITY.set(k, Number(r) as 1 | 2 | 3);
   const tags = tagQueue(settings, 12);
-  const made = placeMade(events);
 
-  const makeConsumables = (list: Made[] | undefined) => {
-    for (const m of list ?? []) {
-      if (!m.copy) check(agreement.made, claimMade(m.set, m.key), m.set);
-      consumables.set(m.id, m.key);
-    }
+  // The deck's starting vouchers and consumables.
+  const run = events.find((e) => e[1] === "run_info")?.[2] as
+    | { deck?: string }
+    | undefined;
+  const start = DECK_START[deckKey(run?.deck) ?? ""] ?? {};
+  dollars += start.dollars ?? 0;
+  for (const v of start.vouchers ?? []) {
+    vouchers.add(v);
+    if ((SHOP_VOUCHERS as readonly string[]).includes(v) && sim.mods.vouchers)
+      sim.mods.vouchers[v as ShopVoucher] = 1;
+  }
+  for (const c of start.consumables ?? [])
+    consumables.set(synthetic++, {
+      set: TAROTS.has(c) ? "Tarot" : PLANETS.has(c) ? "Planet" : "Spectral",
+      key: c,
+      unseen: true,
+    });
+
+  /** The first blind after a boss, played or skipped, starts the next ante. */
+  const newAnte = () => {
+    if (!afterBoss) return;
+    ante++;
+    afterBoss = false;
   };
 
   events.forEach((e, i) => {
     const [, op, args] = e;
     const a = (args ?? []) as unknown[];
     updateLocks();
-    makeConsumables(made.before.get(i));
+    if (trace && op !== "money_delta" && op !== "hand_scored")
+      trace(`#${i} ${op} $${dollars} ${JSON.stringify(args).slice(0, 150)}`);
     switch (op) {
+      case "money_delta":
+        dollars += Number(a[0]) || 0;
+        break;
       case "select_blind": {
         const key = a[1] as string;
-        if (afterBoss) {
-          ante++;
-          afterBoss = false;
-        }
+        newAnte();
         inShop = false;
         shop = [];
+        handsThisRound = 0;
         blind = blindName(key);
         nextBlind =
           key === "bl_small" ? "big" : key === "bl_big" ? "boss" : "small";
-        if ([...jokers.values()].some((j) => j.key === "j_riff_raff"))
-          makeJokers("Riff-raff", 2, 1);
+        // setting_blind, joker by joker (copies included).
+        for (const k of acting(nextJokerOrder(i))) {
+          if (k === "j_riff_raff") makeJokers("Riff-raff", 2, 1);
+          if (k === "j_cartomancer") makeConsumable("Cartomancer", "Tarot");
+        }
         if (key.startsWith("bl_mp_") && pincherLocked) {
           // update_draw_to_hand, after Riff-raff's setting_blind.
           pincherLocked = false;
@@ -757,6 +859,7 @@ export function findBlocks(
         break;
       }
       case "skip_blind": {
+        newAnte();
         const t = tags[ante - 1];
         const tag = nextBlind === "small" ? t?.small : t?.big;
         blind = nextBlind === "small" ? "Small Blind" : "Big Blind";
@@ -780,8 +883,6 @@ export function findBlocks(
         break;
       case "leave_shop":
         shop = [];
-        unclaimed = unclaimed.filter((u) => u.shop >= shops);
-        shops++;
         break;
       case "buy": {
         const got = learn(a[2]);
@@ -797,8 +898,10 @@ export function findBlocks(
           shop.splice(at, 1);
           if (set === "Joker")
             jokers.set(got.id, { key, edition: got.edition });
-          else if (CONSUMABLE_SETS.has(set) && a[4] !== true)
-            consumables.set(got.id, key);
+          else if (CONSUMABLE_SETS.has(set)) {
+            if (a[4] === true) applyUse(key, []);
+            else consumables.set(got.id, { set, key, edition: got.edition });
+          }
         } else if (got?.card) shop.splice(slot, 1);
         break;
       }
@@ -824,6 +927,12 @@ export function findBlocks(
           }
         }
         if (kind === "standard") pack = [];
+        trace?.(`  pack: ${pack.join(" ")}`);
+        // open_booster: Hallucination, 1 in 2 (TheOrder.toml: "halu" .. ante_based() = "halu0").
+        for (const k of acting([...jokers.values()].map((j) => j.key)))
+          if (k === "j_hallucination" && consumableRoom() > 0)
+            if (sim.chance("halu0") < odds() / 2)
+              makeConsumable("Hallucination", "Tarot");
         break;
       }
       case "pack_pick": {
@@ -856,7 +965,7 @@ export function findBlocks(
         break;
       }
       case "use": {
-        const got = learn(a[2]);
+        const got = seeConsumable(a[2]);
         const targets = learnAll(a[3]);
         if (!got?.item) break;
         const { key, set } = got.item;
@@ -868,7 +977,8 @@ export function findBlocks(
         break;
       }
       case "sell": {
-        const got = learn(a[2]);
+        const got = a[0] === 4 ? learn(a[2]) : seeConsumable(a[2]);
+        confirmJoker(got);
         if (!got?.item) break;
         if (a[0] === 4) removeJoker(got.id, got.item.key);
         else consumables.delete(got.id);
@@ -876,13 +986,17 @@ export function findBlocks(
       }
       case "reorder":
         for (const m of (a[2] as unknown[][]) ?? []) {
-          const got = learn(m[0]);
+          const got = a[0] === 5 ? seeConsumable(m[0]) : learn(m[0]);
+          confirmJoker(got);
           if (a[0] === 4 && got?.item?.set === "Joker")
             bindJoker(got.id, got.item.key, got.edition);
         }
         break;
       case "discard":
-        learnAll(a[1]);
+        // A Purple Seal discarded makes a Tarot.
+        for (const t of learnAll(a[1]))
+          if (t?.card?.seal === "Purple")
+            makeConsumable("Purple Seal", "Tarot");
         break;
       case "play": {
         const hand = learnAll(a[1]).flatMap((t) => (t?.card ? [t.card] : []));
@@ -915,13 +1029,34 @@ export function findBlocks(
             const edition = tokens.find((t) => t.key === key)?.edition;
             jokers.set(synthetic++, { key, edition });
           }
-        const smeared = tokens.some((t) => t.key === "j_smeared");
-        const h = softHand(hand, smeared);
+        const keys = tokens.map((t) => t.key);
+        const h = softHand(hand, keys.includes("j_smeared"));
         if (h) played.add(h);
+        // joker_main, joker by joker (copies included). The money is what it was before the
+        // hand: what the hand earns is added after.
+        const { straight, flush, ace } = shape(hand, keys);
+        for (const k of acting(keys)) {
+          if (k === "j_vagabond" && dollars <= 4)
+            makeConsumable("Vagabond", "Tarot");
+          if (k === "j_superposition" && straight && ace)
+            makeConsumable("Superposition", "Tarot");
+          if (k === "j_seance" && straight && flush)
+            makeConsumable("Séance", "Spectral");
+        }
+        // destroying_card: Sixth Sense (not copied).
+        if (
+          keys.includes("j_sixth_sense") &&
+          handsThisRound === 0 &&
+          hand.length === 1 &&
+          hand[0].rank === "6"
+        ) {
+          makeConsumable("Sixth Sense", "Spectral");
+          hand[0].alive = false;
+        }
+        handsThisRound++;
         break;
       }
     }
-    makeConsumables(made.after.get(i));
   });
 
   // Vouchers: each ante's offers, with what the player had redeemed by then.
@@ -929,7 +1064,7 @@ export function findBlocks(
     settings,
     bossesBeaten + 1,
     (va, key) => redeemed.some((r) => r.ante === va && r.key === key),
-    [],
+    start.vouchers ?? [],
     (va, keys) => {
       for (const key of keys)
         hits.push({

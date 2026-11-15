@@ -1009,6 +1009,16 @@ export class ShopSim {
     return copy;
   }
 
+  /** Moves a stream on `n` draws without using them. */
+  skip(stream: string, n: number): void {
+    for (let i = 0; i < n; i++) this.game.rng.random(stream);
+  }
+
+  /** One draw from a stream, for a chance roll (Hallucination's "halu0", …). */
+  chance(stream: string): number {
+    return this.game.rng.random(stream);
+  }
+
   /**
    * A Tarot, Planet or Spectral made outside the shop and packs (The Emperor, Cartomancer,
    * Vagabond, Purple Seals, Séance, …): under The Order it takes the shop's queue.

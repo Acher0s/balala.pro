@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { findBlocks, type LogEvent, matchSettings } from "./blocks";
+import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
+import viwlatit from "./fixtures/viwlatit-log.json";
+import x3uf2auh from "./fixtures/x3uf2auh-log.json";
 import { jokerQueue, type ReaderSettings, shopQueue } from "./reader";
+import { isReadable } from "./replay-file";
 import { PATCHES } from "./rulesets";
 
 const events = log.events as LogEvent[];
@@ -37,11 +41,15 @@ describe("what did I block (FZZUAJBR)", () => {
     expect(matchSettings(off).ok).toBe(false);
   });
 
-  it("follows the log: pack cards and made consumables are where the replay puts them", () => {
-    const { packs, made, jokers } = report.agreement;
+  it("follows the log: shop, pack and made cards are where the replay puts them", () => {
+    const { shop, packs, made, jokers } = report.agreement;
+    // Vagabond's and the Purple Seals' Tarots are made as they happen, so the shop holds
+    // through Ante 4.
+    expect(report.firstMiss).toMatch(/^Ante [5-9]/);
+    expect(shop.matched / shop.checked).toBeGreaterThan(0.6);
     expect(packs.matched / packs.checked).toBeGreaterThan(0.9);
-    expect(made.matched / made.checked).toBeGreaterThan(0.75);
-    // The two jokers Riff-raff made are the ones the player had next.
+    expect(made.matched / made.checked).toBeGreaterThan(0.8);
+    // The jokers Riff-raff made are the ones the player had next.
     expect(jokers.matched).toBe(jokers.checked);
   });
 
@@ -100,5 +108,43 @@ describe("pool flags and stickers", () => {
       (j) => j.kind === "joker" && j.stickerQueue && j.stickers.length === 0,
     );
     expect(bare.length).toBeGreaterThan(0);
+  });
+});
+
+describe("whole matches that replay without a miss", () => {
+  const cases = [
+    // Magic Deck (Crystal Ball, two Fools), stake 6, a Rare Tag that fills the next shop.
+    ["VIWLATIT", viwlatit],
+    // Orange Deck: two Hanged Men to start with.
+    ["DKH5GTRX", dkh5gtrx],
+    // Showman, Judgement's joker sold before the next hand.
+    ["X3UF2AUH", x3uf2auh],
+  ] as const;
+  for (const [seed, fixture] of cases)
+    it(seed, () => {
+      const events = fixture.events as LogEvent[];
+      const read = matchSettings(events);
+      if (!read.ok) throw new Error(read.error);
+      expect(read.settings.seed).toBe(seed);
+      const { agreement, firstMiss } = findBlocks(events, read.settings);
+      expect(firstMiss).toBeUndefined();
+      for (const a of Object.values(agreement))
+        expect(a.matched).toBe(a.checked);
+      expect(agreement.shop.checked).toBeGreaterThan(10);
+    });
+});
+
+describe("replay files", () => {
+  it("treats a log without its run as not shared", () => {
+    expect(
+      isReadable({
+        name: "",
+        shared: false,
+        events: [[0, "select_blind", [0, "bl_small"]]],
+      }),
+    ).toBe(false);
+    expect(
+      isReadable({ name: "", shared: true, events: log.events as LogEvent[] }),
+    ).toBe(true);
   });
 });
