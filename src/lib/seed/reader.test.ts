@@ -3,6 +3,7 @@ import pools from "./pools.generated.json";
 import type { SeedRng } from "./pseudo";
 import {
   _internal,
+  bannedKeys,
   certificateQueue,
   illusionQueue,
   jokerQueue,
@@ -15,13 +16,15 @@ import {
   rawJokerQueue,
   shopConsumableQueue,
   shopQueue,
+  smallWorldBans,
+  smallWorldPools,
   standardPackQueue,
   tagQueue,
   voucherQueue,
 } from "./reader";
 import { PATCHES } from "./rulesets";
 
-const [expanded, balanced] = PATCHES[0].rulesets;
+const [expanded, smallWorld, balanced] = PATCHES[0].rulesets;
 const settings = (
   seed: string,
   stake = 1,
@@ -498,5 +501,142 @@ describe("blocking a card", () => {
     ]);
     expect(fewer.slice(0, 2)).toEqual(tarots.slice(0, 2));
     expect(fewer.slice(2)).not.toContain(tarots[2]);
+  });
+});
+
+/**
+ * Small World, checked against a real match on it (seed UXYM3NVF, Green Stake, Anaglyph Deck,
+ * The Order on): every card either player bought, picked, opened or used.
+ */
+describe("Small World", () => {
+  const sw = (seed: string, extra: Partial<ReaderSettings> = {}) =>
+    settings(seed, 3, smallWorld, { pincherUnlocked: true, ...extra });
+  const MATCH = "UXYM3NVF";
+  // Several keys where the log's name is ambiguous (a pack's art variants): one must be left.
+  const SEEN: (string | string[])[] = [
+    "c_strength",
+    "j_mp_pizza",
+    "j_todo_list",
+    "j_chaos",
+    "c_wraith",
+    "j_wrathful_joker",
+    "j_popcorn",
+    "j_cartomancer",
+    "c_tower",
+    "c_world",
+    "c_mp_asteroid",
+    "c_judgement",
+    "j_green_joker",
+    "j_pareidolia",
+    "j_campfire",
+    "p_buffoon_mega_1",
+    "j_rocket",
+    "j_fibonacci",
+    "v_grabber",
+    "j_greedy_joker",
+    "j_splash",
+    "j_mp_seltzer",
+    "c_empress",
+    "j_swashbuckler",
+    "j_credit_card",
+    "j_stencil",
+    "j_acrobat",
+    "j_juggler",
+    "j_baseball",
+    "v_overstock_norm",
+    "j_ceremonial",
+    "j_rough_gem",
+    "j_loyalty_card",
+    "j_mp_pacifist",
+    "j_seance",
+    "c_eris",
+    "c_uranus",
+    "j_mp_skip_off",
+    [
+      "p_standard_normal_1",
+      "p_standard_normal_2",
+      "p_standard_normal_3",
+      "p_standard_normal_4",
+    ],
+    [
+      "p_arcana_normal_1",
+      "p_arcana_normal_2",
+      "p_arcana_normal_3",
+      "p_arcana_normal_4",
+    ],
+    ["p_arcana_jumbo_1", "p_arcana_jumbo_2"],
+    ["p_celestial_jumbo_1", "p_celestial_jumbo_2"],
+  ];
+
+  it("leaves every card the match saw", () => {
+    const banned = bannedKeys(sw(MATCH));
+    for (const k of SEEN)
+      expect(
+        (Array.isArray(k) ? k : [k]).some((x) => !banned.has(x)),
+        String(k),
+      ).toBe(true);
+    // Another seed's cull bans most of them.
+    const other = bannedKeys(sw("FZZUAJBR"));
+    const hit = SEEN.filter((k) =>
+      (Array.isArray(k) ? k : [k]).every((x) => other.has(x)),
+    );
+    expect(hit.length).toBeGreaterThan(20);
+  });
+
+  it("rolls the match's shop", () => {
+    const shop = shopQueue(sw(MATCH), 10).map((x) =>
+      "key" in x ? x.key : x.card,
+    );
+    expect(shop).toEqual([
+      "j_mp_pizza",
+      "c_strength",
+      "j_chaos",
+      "j_todo_list",
+      "j_wrathful_joker",
+      "j_pareidolia",
+      "j_popcorn",
+      "j_greedy_joker",
+      "j_cartomancer",
+      "j_madness",
+    ]);
+    // The first Buffoon Pack was culled, so the first shop has two Standard Packs.
+    const packs = packQueue(sw(MATCH), 2);
+    expect(packs[0].every((p) => p.startsWith("p_standard"))).toBe(true);
+    expect(packs[1].every((p) => p.startsWith("p_arcana"))).toBe(true);
+    expect(voucherQueue(sw(MATCH), 3, true)[2]).toEqual(["v_grabber"]);
+  });
+
+  it("bans three quarters of each pool", () => {
+    for (const seed of SEEDS) {
+      const pools = smallWorldPools(sw(seed));
+      expect(pools.Joker4).toHaveLength(1);
+      expect(pools.Tarot).toHaveLength(21 - Math.floor(0.5 + 21 * 0.75));
+      const bans = smallWorldBans(sw(seed));
+      // Upgrades go with their base, Cavendish with Gros Michel.
+      if (bans.has("v_overstock_norm"))
+        expect(bans.has("v_overstock_plus")).toBe(true);
+      if (bans.has("j_gros_michel")) expect(bans.has("j_cavendish")).toBe(true);
+    }
+  });
+
+  it("allows duplicates, so blocks change nothing", () => {
+    const plain = shopQueue(sw(MATCH), 30);
+    const blocked = shopQueue(sw(MATCH), 30, {
+      blocks: [{ key: "j_chaos", from: 1 }],
+    });
+    expect(blocked).toEqual(plain);
+  });
+
+  it("rolls the first ante's tags before the cull, then swaps banned ones", () => {
+    const banned = bannedKeys(sw(MATCH));
+    for (const seed of SEEDS) {
+      const s = sw(seed);
+      const bans = bannedKeys(s);
+      for (const t of tagQueue(s, 4)) {
+        expect(bans.has(t.small)).toBe(false);
+        expect(bans.has(t.big)).toBe(false);
+      }
+    }
+    expect(banned.size).toBeGreaterThan(150);
   });
 });

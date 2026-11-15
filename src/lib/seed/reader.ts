@@ -15,6 +15,7 @@
  * are noted where they are.
  */
 
+import { LuaRandom } from "./lua-random";
 import type { SeedPools } from "./pool-types";
 import vanilla from "./pools.generated.json";
 import { SeedRng } from "./pseudo";
@@ -148,9 +149,140 @@ interface Pools {
   noPerishable: Set<string>;
 }
 
-/** Everything banned in a match: the ruleset's bans and the game mode's. */
-export function bannedKeys(settings: ReaderSettings): Set<string> {
-  return new Set([...settings.ruleset.banned, ...settings.gameMode.banned]);
+/**
+ * Everything banned in a match: the ruleset's bans and the game mode's, and on Small World the
+ * cards it culled. `beforeCull` leaves the cull out: the ante-1 tags and voucher are rolled in
+ * start_run, before Small World culls (lovely/ban_timing.toml applies only the declared bans).
+ */
+export function bannedKeys(
+  settings: ReaderSettings,
+  beforeCull = false,
+): Set<string> {
+  const keys = new Set([
+    ...settings.ruleset.banned,
+    ...settings.gameMode.banned,
+  ]);
+  if (settings.ruleset.smallWorld && !beforeCull)
+    for (const k of smallWorldBans(settings)) keys.add(k);
+  return keys;
+}
+
+const smallWorldCache = new Map<string, Set<string>>();
+
+/**
+ * The cards Small World bans for a seed (layers/smallworld.lua, on apply_bans). Every pool of
+ * cards not already banned (G.GAME.banned_keys: not the ones whose in_pool says no) is sorted
+ * by key and shuffled with pseudoshuffle on "<pool>_mp_smallworld", and its first 75% (rounded)
+ * are banned, one fewer for vouchers. The pools are each joker rarity ("Joker1" …), Tarot,
+ * Planet, Spectral, base vouchers, packs and tags; upgrades, The Soul, Black Hole and Cavendish
+ * aren't in them. An upgrade goes with its base voucher, Cavendish with Gros Michel.
+ */
+export function smallWorldBans(settings: ReaderSettings): Set<string> {
+  const seed = normalizeSeed(settings.seed);
+  const id = `${seed}|${settings.ruleset.id}|${settings.gameMode.id}`;
+  const hit = smallWorldCache.get(id);
+  if (hit) return hit;
+
+  const { pre, tables, vouchers } = smallWorldTables(settings);
+  const rng = new SeedRng(seed);
+  const lua = new LuaRandom();
+  const out = new Set<string>();
+  for (const [name, all] of Object.entries(tables)) {
+    // table.sort compares strings byte by byte; the keys are ASCII.
+    const list = all.filter((k) => !pre.has(k)).sort();
+    // pseudoshuffle: math.randomseed(seed), then swap each i (from the end) with math.random(i).
+    lua.seed(rng.pseudoseed(`${name}_mp_smallworld`));
+    for (let i = list.length; i >= 2; i--) {
+      const j = lua.randint(1, i);
+      [list[i - 1], list[j - 1]] = [list[j - 1], list[i - 1]];
+    }
+    const threshold = Math.floor(0.5 + list.length * 0.75);
+    // Vouchers start the count at 2 (unless legacy_smallworld), so one fewer is banned.
+    const n = name === "Voucher" ? threshold - 1 : threshold;
+    for (const k of list.slice(0, Math.max(0, n))) out.add(k);
+  }
+  for (const v of vouchers)
+    if (v.requires.length > 0 && out.has(v.requires[0])) out.add(v.key);
+  if (out.has("j_gros_michel")) out.add("j_cavendish");
+  smallWorldCache.set(id, out);
+  return out;
+}
+
+/** The pools Small World culls, by its names for them ("Joker1", "Tarot", …). */
+export const SMALL_WORLD_POOLS = [
+  "Joker4",
+  "Joker3",
+  "Joker2",
+  "Joker1",
+  "Tarot",
+  "Planet",
+  "Spectral",
+  "Voucher",
+  "Booster",
+  "Tag",
+] as const;
+
+/**
+ * What's left of each pool after Small World's cull, in pool order: the cards you can still
+ * get (base vouchers only; Cavendish is listed with the Commons when Gros Michel is left).
+ */
+export function smallWorldPools(
+  settings: ReaderSettings,
+): Record<(typeof SMALL_WORLD_POOLS)[number], string[]> {
+  const { pre, tables } = smallWorldTables(settings);
+  const bans = smallWorldBans(settings);
+  const left = (name: string) =>
+    (tables[name] ?? []).filter((k) => !pre.has(k) && !bans.has(k));
+  const out = Object.fromEntries(
+    SMALL_WORLD_POOLS.map((name) => [name, left(name)]),
+  ) as Record<(typeof SMALL_WORLD_POOLS)[number], string[]>;
+  if (!bans.has("j_cavendish") && !pre.has("j_cavendish"))
+    out.Joker1.push("j_cavendish");
+  return out;
+}
+
+/** The pools Small World shuffles, and the bans it reads (G.GAME.banned_keys) before it does. */
+function smallWorldTables(settings: ReaderSettings) {
+  const { ruleset, gameMode } = settings;
+  const closed = new Set(ruleset.closed ?? []);
+  const pre = new Set([
+    ...ruleset.banned.filter((k) => !closed.has(k)),
+    ...gameMode.banned,
+  ]);
+  const vouchers = [...POOLS.vouchers, ...(ruleset.added.vouchers ?? [])];
+  const tables: Record<string, string[]> = {
+    Tarot: POOLS.tarots,
+    Planet: [
+      ...POOLS.planets.map((p) => p.key),
+      ...(ruleset.added.Planet ?? []),
+    ],
+    Spectral: [
+      ...POOLS.spectrals.filter((c) => !c.hidden).map((c) => c.key),
+      ...(ruleset.added.Spectral ?? []),
+    ],
+    Voucher: vouchers.filter((v) => v.requires.length === 0).map((v) => v.key),
+    Booster: [
+      ...POOLS.boosters.map((b) => b.key),
+      ...(ruleset.added.boosters ?? []),
+    ],
+    Tag: [...POOLS.tags.map((t) => t.key), ...(ruleset.added.tags ?? [])],
+  };
+  for (const r of [1, 2, 3, 4] as Rarity[])
+    tables[`Joker${r}`] = [
+      ...POOLS.jokers[r],
+      ...(ruleset.added.jokers?.[r] ?? []),
+    ].filter((k) => k !== "j_cavendish");
+  return { pre, tables, vouchers };
+}
+
+/**
+ * A set that never holds anything. On Small World duplicates are allowed (SMODS.showman is
+ * always true), so a card in the run is never skipped.
+ */
+class NoneSet extends Set<string> {
+  override add(): this {
+    return this;
+  }
 }
 
 /** Every slot that's never picked: the bans, and Penny Pincher while it's locked. */
@@ -286,10 +418,11 @@ class Game {
   /** Replaced mid-run when a pool opens up (Penny Pincher). */
   pools: Pools;
   /** Cards that exist in the run right now: skipped like unavailable ones. */
-  readonly owned = new Set<string>();
+  readonly owned: Set<string>;
   readonly stake: number;
 
   constructor(settings: ReaderSettings) {
+    this.owned = settings.ruleset.smallWorld ? new NoneSet() : new Set();
     this.rng = new SeedRng(normalizeSeed(settings.seed));
     this.pools = buildPools(settings);
     this.stake = settings.stake;
@@ -514,24 +647,37 @@ export function tagQueue(
   const game = new Game(settings);
   const banned = bannedKeys(settings);
   const out: { ante: number; small: string; big: string }[] = [];
-  for (let ante = 1; ante <= antes; ante++) {
-    const pool = [
-      ...POOLS.tags,
-      ...(settings.ruleset.added.tags ?? []).map((key) => ({
-        key,
-        minAnte: undefined as number | undefined,
-      })),
-    ].map((t) =>
-      (t.minAnte ?? 0) > ante || banned.has(t.key) ? UNAVAILABLE : t.key,
+  const all = [
+    ...POOLS.tags,
+    ...(settings.ruleset.added.tags ?? []).map((key) => ({
+      key,
+      minAnte: undefined as number | undefined,
+    })),
+  ];
+  const draw = (bans: Set<string>, ante: number, key: string) => {
+    const pool = all.map((t) =>
+      (t.minAnte ?? 0) > ante || bans.has(t.key) ? UNAVAILABLE : t.key,
     );
-    const next = () => {
-      let tag = game.rng.element(pool, `Tag${ante}`);
-      for (let it = 2; tag === UNAVAILABLE; it++)
-        tag = game.rng.element(pool, `Tag${ante}_resample${it}`);
-      return tag;
-    };
-    const small = next();
-    const big = next();
+    let tag = game.rng.element(pool, key);
+    for (let it = 2; tag === UNAVAILABLE; it++)
+      tag = game.rng.element(pool, `${key}_resample${it}`);
+    return tag;
+  };
+  for (let ante = 1; ante <= antes; ante++) {
+    // Small World culls after start_run has rolled the first ante's tags.
+    const bans =
+      ante === 1 && settings.ruleset.smallWorld
+        ? bannedKeys(settings, true)
+        : banned;
+    let small = draw(bans, ante, `Tag${ante}`);
+    let big = draw(bans, ante, `Tag${ante}`);
+    if (ante === 1 && settings.ruleset.smallWorld) {
+      // Small World's Tag:init swaps a banned tag for get_next_tag_key("replace"), with the
+      // ante set to 10 under The Order: "Tagreplace10". The blind screen makes the Small
+      // Blind's tag first, then the Big Blind's.
+      if (banned.has(small)) small = draw(banned, 10, "Tagreplace10");
+      if (banned.has(big)) big = draw(banned, 10, "Tagreplace10");
+    }
     out.push({ ante, small, big });
   }
   return out;
@@ -553,12 +699,15 @@ export function voucherQueue(
 ): string[][] {
   const game = new Game(settings);
   const have = new Set(owned);
-  const banned = bannedKeys(settings);
+  const culledBans = bannedKeys(settings);
+  // Small World culls after start_run has rolled the first ante's vouchers.
+  const firstBans = bannedKeys(settings, true);
   // vouchers_in_shop + extra_vouchers: Violet Deck adds one (SMODS.change_voucher_limit(1)),
   // before the first ante's vouchers are rolled.
   const perAnte = 1 + (settings.deck === "violet" ? 1 : 0);
   const out: string[][] = [];
   for (let ante = 1; ante <= antes; ante++) {
+    const banned = ante === 1 ? firstBans : culledBans;
     const pool = [
       ...POOLS.vouchers,
       ...(settings.ruleset.added.vouchers ?? []),
@@ -629,8 +778,10 @@ export function packQueue(settings: ReaderSettings, shops: number): string[][] {
     }
     return boosters[boosters.length - 1].key;
   };
+  // get_pack's first-shop Buffoon Pack is skipped when p_buffoon_normal_1 is banned.
+  const buffoon = !banned.has("p_buffoon_normal_1");
   return Array.from({ length: shops }, (_, i) =>
-    i === 0 ? ["p_buffoon_normal_1", roll()] : [roll(), roll()],
+    i === 0 && buffoon ? ["p_buffoon_normal_1", roll()] : [roll(), roll()],
   );
 }
 

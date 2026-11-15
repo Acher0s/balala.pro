@@ -17,6 +17,11 @@ export interface RulesetDef {
    * the pool whose in_pool says no (they hold a slot, but are never picked).
    */
   banned: string[];
+  /**
+   * Keys in `banned` that the game doesn't ban: they're in the pool, but their in_pool says no.
+   * Small World counts them when it culls (it reads G.GAME.banned_keys, not in_pool).
+   */
+  closed?: string[];
   /** Mod cards in this ruleset's pools, by pool, appended after the vanilla cards. */
   added: {
     jokers?: Partial<Record<1 | 2 | 3 | 4, string[]>>;
@@ -25,6 +30,8 @@ export interface RulesetDef {
     /** In pool order; an upgrade lists the voucher it requires. */
     vouchers?: { key: string; requires: string[] }[];
     tags?: string[];
+    /** Packs in the Booster pool that the shop never rolls (weight 0); Small World counts them. */
+    boosters?: string[];
   };
   /** Added jokers that can't be Eternal / Perishable (eternal_compat / perishable_compat). */
   noEternal?: string[];
@@ -40,6 +47,11 @@ export interface RulesetDef {
   decks: DeckId[];
   /** Whether ranked matches on this ruleset always use The Order. */
   rankedOrder: boolean;
+  /**
+   * Small World (layers/smallworld.lua): 75% of every pool is banned at the start of the run,
+   * picked by a seeded shuffle, and duplicates are allowed (SMODS.showman is always true).
+   */
+  smallWorld?: boolean;
 }
 
 /** Decks that change what a seed rolls. Any other deck reads the same as Red Deck. */
@@ -159,6 +171,7 @@ const EXPANDED: RulesetDef = {
     "v_mp_petroglyph_manhunt",
     "tag_mp_ward",
   ],
+  closed: ["v_mp_hieroglyph_manhunt", "v_mp_petroglyph_manhunt", "tag_mp_ward"],
   added: {
     jokers: {
       1: [
@@ -187,6 +200,8 @@ const EXPANDED: RulesetDef = {
       { key: "v_mp_petroglyph_manhunt", requires: ["v_mp_hieroglyph_manhunt"] },
     ],
     tags: ["tag_mp_ward"],
+    // objects/boosters/standard_giga.lua: Orange Deck's pack, weight 0.
+    boosters: ["p_mp_standard_giga"],
   },
   noEternal: ["j_mp_pizza", "j_mp_seltzer", "j_mp_turtle_bean"],
   noPerishable: ["j_mp_taxes"],
@@ -195,6 +210,21 @@ const EXPANDED: RulesetDef = {
   // layers/expanded.lua allowed_backs; Ghost Deck isn't in ranked, but it's there to read.
   decks: ["violet", "orange", "ghost"],
   rankedOrder: true,
+};
+
+/**
+ * Small World (rulesets/smallworld.lua): Expanded's layers (balanced, expanded, expanded_draft)
+ * plus the smallworld layer. Once the run has started (MPAPI.ApplyBans, after start_run) it
+ * sorts every pool by key, shuffles it with pseudoshuffle on "<pool>_mp_smallworld" and bans the
+ * first 75% (rounded); see smallWorldBans in reader.ts. Not a ranked ruleset, so The Order is the
+ * lobby's choice.
+ */
+const SMALL_WORLD: RulesetDef = {
+  ...EXPANDED,
+  id: "smallworld",
+  name: "Small World",
+  rankedOrder: false,
+  smallWorld: true,
 };
 
 const BALANCED: RulesetDef = {
@@ -213,7 +243,7 @@ export const PATCHES: PatchDef[] = [
   {
     id: "pvp-1.0.5",
     label: "Multiplayer PvP 1.0.5",
-    rulesets: [EXPANDED, BALANCED],
+    rulesets: [EXPANDED, SMALL_WORLD, BALANCED],
     gameMode: ATTRITION,
   },
 ];

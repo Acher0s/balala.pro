@@ -72,6 +72,44 @@ name. Cards a ruleset can't use (sandbox, experimental, traps, Wraith rework) ar
   has Eternals, Perishables and Rentals like Gold.
 - Pizza, Seltzer and Turtle Bean can't be Eternal; Taxes can't be Perishable.
 
+## Small World
+
+Small World (`rulesets/smallworld.lua`) is Expanded's layers plus `layers/smallworld.lua`, so its
+pools, bans and stakes start as Expanded's. On `apply_bans` (`MPAPI.ApplyBans`, which runs after
+`start_run`) the layer culls:
+
+- It builds one list per pool from `G.P_CENTERS` and `G.P_TAGS`: each joker rarity (`Joker1` to
+  `Joker4`), Tarot, Planet, Spectral, Voucher, Booster and Tag. It leaves out cards already in
+  `G.GAME.banned_keys`, cards with `requires` (upgrade vouchers) or `hidden` (The Soul, Black
+  Hole), Cavendish, and mod cards the ruleset excludes. Cards whose `in_pool` is false are kept
+  (Penny Pincher, the Manhunt voucher, the Ward Tag): the ruleset lists them in `closed`. Orange
+  Deck's Giga Standard Pack is a Booster with weight 0, so it counts too (`added.boosters`).
+- It sorts each list by key, then runs `pseudoshuffle(list, pseudoseed("<pool>_mp_smallworld"))`.
+  The Order only takes over shuffles of playing cards, so this is vanilla's: `math.randomseed`,
+  then a swap of each i with `math.random(i)` from the end.
+- It bans the first `floor(0.5 + n * 0.75)`, or one fewer for vouchers (the count starts at 2
+  unless the lobby's `legacy_smallworld` is on, which the reader doesn't support). An upgrade is
+  banned when its base is, and Cavendish when Gros Michel is.
+- `SMODS.showman` is always true, so duplicates are allowed: cards you have are never skipped,
+  and the page turns blocking off.
+- The ante-1 tags and voucher are rolled inside `start_run`, before the cull
+  (`lovely/ban_timing.toml` applies only the declared bans there), so they can be cards that
+  are culled. A culled tag is swapped when `Tag:init` makes it (the blind screen makes the
+  Small Blind's, then the Big Blind's) for `get_next_tag_key("replace")` with the ante set to 10
+  under The Order: stream `Tagreplace10`. If the same tag is made again (when you skip, for
+  one), it rolls again, which the reader doesn't follow. A culled ante-1 voucher is shown
+  as is.
+- A culled `p_buffoon_normal_1` turns off the first shop's guaranteed Buffoon Pack.
+- Decks with starting vouchers (Nebula, Zodiac, Magic, …) swap a culled one through
+  `get_next_voucher_key` and reroll the ante-1 voucher (`PVP.apply_fake_back_vouchers`). None
+  of the reader's decks have them, so this isn't modelled.
+
+Checked against a real Small World match (seed UXYM3NVF, Green Stake, Anaglyph Deck). None of
+the 42 cards the two players bought, picked, opened or used is culled; with another seed's cull,
+28 of them would be. The shop's first ten slots and the first two shops' packs (two Standard,
+because the Buffoon Pack was culled, then Arcana) match the log, as does the ante-3 voucher
+(Grabber). Not checked: the ante-1 tag swap (nobody skipped a culled tag).
+
 ## Assumptions
 
 - Mod cards the ruleset doesn't use are removed from the pools (MPAPI's pool_gating, unlike

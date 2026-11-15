@@ -25,8 +25,10 @@ import {
   type ReaderSettings,
   type ShopItem,
   type ShopVoucher,
+  SMALL_WORLD_POOLS,
   shopConsumableQueue,
   shopQueue,
+  smallWorldPools,
   standardPackQueue,
   tagQueue,
   voucherQueue,
@@ -59,6 +61,7 @@ const TABS = [
   ["tags", "Skip tags"],
   ["judgement", "Judgement"],
   ["lucky", "Lucky Cards"],
+  ["smallworld", "Small World"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -109,11 +112,26 @@ const BlockContext = createContext<{
   add: (b: BlockEntry) => void;
   undo: () => void;
   clear: () => void;
-}>({ blocks: [], add: () => {}, undo: () => {}, clear: () => {} });
+  /** False on Small World: duplicates are allowed, so a card you have is never skipped. */
+  enabled: boolean;
+}>({
+  blocks: [],
+  add: () => {},
+  undo: () => {},
+  clear: () => {},
+  enabled: true,
+});
 
 /** What clicking a card does, with Undo last block and Unblock all: shown above blockable cards. */
 function BlockBar() {
-  const { blocks, undo, clear } = useContext(BlockContext);
+  const { blocks, undo, clear, enabled } = useContext(BlockContext);
+  if (!enabled)
+    return (
+      <p className="text-sm text-fd-muted-foreground">
+        Small World allows duplicates, so a card you have is never skipped:
+        there's nothing to block.
+      </p>
+    );
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <Ban className="size-4 text-[#fe5f55]" />
@@ -145,7 +163,7 @@ function BlockBar() {
 
 /** One list's blocks, a way to add one, and how many are blocked at a position. */
 function useBlocks(list: string) {
-  const { blocks, add } = useContext(BlockContext);
+  const { blocks, add, enabled } = useContext(BlockContext);
   const mine = useMemo(
     () =>
       blocks
@@ -155,7 +173,10 @@ function useBlocks(list: string) {
   );
   return {
     blocks: mine,
-    block: (key: string, from: number) => add({ list, key, from }),
+    /** Blocks a card from a position on; undefined where blocking does nothing. */
+    block: enabled
+      ? (key: string, from: number) => add({ list, key, from })
+      : undefined,
     note: (at: number) => {
       const n = mine.filter((b) => b.from === at).length;
       return n ? `${n} blocked` : undefined;
@@ -640,7 +661,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
                 index={slot}
                 highlight={found}
                 note={note(slot)}
-                onBlock={() => block(item.key, slot)}
+                onBlock={block && (() => block(item.key, slot))}
               />
             );
           if (item.kind === "consumable")
@@ -652,7 +673,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
                 index={slot}
                 highlight={found}
                 note={note(slot)}
-                onBlock={() => block(item.key, slot)}
+                onBlock={block && (() => block(item.key, slot))}
               />
             );
           return (
@@ -761,7 +782,7 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
             stickers={j.stickers}
             index={index}
             note={note(index)}
-            onBlock={() => block(j.key, index)}
+            onBlock={block && (() => block(j.key, index))}
           />
         ))}
       </CardList>
@@ -886,7 +907,7 @@ function ConsumableTab({
             itemKey={key}
             index={i + 1}
             note={note(i + 1)}
-            onBlock={() => block(key, i + 1)}
+            onBlock={block && (() => block(key, i + 1))}
           />
         ))}
       </CardList>
@@ -933,6 +954,8 @@ function VouchersTab({ settings }: { settings: ReaderSettings }) {
         the upgrade once you own the base, and a pair you own both of is
         skipped, so click what you bought to see what comes after. A Voucher Tag
         takes the next one from this list.
+        {settings.ruleset.smallWorld &&
+          " On Small World the first ante's voucher is rolled before the cull, so it can be one that's banned for the rest of the game."}
       </Note>
       <div className="flex flex-wrap gap-3">
         {list.map((offers, i) => {
@@ -977,6 +1000,8 @@ function TagsTab({ settings }: { settings: ReaderSettings }) {
       <Note>
         The tag for skipping each ante's Small and Big Blind. These are rolled
         per ante, so they don't depend on what you did before.
+        {settings.ruleset.smallWorld &&
+          " On Small World the first ante's tags are rolled before the cull; a banned one is swapped for another when the blind screen shows it."}
       </Note>
       <div className="flex flex-wrap gap-3">
         {list.map((t) => (
@@ -1099,6 +1124,45 @@ function LuckyTab({ settings }: { settings: ReaderSettings }) {
   );
 }
 
+const SMALL_WORLD_LABEL: Record<(typeof SMALL_WORLD_POOLS)[number], string> = {
+  Joker4: "Legendary jokers",
+  Joker3: "Rare jokers",
+  Joker2: "Uncommon jokers",
+  Joker1: "Common jokers",
+  Tarot: "Tarots",
+  Planet: "Planets",
+  Spectral: "Spectrals",
+  Voucher: "Vouchers",
+  Booster: "Packs",
+  Tag: "Skip tags",
+};
+
+function SmallWorldTab({ settings }: { settings: ReaderSettings }) {
+  const pools = useMemo(() => smallWorldPools(settings), [settings]);
+  return (
+    <div className="flex flex-col gap-4">
+      <Note>
+        Small World bans three quarters of every pool for this seed. These are
+        the cards left: nothing else can show up after the first ante, and
+        duplicates are allowed. Upgrade vouchers come with their base, and
+        Cavendish with Gros Michel.
+      </Note>
+      {SMALL_WORLD_POOLS.map((name) => (
+        <div key={name} className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">
+            {SMALL_WORLD_LABEL[name]} ({pools[name].length})
+          </h3>
+          <Grid>
+            {pools[name].map((key) => (
+              <ItemCard key={key} itemKey={key} />
+            ))}
+          </Grid>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -1112,6 +1176,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [stake, setStake] = useState(1);
   const [deckId, setDeckId] = useState<DeckId | "">("");
   const [layout, setLayout] = useState<Layout>("band");
+  const swRuleset =
+    findRuleset(findPatch(patchId), rulesetId).smallWorld ?? false;
   // Blocked cards, in the order they were blocked (so Undo takes the last one off).
   const [blocks, setBlocks] = useState<BlockEntry[]>([]);
   const blockStore = useMemo(
@@ -1120,8 +1186,9 @@ export function SeedReader({ art }: { art: SeedArt }) {
       add: (b: BlockEntry) => setBlocks((prev) => [...prev, b]),
       undo: () => setBlocks((prev) => prev.slice(0, -1)),
       clear: () => setBlocks([]),
+      enabled: !swRuleset,
     }),
-    [blocks],
+    [blocks, swRuleset],
   );
   const [tab, setTab] = useState<Tab>("shop");
 
@@ -1247,7 +1314,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
                 >
                   {patch.rulesets.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name} (ranked)
+                      {r.name}
+                      {r.rankedOrder ? " (ranked)" : ""}
                     </option>
                   ))}
                 </select>
@@ -1293,7 +1361,9 @@ export function SeedReader({ art }: { art: SeedArt }) {
             {seed ? (
               <>
                 <nav className="flex flex-wrap gap-1 border-b pb-2">
-                  {TABS.map(([id, label]) => (
+                  {TABS.filter(
+                    ([id]) => id !== "smallworld" || ruleset.smallWorld,
+                  ).map(([id, label]) => (
                     <button
                       key={id}
                       type="button"
@@ -1327,6 +1397,9 @@ export function SeedReader({ art }: { art: SeedArt }) {
                   {tab === "tags" && <TagsTab settings={settings} />}
                   {tab === "judgement" && <JudgementTab settings={settings} />}
                   {tab === "lucky" && <LuckyTab settings={settings} />}
+                  {tab === "smallworld" && ruleset.smallWorld && (
+                    <SmallWorldTab settings={settings} />
+                  )}
                 </section>
               </>
             ) : (

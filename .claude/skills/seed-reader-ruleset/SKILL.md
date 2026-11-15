@@ -1,6 +1,6 @@
 ---
 name: seed-reader-ruleset
-description: Add a ruleset, a game mode or a new Multiplayer mod/Steamodded/Balatro version to the Seed reader (/seed-reader, src/lib/seed). Use when asked to support another ruleset (Vanilla, Smallworld, Major League…), The Order off, or a new patch of BalatroMultiplayerPvP / BalatroMultiplayerAPI / Steamodded.
+description: Add a ruleset, a game mode or a new Multiplayer mod/Steamodded/Balatro version to the Seed reader (/seed-reader, src/lib/seed). Use when asked to support another ruleset (Vanilla, Major League, Chaos…), The Order off, or a new patch of BalatroMultiplayerPvP / BalatroMultiplayerAPI / Steamodded.
 ---
 
 # Adding a ruleset or patch to the Seed reader

@@ -39,6 +39,9 @@ function wantedKeys(): Set<string> {
       for (const key of [
         ...(ruleset.added.Planet ?? []),
         ...(ruleset.added.Spectral ?? []),
+        ...(ruleset.added.boosters ?? []),
+        ...(ruleset.added.tags ?? []),
+        ...(ruleset.added.vouchers ?? []).map((v) => v.key),
       ])
         keys.add(key);
     }
