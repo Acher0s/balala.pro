@@ -670,6 +670,22 @@ function softlockEvidence(events: readonly LogEvent[]): Map<number, string[]> {
   return out;
 }
 
+/** Skip tags that open a pack when taken (tag.lua); Charm and Meteor's art number is unseeded. */
+const TAG_PACKS: Record<string, string> = {
+  tag_buffoon: "p_buffoon_mega_1",
+  tag_charm: "p_arcana_mega_1",
+  tag_meteor: "p_celestial_mega_1",
+  tag_ethereal: "p_spectral_normal_1",
+  tag_standard: "p_standard_mega_1",
+};
+const TAG_NAMES: Record<string, string> = {
+  tag_buffoon: "Buffoon Tag",
+  tag_charm: "Charm Tag",
+  tag_meteor: "Meteor Tag",
+  tag_ethereal: "Ethereal Tag",
+  tag_standard: "Standard Tag",
+};
+
 /** The queue a card was rolled from, as far as checking it goes. */
 function familyOf(key: string, source: string): string {
   // Each rarity is its own queue.
@@ -1279,6 +1295,46 @@ export function findBlocks(
       unseen: true,
     });
 
+  /** A booster opened: from the shop, or by a tag (Buffoon, Charm, Meteor, Ethereal, Standard). */
+  const openPack = (key: string, name: string) => {
+    const info = PACK_INFO.get(key) ?? { size: 0, choose: 0 };
+    const kind = packKind(key);
+    pack = [];
+    picksLeft = info.choose;
+    for (let n = 0; n < info.size; n++) {
+      if (kind === "buffoon") {
+        const joker = roll(name, (s) => s.buffoonCard()).key;
+        pack.push(joker);
+        noteRolled(joker, packEvent);
+      } else if (kind === "arcana")
+        // Omen Globe: each card is a Spectral when "omen_globe" rolls over 0.8 (Steamodded's
+        // Arcana Pack create_card).
+        pack.push(
+          roll(name, (s) =>
+            s.packConsumable(
+              vouchers.has("v_omen_globe") && s.chance("omen_globe") > 0.8
+                ? "Spectral"
+                : "Tarot",
+            ),
+          ),
+        );
+      else if (kind === "spectral")
+        pack.push(roll(name, (s) => s.packConsumable("Spectral")));
+      else if (kind === "celestial") {
+        // Telescope: the first card is the most played hand's planet, not rolled.
+        if (n === 0 && vouchers.has("v_telescope")) pack.push("");
+        else pack.push(roll(name, (s) => s.packConsumable("Planet")));
+      }
+    }
+    if (kind === "standard") pack = [];
+    trace?.(`  pack: ${pack.join(" ")}`);
+    // open_booster: Hallucination, 1 in 2 (TheOrder.toml: "halu" .. ante_based() = "halu0").
+    for (const k of acting([...jokers.values()].map((j) => j.key)))
+      if (k === "j_hallucination" && consumableRoom() > 0)
+        if (sim.chance("halu0") < odds() / 2)
+          makeConsumable("Hallucination", "Tarot");
+  };
+
   /** The first blind after a boss, played or skipped, starts the next ante. */
   const newAnte = () => {
     if (!afterBoss) return;
@@ -1336,6 +1392,15 @@ export function findBlocks(
         blind = nextBlind === "small" ? "Small Blind" : "Big Blind";
         nextBlind = nextBlind === "small" ? "big" : "boss";
         if (tag === "tag_top_up") makeJokers("Top-up Tag", 2, 1);
+        // These tags open their pack at once (tag.lua); the log has no open_pack for it.
+        const tagPack = TAG_PACKS[tag ?? ""];
+        if (tagPack) {
+          packEvent = i;
+          openPack(
+            tagPack,
+            `${packName(tagPack)} (${TAG_NAMES[tag as string]})`,
+          );
+        }
         if (tag === "tag_uncommon") forcedRarity = 2;
         if (tag === "tag_rare") forcedRarity = 3;
         break;
@@ -1385,43 +1450,7 @@ export function findBlocks(
         packEvent = i;
         const got = learn(a[2]);
         const key = got?.item?.key ?? "";
-        const info = PACK_INFO.get(key) ?? { size: 0, choose: 0 };
-        const kind = packKind(key);
-        const name = got?.item ? packName(key) : "Pack";
-        pack = [];
-        picksLeft = info.choose;
-        for (let n = 0; n < info.size; n++) {
-          if (kind === "buffoon") {
-            const joker = roll(name, (s) => s.buffoonCard()).key;
-            pack.push(joker);
-            noteRolled(joker, packEvent);
-          } else if (kind === "arcana")
-            // Omen Globe: each card is a Spectral when "omen_globe" rolls over 0.8 (Steamodded's
-            // Arcana Pack create_card).
-            pack.push(
-              roll(name, (s) =>
-                s.packConsumable(
-                  vouchers.has("v_omen_globe") && s.chance("omen_globe") > 0.8
-                    ? "Spectral"
-                    : "Tarot",
-                ),
-              ),
-            );
-          else if (kind === "spectral")
-            pack.push(roll(name, (s) => s.packConsumable("Spectral")));
-          else if (kind === "celestial") {
-            // Telescope: the first card is the most played hand's planet, not rolled.
-            if (n === 0 && vouchers.has("v_telescope")) pack.push("");
-            else pack.push(roll(name, (s) => s.packConsumable("Planet")));
-          }
-        }
-        if (kind === "standard") pack = [];
-        trace?.(`  pack: ${pack.join(" ")}`);
-        // open_booster: Hallucination, 1 in 2 (TheOrder.toml: "halu" .. ante_based() = "halu0").
-        for (const k of acting([...jokers.values()].map((j) => j.key)))
-          if (k === "j_hallucination" && consumableRoom() > 0)
-            if (sim.chance("halu0") < odds() / 2)
-              makeConsumable("Hallucination", "Tarot");
+        openPack(key, got?.item ? packName(key) : "Pack");
         break;
       }
       case "pack_pick": {

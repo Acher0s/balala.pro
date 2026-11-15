@@ -223,6 +223,11 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   next blind. The log only shows it gone at the next hand, which was too late for Riff-raff's
   room (4T4U9DGU: Gros Michel went extinct, Riff-raff made two jokers, not one) and for
   Cavendish being in the next shop.
+- Skip tags that open a pack (Buffoon: Mega Buffoon, Charm: Mega Arcana, Meteor: Mega
+  Celestial, Ethereal: Spectral, Standard: Mega Standard) open it when the blind is skipped,
+  with no `open_pack` in the log: the picks follow right after the `skip_blind`. The replay
+  rolls that pack then (IUY9B53E: a Buffoon Tag's pack, whose two jokers had been read as lobby
+  avatars before).
 - NKRWQ99V (Magic Deck), both logs from about 40% of shop buys to all of them:
   - Omen Globe: each Arcana Pack card is a Spectral when "omen_globe" rolls over 0.8
     (Steamodded's Arcana Pack create_card), from the Spectral pack queue.
@@ -283,7 +288,8 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   Death, the suit Tarots), for the three softlocked planets. Enhancements for the gated jokers
   come from the cards' refs and the enhancing Tarots.
 
-Not modelled: Dusk's retrigger for 8 Ball (needs hands left), Perkeo, tags other than Top-up / Uncommon / Rare,
+Not modelled: Dusk's retrigger for 8 Ball (needs hands left), Perkeo, tags other than Top-up /
+Uncommon / Rare and the pack tags,
 the Voucher Tag's extra voucher roll, Omen Globe, Glass Cards breaking, which planet Telescope
 gives, the Cocktail and Gradient Decks' effects.
 
