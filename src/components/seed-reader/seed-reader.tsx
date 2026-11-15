@@ -100,11 +100,12 @@ function readerId(): string {
 /** How far the seek box looks for a joker. */
 const SEEK_SLOTS = 1000;
 
-/** A blocked card in one list ("shop", "jokers:1", "Tarot:pack", …) from a position on. */
+/** A blocked card in one list ("shop", "jokers:1", "Tarot:pack", …) at a position. */
 interface BlockEntry {
   list: string;
   key: string;
   from: number;
+  to?: number;
 }
 
 const BlockContext = createContext<{
@@ -136,8 +137,8 @@ function BlockBar() {
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <Ban className="size-4 text-[#fe5f55]" />
       <span className="text-fd-muted-foreground">
-        Click a joker or consumable to block it: the queue skips it from there
-        on, as if you had it.
+        Click a joker or consumable to block it there: that slot rolls again, as
+        if you had it at that moment. Later copies stay.
         {blocks.length > 0 && ` ${blocks.length} blocked.`}
       </span>
       <button
@@ -168,14 +169,14 @@ function useBlocks(list: string) {
     () =>
       blocks
         .filter((b) => b.list === list)
-        .map(({ key, from }) => ({ key, from })),
+        .map(({ key, from, to }) => ({ key, from, to })),
     [blocks, list],
   );
   return {
     blocks: mine,
-    /** Blocks a card from a position on; undefined where blocking does nothing. */
+    /** Blocks a card at one position; undefined where blocking does nothing. */
     block: enabled
-      ? (key: string, from: number) => add({ list, key, from })
+      ? (key: string, at: number) => add({ list, key, from: at, to: at })
       : undefined,
     note: (at: number) => {
       const n = mine.filter((b) => b.from === at).length;

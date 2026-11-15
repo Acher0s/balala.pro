@@ -112,6 +112,8 @@ interface Watch {
 export interface Block {
   key: string;
   from: number;
+  /** The last position it's blocked at; open-ended when absent. */
+  to?: number;
 }
 
 /** The blocked keys at `position`. */
@@ -120,7 +122,9 @@ export function blockedAt(
   position: number,
 ): Set<string> {
   return new Set(
-    (blocks ?? []).filter((b) => b.from <= position).map((b) => b.key),
+    (blocks ?? [])
+      .filter((b) => b.from <= position && (b.to ?? Infinity) >= position)
+      .map((b) => b.key),
   );
 }
 

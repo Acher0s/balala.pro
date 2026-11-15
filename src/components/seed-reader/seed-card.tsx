@@ -157,7 +157,7 @@ export function ItemCard({
   dim?: boolean;
   /** Ringed, e.g. the joker the seek box looks for. */
   highlight?: boolean;
-  /** Clicking blocks the card (the queue skips it from here on). */
+  /** Clicking blocks the card at this position (that slot rolls again). */
   onBlock?: () => void;
   /** An outline around the card, in this colour; dashed for something less certain. */
   ring?: { colour: string; dashed?: boolean };
@@ -262,8 +262,8 @@ export function ItemCard({
         )}
         {onBlock && (
           <span className="mt-1 border-t border-white/20 pt-1 text-xs font-semibold text-[#ff9a00]">
-            Click to block it: the queue skips it from here on, as if you had
-            it.
+            Click to block it here: this slot rolls again, as if you had it now.
+            Later copies stay.
           </span>
         )}
       </Tooltip>
