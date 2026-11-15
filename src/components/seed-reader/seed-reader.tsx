@@ -1186,6 +1186,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [rulesetId, setRulesetId] = useState(PATCHES[0].rulesets[0].id);
   const [stake, setStake] = useState(1);
   const [deckId, setDeckId] = useState<DeckId | "">("");
+  /** Gros Michel has gone extinct: Cavendish is in the pool, Gros Michel isn't. */
+  const [extinct, setExtinct] = useState(false);
   const [layout, setLayout] = useState<Layout>("band");
   const swRuleset =
     findRuleset(findPatch(patchId), rulesetId).smallWorld ?? false;
@@ -1252,13 +1254,18 @@ export function SeedReader({ art }: { art: SeedArt }) {
       // PvP blind) are always read as in the pool.
       enhancements: ALL_GATES,
       pincherUnlocked: true,
+      // Gros Michel and Cavendish can't both be in the pool: one is chosen here.
+      grosMichelExtinct: extinct,
     }),
-    [seed, ruleset, patch.gameMode, activeStake, deck],
+    [seed, ruleset, patch.gameMode, activeStake, deck, extinct],
   );
 
   // Blocks are for one seed and its settings; changing them starts afresh.
   // biome-ignore lint/correctness/useExhaustiveDependencies: clears when these change
-  useEffect(() => setBlocks([]), [seed, ruleset.id, activeStake, deck]);
+  useEffect(
+    () => setBlocks([]),
+    [seed, ruleset.id, activeStake, deck, extinct],
+  );
 
   // Report each seed read to the site (Studio → Seed reader), once it's been left alone for a
   // moment, and once per seed and settings in this tab.
@@ -1366,6 +1373,17 @@ export function SeedReader({ art }: { art: SeedArt }) {
                     </option>
                   ))}
                 </select>
+              </label>
+              <label
+                className="flex items-center gap-2 py-2 text-sm"
+                title="Cavendish is only in the pool once Gros Michel has gone extinct, and Gros Michel isn't from then on"
+              >
+                <input
+                  type="checkbox"
+                  checked={extinct}
+                  onChange={(e) => setExtinct(e.target.checked)}
+                />
+                Gros Michel extinct (Cavendish can show up)
               </label>
             </div>
 
