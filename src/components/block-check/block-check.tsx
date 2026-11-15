@@ -14,7 +14,7 @@ import {
   type BlockHit,
   type BlockReason,
   type BlockReport,
-  findBlocksAuto,
+  findBlocksMatch,
   type MatchPlayerLog,
   matchSettings,
 } from "@/lib/seed/blocks";
@@ -193,10 +193,7 @@ export function BlockCheck({ art }: { art: SeedArt }) {
         {loaded.state === "done" && (
           <>
             <Legend />
-            {loaded.logs.map((log, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: players keep their order
-              <Player key={i} log={log} />
-            ))}
+            <Match logs={loaded.logs} />
           </>
         )}
       </div>
@@ -250,14 +247,46 @@ const KINDS = [
   ["Vouchers", (k: string) => k.startsWith("v_")],
 ] as const;
 
-function Player({ log }: { log: MatchPlayerLog }) {
+type PlayerResult = { error: string } | BlockReport | undefined;
+
+/** Every player's replay. The lobby avatars found in one log are tried in the other's. */
+function Match({ logs }: { logs: MatchPlayerLog[] }) {
+  const results = useMemo((): PlayerResult[] => {
+    const read = logs.map((log) =>
+      log.events && isReadable(log) ? matchSettings(log.events) : undefined,
+    );
+    const ready = logs.flatMap((log, i) => {
+      const s = read[i];
+      return log.events && s?.ok
+        ? [{ i, events: log.events, settings: s.settings }]
+        : [];
+    });
+    const reports = findBlocksMatch(ready);
+    return logs.map((_, i): PlayerResult => {
+      const s = read[i];
+      if (!s) return undefined;
+      if (!s.ok) return { error: s.error };
+      return reports[ready.findIndex((r) => r.i === i)];
+    });
+  }, [logs]);
+  return (
+    <>
+      {logs.map((log, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: players keep their order
+        <Player key={i} log={log} result={results[i]} />
+      ))}
+    </>
+  );
+}
+
+function Player({
+  log,
+  result,
+}: {
+  log: MatchPlayerLog;
+  result: PlayerResult;
+}) {
   const [maybes, setMaybes] = useState(true);
-  const result = useMemo((): { error: string } | BlockReport | undefined => {
-    if (!log.events || !isReadable(log)) return undefined;
-    const s = matchSettings(log.events);
-    if (!s.ok) return { error: s.error };
-    return findBlocksAuto(log.events, s.settings);
-  }, [log]);
 
   return (
     <section className="flex flex-col gap-3 rounded-xl border p-4">
@@ -305,18 +334,21 @@ function Report({
       </p>
       {report.avatars.length > 0 && (
         <p className="text-sm text-fd-muted-foreground">
-          Probably blocked by a lobby avatar (a bug in Multiplayer 1.0.5: after
-          looking at the avatars in the lobby info, those jokers stop showing
-          up):{" "}
+          Probably blocked by the lobby avatars, from{" "}
+          {report.avatars[0].from > 0 && report.avatars[0].place
+            ? report.avatars[0].place
+            : "the start of the run"}
+          :{" "}
           {report.avatars.map((a, i) => (
             <span key={a.key}>
-              {i > 0 && ", "}
+              {i > 0 && " and "}
               <Name k={a.key} />
-              {a.from > 0 && a.place ? ` (from ${a.place})` : ""}
             </span>
           ))}
-          . The log doesn't record this: it's a guess from cards that went
-          missing with no other cause, so it can be wrong.
+          . In Multiplayer 1.0.5, looking at the lobby info keeps both players'
+          avatar jokers out of your own shop from then on. The log doesn't
+          record when anyone looked, or the avatars: this is a guess from cards
+          that went missing with no other cause, so it can be wrong.
         </p>
       )}
       <label className="flex items-center gap-2 text-sm">

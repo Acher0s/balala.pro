@@ -221,16 +221,19 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   on `select_blind`, no joker list on `play`, and open packs through `use`.
 - The log numbers the mod's stakes after Gold (Planet 9, Spectral 10, Spectral+ 11); the
   reader calls Spectral+ 9.
-- Lobby avatars (a bug in Multiplayer 1.0.5, fixed in the next update): looking at the players'
-  avatars in the lobby info leaves those jokers in `G.GAME.used_jokers`, so the shop and packs
-  skip them from then on. The log records neither the avatars nor when anyone looked, so
-  `findBlocksAuto` only speculates where nothing else explains a miss: each joker the replay
-  had in a slot where the player bought something else is tried as blocked, from that shop or
-  from the start, alone or with one other (one avatar per player); it's kept when it takes away
-  two misses or more, or all of them. The page says it's a guess. Confirmed by a player: their
-  avatar (Burglar) and Hiker in FD54Z7XN, where Hiker and Bloodstone together take the match
-  from 2 misses to none. Only 1.0.5 logs get this (`AVATAR_BUG`); drop it from the next
-  version's patch.
+- Lobby avatars (a bug in Multiplayer 1.0.5, fixed in the next update): a player who looks at
+  the lobby info, at any time in the run, leaves both players' avatar jokers in
+  `G.GAME.used_jokers`, so their own shop and packs skip both from then on. The other player
+  isn't affected unless they look too. The log records neither the avatars nor the look, so
+  `findBlocksAuto` only speculates where nothing else explains a miss: the jokers the replay had
+  where the player bought something else are tried as the avatars, one or two, blocked
+  together from the first shop either of them missed in (or from the start). A guess is kept
+  when it takes away two misses or more, or all of them. `findBlocksMatch` does both logs of a
+  match: the avatars found in either are the match's pair, tried in each log (then one miss
+  less is enough, and on a tie the pair is shown, as one look blocks both). The page says it's
+  a guess. Confirmed by a player: their avatar is Burglar, and FD54Z7XN's were Hiker and
+  Bloodstone (blocked together from Ante 4, which takes that log from 2 misses to none). Only
+  1.0.5 logs get this (`AVATAR_BUG`).
 - MultiplayerAPI's phantom cards (`api/synced/phantom.lua`): a copy of the opponent's Let's Go
   Gambling, Pizza, Conjoined Joker or Speedrun sits in your game while they hold it. Not
   modelled (it needs the opponent's log), and not confirmed to make the pools skip it.
@@ -256,6 +259,6 @@ on 1.0.5 except 36 older logs that can't be read): Expanded 42 logs, 20 with no 
 2,125 checks matched; Balanced 6 logs, 4 with no miss, 176 of 236; Small World 85 logs, 33
 with no miss, 5,579 of 7,089 (its deck vouchers swapped by the cull aren't modelled). The most
 common first miss in Expanded was a shop Uncommon, Burglar in five logs: the lobby-avatar bug
-above (Burglar is that player's avatar). With avatars worked out: Expanded 23 of 42 logs with
-no miss, 1,877 of 2,125 checks; Balanced 180 of 236.
+above (Burglar is that player's avatar). With avatars worked out per match: Expanded 25 of 43
+logs with no miss (with FD54Z7XN), 1,984 of 2,230 checks; Balanced 180 of 236.
 

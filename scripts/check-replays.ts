@@ -17,10 +17,11 @@ import { basename, join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import {
   findBlocks,
-  findBlocksAuto,
+  findBlocksMatch,
   type LogEvent,
   matchSettings,
 } from "../src/lib/seed/blocks";
+import type { ReaderSettings } from "../src/lib/seed/reader";
 import {
   isReadable,
   type ReplayResponse,
@@ -76,29 +77,47 @@ const sources = args.length
       .filter((f) => f.endsWith("-log.json"))
       .map((f) => join(fixtures, f));
 
-for (const source of sources)
+const f = (x: { matched: number; checked: number }) =>
+  `${x.matched}/${x.checked}`;
+
+for (const source of sources) {
+  // The logs of one match ("<id>#<player>") are replayed together: they share the lobby
+  // avatars (a 1.0.5 bug), which are worked out first; the trace replays with them.
+  const byMatch = new Map<string, [string, LogEvent[]][]>();
   for (const [name, events] of await load(source)) {
-    const read = matchSettings(events);
-    if (!read.ok) {
-      console.log(`${name}: ${read.error}`);
-      continue;
-    }
-    const lines: string[] = [];
-    // Lobby avatars (a 1.0.5 bug) are worked out first; the trace replays with them.
-    const auto = findBlocksAuto(events, read.settings);
-    const { agreement: a, firstMiss } = findBlocks(
-      events,
-      read.settings,
-      traceDir ? (l) => lines.push(l) : undefined,
-      undefined,
-      auto.avatars,
-    );
-    if (traceDir)
-      writeFileSync(join(traceDir, `${name}.txt`), lines.join("\n"));
-    const f = (x: { matched: number; checked: number }) =>
-      `${x.matched}/${x.checked}`;
-    const s = read.settings;
-    console.log(
-      `${name.padEnd(22)} ${s.seed} deck ${s.deck ?? "-"} stake ${s.stake}  shop ${f(a.shop)}  packs ${f(a.packs)}  made ${f(a.made)}  jokers ${f(a.jokers)}  first miss: ${firstMiss ?? "none"}${auto.avatars.length ? `  avatars: ${auto.avatars.map((v) => `${v.key}${v.from ? ` from #${v.from}` : ""}`).join(", ")}` : ""}`,
-    );
+    const id = name.split("#")[0];
+    byMatch.set(id, [...(byMatch.get(id) ?? []), [name, events]]);
   }
+  for (const logs of byMatch.values()) {
+    const ready: {
+      name: string;
+      events: LogEvent[];
+      settings: ReaderSettings;
+    }[] = [];
+    for (const [name, events] of logs) {
+      const read = matchSettings(events);
+      if (read.ok) ready.push({ name, events, settings: read.settings });
+      else console.log(`${name}: ${read.error}`);
+    }
+    const reports = findBlocksMatch(ready);
+    ready.forEach(({ name, events, settings: s }, i) => {
+      const avatars = reports[i].avatars;
+      const lines: string[] = [];
+      const { agreement: a, firstMiss } = findBlocks(
+        events,
+        s,
+        traceDir ? (l) => lines.push(l) : undefined,
+        undefined,
+        avatars,
+      );
+      if (traceDir)
+        writeFileSync(
+          join(traceDir, `${name}.txt`),
+          lines.join(String.fromCharCode(10)),
+        );
+      console.log(
+        `${name.padEnd(22)} ${s.seed} deck ${s.deck ?? "-"} stake ${s.stake}  shop ${f(a.shop)}  packs ${f(a.packs)}  made ${f(a.made)}  jokers ${f(a.jokers)}  first miss: ${firstMiss ?? "none"}${avatars.length ? `  avatars: ${avatars.map((v) => v.key).join(", ")} from #${avatars[0].from}` : ""}`,
+      );
+    });
+  }
+}

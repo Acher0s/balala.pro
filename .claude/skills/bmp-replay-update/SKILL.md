@@ -141,10 +141,11 @@ their key_append (`Joker<r>0`, rarity on `rarity0`); shop and pack jokers roll s
 | The Fool, Blue Seal (last hand's planet), starting decks | by key, no roll | consumables | — |
 
 **Known bugs the replay works around** (check each new version and drop the workaround once
-fixed): Multiplayer 1.0.5's lobby avatars stay in `G.GAME.used_jokers` once someone looks at
-the lobby info, so those jokers are skipped from then on. Nothing in the log says so;
-`findBlocksAuto` guesses it from misses nothing else explains (`AVATAR_BUG` lists the
-versions). When a new kind of inexplicable miss shows up, ask the user: they may know a bug.
+fixed): in Multiplayer 1.0.5, a player who looks at the lobby info (any time) gets both
+players' avatar jokers stuck in `G.GAME.used_jokers`, so their own shop and packs skip both
+from then on. Nothing in the log says so; `findBlocksAuto` guesses it from misses nothing else
+explains, and `findBlocksMatch` shares the pair between the two logs of a match (`AVATAR_BUG`
+lists the versions). When a new kind of inexplicable miss shows up, ask the user: they may know a bug.
 
 Room is `#held + made-this-event < limit` (2, +1 Crystal Ball, +negatives, deck changes).
 Blueprint copies the joker to its right, Brainstorm the first; the joker order comes from the
@@ -181,7 +182,7 @@ Cocktail Deck's mixed effects, Gradient Deck.
 
 | File | What |
 |---|---|
-| `src/lib/seed/blocks.ts` | The replay: `matchSettings`, `findBlocks` (its `trace`, `probe` and `avatars` arguments), `findBlocksAuto` (lobby avatars), `evaluateHand`, the makers, `DECK_START` |
+| `src/lib/seed/blocks.ts` | The replay: `matchSettings`, `findBlocks` (its `trace`, `probe` and `avatars` arguments), `findBlocksAuto` / `findBlocksMatch` (lobby avatars), `evaluateHand`, the makers, `DECK_START` |
 | `src/lib/seed/reader.ts` | `ShopSim` (`next`, `consumable`, `packConsumable`, `buffoonCard`, `otherJoker`, `tagJoker`, `fork`, `skip`, `chance`), `Game`, pools |
 | `src/lib/seed/replay-file.ts` | Reading balatromp.com's replay JSON (server and browser) |
 | `src/app/api/what-did-i-block/[id]/route.ts` | Fetches a shared match |

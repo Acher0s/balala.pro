@@ -1264,53 +1264,96 @@ const misses = (r: BlockReport) =>
 const AVATAR_BUG = new Set(["1.0.5"]);
 
 /**
- * findBlocks, with the lobby-avatar bug worked out. In Multiplayer 1.0.5, looking at the
- * players' avatars in the lobby info leaves those jokers in G.GAME.used_jokers, so the shop
- * and packs skip them from then on. The log doesn't say when (or whether) anyone looked, so
- * this only speculates where nothing else explains a miss: each joker the replay had in a
- * slot where the player bought something else is tried as blocked, from the start of the run
- * or from the shop where it first missed, alone or with one other (each player has an
- * avatar; a match on record had both blocked). The block is kept only when it takes away two
- * misses or more, or all of them.
+ * findBlocks, with the lobby-avatar bug worked out. In Multiplayer 1.0.5, looking at the lobby
+ * info (at any time in the run) leaves both players' avatar jokers in G.GAME.used_jokers, so
+ * that player's shop and packs skip both from then on. Only the player who looked is affected.
+ *
+ * The log records neither the avatars nor the look, so this only speculates where nothing else
+ * explains a miss: the jokers the replay had in a slot where the player bought something else
+ * are tried as the avatars, one or two of them, blocked together from the shop where the first
+ * of them missed (or from the start). Such a guess is kept when it takes away two misses or
+ * more, or all of them. `known` is the match's avatars when found from the other player's log:
+ * then one miss less is enough.
  */
 export function findBlocksAuto(
   events: readonly LogEvent[],
   settings: ReaderSettings,
+  known: readonly string[] = [],
 ): BlockReport {
   const base = findBlocks(events, settings);
   const lobby = events.find((e) => e[1] === "lobby_info")?.[2] as
     | { options?: { mod_version?: string } }
     | undefined;
   if (!AVATAR_BUG.has(lobby?.options?.mod_version ?? "")) return base;
-  const options = new Map<string, AvatarBlock[]>();
+  if (misses(base) === 0) return base;
+
+  const firstMissAt = new Map<string, number>();
   for (const m of base.missedShop)
-    if (!options.has(m.key) && options.size < 4)
-      // The later start first: on a tie it's kept, as it claims fewer blocked rolls.
-      options.set(m.key, [
-        ...(m.at > 0 ? [{ key: m.key, from: m.at }] : []),
-        { key: m.key, from: 0 },
-      ]);
-  const each = [...options.values()];
-  const sets: AvatarBlock[][] = [
-    ...each.flat().map((a) => [a]),
-    ...each.flatMap((as, i) =>
-      each
-        .slice(i + 1)
-        .flatMap((bs) => as.flatMap((a) => bs.map((b) => [a, b]))),
+    if (!firstMissAt.has(m.key)) firstMissAt.set(m.key, m.at);
+  const keys = [...firstMissAt.keys()].slice(0, 4);
+  const guesses: { set: string[]; known: boolean }[] = [
+    ...(known.length ? [{ set: [...known], known: true }] : []),
+    ...keys.map((k) => ({ set: [k], known: false })),
+    ...keys.flatMap((k, i) =>
+      keys.slice(i + 1).map((l) => ({ set: [k, l], known: false })),
     ),
   ];
-  let best = base;
-  for (const set of sets) {
-    const r = findBlocks(events, settings, undefined, undefined, set);
-    // Fewer misses wins; on a tie, fewer avatars.
-    if (
-      misses(r) < misses(best) ||
-      (misses(r) === misses(best) && r.avatars.length < best.avatars.length)
-    )
-      best = r;
+
+  let best: { report: BlockReport; known: boolean } | undefined;
+  for (const guess of guesses) {
+    // One look blocks both from the same moment: the first shop either of them missed in,
+    // or the start of the run. The later start first, as it claims less.
+    const starts = guess.set.flatMap((k) => firstMissAt.get(k) ?? []);
+    const from = starts.length ? Math.min(...starts) : 0;
+    for (const at of [...new Set([from, 0])]) {
+      const report = findBlocks(
+        events,
+        settings,
+        undefined,
+        undefined,
+        guess.set.map((key) => ({ key, from: at })),
+      );
+      const gain = misses(base) - misses(report);
+      const enough = guess.known
+        ? gain >= 1
+        : gain >= 2 || (gain > 0 && misses(report) === 0);
+      if (!enough) continue;
+      // Fewer misses wins. On a tie the match's known pair wins (one look blocks both), then
+      // fewer avatars.
+      const tie = best && misses(report) === misses(best.report);
+      if (
+        !best ||
+        misses(report) < misses(best.report) ||
+        (tie && guess.known && !best.known) ||
+        (tie &&
+          guess.known === best.known &&
+          report.avatars.length < best.report.avatars.length)
+      )
+        best = { report, known: guess.known };
+    }
   }
-  const gain = misses(base) - misses(best);
-  return gain >= 2 || (gain > 0 && misses(best) === 0) ? best : base;
+  return best?.report ?? base;
+}
+
+/**
+ * findBlocksAuto for every log of a match. Both players have the same two avatars, so what was
+ * found in either log (up to two jokers) is tried in each as the match's pair, and kept where
+ * it does at least as well.
+ */
+export function findBlocksMatch(
+  logs: readonly { events: readonly LogEvent[]; settings: ReaderSettings }[],
+): BlockReport[] {
+  const first = logs.map((l) => findBlocksAuto(l.events, l.settings));
+  const found = [
+    ...new Set(first.flatMap((r) => r.avatars.map((a) => a.key))),
+  ].slice(0, 2);
+  if (!found.length) return first;
+  return logs.map((l, i) => {
+    const again = findBlocksAuto(l.events, l.settings, found);
+    return misses(again) <= misses(first[i]) && again.avatars.length
+      ? again
+      : first[i];
+  });
 }
 
 function packName(key: string): string {
