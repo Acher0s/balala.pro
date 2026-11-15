@@ -217,17 +217,17 @@ describe("evaluateHand", () => {
 });
 
 describe("lobby avatars (Multiplayer 1.0.5 bug)", () => {
-  it("finds the avatars that kept jokers out of the shop", () => {
+  it("finds the avatar that kept a joker out of the shop", () => {
+    // The player confirmed Hiker. Only jokers the avatar picker offers are tried.
     const events = fd54z7xn.events as LogEvent[];
     const read = matchSettings(events);
     if (!read.ok) throw new Error(read.error);
-    expect(findBlocks(events, read.settings).firstMiss).toBeDefined();
+    const plain = findBlocks(events, read.settings);
     const r = findBlocksAuto(events, read.settings);
-    expect(r.avatars.map((a) => a.key).sort()).toEqual([
-      "j_hiker",
-      "j_mp_bloodstone",
-    ]);
-    expect(r.firstMiss).toBeUndefined();
+    expect(r.avatars.map((a) => a.key)).toEqual(["j_hiker"]);
+    const misses = (x: typeof r) =>
+      Object.values(x.agreement).reduce((n, a) => n + a.checked - a.matched, 0);
+    expect(misses(r)).toBeLessThan(misses(plain));
   });
   it("leaves a match that needs no avatars alone", () => {
     const events = x3uf2auh.events as LogEvent[];

@@ -1263,6 +1263,73 @@ const misses = (r: BlockReport) =>
 /** Versions with the lobby-avatar bug (fixed in the next update). */
 const AVATAR_BUG = new Set(["1.0.5"]);
 
+/** The jokers a player can pick as their avatar (balatromp.com's avatar picker). */
+export const AVATARS: ReadonlySet<string> = new Set([
+  "j_joker",
+  "j_jolly",
+  "j_zany",
+  "j_mad",
+  "j_crazy",
+  "j_droll",
+  "j_sly",
+  "j_wily",
+  "j_clever",
+  "j_devious",
+  "j_crafty",
+  "j_baron",
+  "j_lucky_cat",
+  "j_smiley",
+  "j_midas_mask",
+  "j_swashbuckler",
+  "j_vampire",
+  "j_photograph",
+  "j_square",
+  "j_scary_face",
+  "j_madness",
+  "j_odd_todd",
+  "j_even_steven",
+  "j_ancient",
+  "j_fortune_teller",
+  "j_sixth_sense",
+  "j_faceless",
+  "j_bull",
+  "j_card_sharp",
+  "j_space",
+  "j_astronomer",
+  "j_constellation",
+  "j_runner",
+  "j_hiker",
+  "j_idol",
+  "j_luchador",
+  "j_matador",
+  "j_scholar",
+  "j_stuntman",
+  "j_wee",
+  "j_burglar",
+  "j_chaos",
+  "j_egg",
+  "j_mr_bones",
+  "j_ring_master",
+  "j_pareidolia",
+  "j_throwback",
+  "j_blue_joker",
+  "j_green_joker",
+  "j_golden",
+  "j_smeared",
+  "j_troubadour",
+  "j_blueprint",
+  "j_merry_andy",
+  "j_brainstorm",
+  "j_abstract",
+  "j_turtle_bean",
+  "j_vagabond",
+  "j_dusk",
+  "j_burnt",
+  "j_mime",
+  "j_perkeo",
+  "j_stone",
+]);
+
 /**
  * findBlocks, with the lobby-avatar bug worked out. In Multiplayer 1.0.5, looking at the lobby
  * info (at any time in the run) leaves both players' avatar jokers in G.GAME.used_jokers, so
@@ -1270,10 +1337,10 @@ const AVATAR_BUG = new Set(["1.0.5"]);
  *
  * The log records neither the avatars nor the look, so this only speculates where nothing else
  * explains a miss: the jokers the replay had in a slot where the player bought something else
- * are tried as the avatars, one or two of them, blocked together from the shop where the first
- * of them missed (or from the start). Such a guess is kept when it takes away two misses or
- * more, or all of them. `known` is the match's avatars when found from the other player's log:
- * then one miss less is enough.
+ * are tried as the avatars (only the 63 jokers the avatar picker offers, `AVATARS`), one or
+ * two, blocked together from the shop where the first of them missed (or from the start).
+ * Such a guess is kept when it takes away a miss (three in a log with over 20). `known` is the match's avatars when found
+ * from the other player's log: on a tie it wins, as one look blocks both.
  */
 export function findBlocksAuto(
   events: readonly LogEvent[],
@@ -1289,10 +1356,13 @@ export function findBlocksAuto(
 
   const firstMissAt = new Map<string, number>();
   for (const m of base.missedShop)
-    if (!firstMissAt.has(m.key)) firstMissAt.set(m.key, m.at);
+    if (AVATARS.has(m.key) && !firstMissAt.has(m.key))
+      firstMissAt.set(m.key, m.at);
   const keys = [...firstMissAt.keys()].slice(0, 4);
   const guesses: { set: string[]; known: boolean }[] = [
-    ...(known.length ? [{ set: [...known], known: true }] : []),
+    ...(known.length
+      ? [{ set: known.filter((k) => AVATARS.has(k)), known: true }]
+      : []),
     ...keys.map((k) => ({ set: [k], known: false })),
     ...keys.flatMap((k, i) =>
       keys.slice(i + 1).map((l) => ({ set: [k, l], known: false })),
@@ -1314,9 +1384,9 @@ export function findBlocksAuto(
         guess.set.map((key) => ({ key, from: at })),
       );
       const gain = misses(base) - misses(report);
-      const enough = guess.known
-        ? gain >= 1
-        : gain >= 2 || (gain > 0 && misses(report) === 0);
+      // Only jokers that can be avatars are tried, so one miss less is enough, unless the
+      // replay is out of line anyway (many misses), where one could be chance.
+      const enough = gain >= (misses(base) > 20 ? 3 : 1);
       if (!enough) continue;
       // Fewer misses wins. On a tie the match's known pair wins (one look blocks both), then
       // fewer avatars.

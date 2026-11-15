@@ -144,7 +144,8 @@ their key_append (`Joker<r>0`, rarity on `rarity0`); shop and pack jokers roll s
 fixed): in Multiplayer 1.0.5, a player who looks at the lobby info (any time) gets both
 players' avatar jokers stuck in `G.GAME.used_jokers`, so their own shop and packs skip both
 from then on. Nothing in the log says so; `findBlocksAuto` guesses it from misses nothing else
-explains, and `findBlocksMatch` shares the pair between the two logs of a match (`AVATAR_BUG`
+explains, trying only the jokers the avatar picker offers (`AVATARS` in `blocks.ts`: update it
+when the site's avatar list changes), and `findBlocksMatch` shares the pair between the two logs of a match (`AVATAR_BUG`
 lists the versions). When a new kind of inexplicable miss shows up, ask the user: they may know a bug.
 
 Room is `#held + made-this-event < limit` (2, +1 Crystal Ball, +negatives, deck changes).
