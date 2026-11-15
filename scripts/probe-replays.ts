@@ -94,20 +94,18 @@ for (const source of sources)
       findBlocks(events, read.settings, (l) => lines.push(l), probe);
       return lines;
     };
-    const ok = `check ${family}: ok`;
-    const miss = `check ${family}: MISS`;
+    // Jokers are checked per rarity ("joker:3").
+    const ok = new RegExp(`check ${family}(:\\d)?: ok`);
+    const miss = new RegExp(`check ${family}(:\\d)?: MISS`);
     const score = (lines: string[]) =>
-      lines.reduce(
-        (n, l) => n + (l.includes(ok) ? 1 : l.includes(miss) ? -3 : 0),
-        0,
-      );
+      lines.reduce((n, l) => n + (ok.test(l) ? 1 : miss.test(l) ? -3 : 0), 0);
     const base = run();
-    const mi = base.findIndex((l) => l.includes(miss));
+    const mi = base.findIndex((l) => miss.test(l));
     if (mi < 0) continue;
     let from = 0;
     if (!fromStart)
       for (let i = mi - 1; i >= 0; i--)
-        if (base[i].includes(ok)) {
+        if (ok.test(base[i])) {
           from = i;
           break;
         }

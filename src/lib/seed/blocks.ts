@@ -532,7 +532,8 @@ export function hiddenEnhanced(
 
 /** The queue a card was rolled from, as far as checking it goes. */
 function familyOf(key: string, source: string): string {
-  if (key.startsWith("j_")) return "joker";
+  // Each rarity is its own queue.
+  if (key.startsWith("j_")) return `joker:${RARITY.get(key) ?? "?"}`;
   if (key.startsWith("v_")) return "voucher";
   const set = TAROTS.has(key)
     ? "Tarot"
@@ -601,11 +602,21 @@ export function findBlocks(
     `Ante ${ante} · ${inShop ? `Shop after ${blind}` : blind}`;
   // Hits waiting for the next card their queue shows, to know whether the replay was in line.
   const pending = new Map<string, BlockHit[]>();
+  /**
+   * The queues the log has just shown in line, and where: a skip there and then is sure without
+   * waiting for the next card (a bought Brainstorm pins the Rare queue for that shop).
+   */
+  const inLine = new Map<string, string>();
   const check = (a: Agreement, ok: boolean, family: string) => {
     trace?.(`  check ${family}: ${ok ? "ok" : "MISS"}`);
     a.checked++;
-    if (ok) a.matched++;
-    else firstMiss ??= place();
+    if (ok) {
+      a.matched++;
+      inLine.set(family, place());
+    } else {
+      firstMiss ??= place();
+      inLine.delete(family);
+    }
     for (const h of pending.get(family) ?? []) h.sure = ok;
     pending.delete(family);
   };
@@ -693,9 +704,10 @@ export function findBlocks(
               : undefined,
         sure,
       };
-      hits.push(hit);
-      if (sure) continue;
       const f = familyOf(s.key, source);
+      if (inLine.get(f) === place()) hit.sure = true;
+      hits.push(hit);
+      if (hit.sure) continue;
       pending.set(f, [...(pending.get(f) ?? []), hit]);
     }
   };
@@ -739,6 +751,8 @@ export function findBlocks(
         skips = [];
         sim = fork;
         trace?.(`  resync ${set}: ${n + 1} rolls on`);
+        if (n < 3)
+          inLine.set(familyOf(key, set === "Joker" ? "Shop" : ""), place());
         // Only a short way on: further, the replay was out of line and the in-between is a guess.
         if (n < 3)
           commit(
@@ -1050,7 +1064,7 @@ export function findBlocks(
     const at = expectedNew.indexOf(got.item.key);
     if (at < 0) return;
     expectedNew.splice(at, 1);
-    check(agreement.jokers, true, "joker");
+    check(agreement.jokers, true, familyOf(got.item.key, ""));
   };
 
   /** A joker in the log that the replay doesn't have yet: one it made, or one it missed. */
@@ -1286,7 +1300,7 @@ export function findBlocks(
           check(
             agreement.jokers,
             tokens.some((t) => t.key === key),
-            "joker",
+            familyOf(key, ""),
           );
         expectedNew = [];
         // The snapshot is what the player has: drop what's gone, add what's new.
