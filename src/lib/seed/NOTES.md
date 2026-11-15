@@ -240,9 +240,12 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   Obelisk, Bloodstone, Cloud 9 and the like can't be avatars), are tried as the avatars, one or
   two, blocked together from the first shop either of them missed in (or from the start). A
   guess is kept when it takes away a miss (three in a log with over 20, where one could be
-  chance). `findBlocksMatch` does both logs of a match: the avatars found in either are the
-  match's pair, tried in each log, and shown on a tie, as one look blocks both. The page says
-  it's a guess. Confirmed by a player: their avatar is Burglar (found in four of their logs),
+  chance). `findBlocksMatch` does both logs of a match: the jokers either log points to are
+  tried as the match's avatars (each one and each pair) in every log, from each log's own
+  moment, and the set with the fewest misses over the whole match wins (on a tie, over the logs'
+  separate guesses: one pair explains both). Suspects are the jokers in a missed slot or pack,
+  and those of the missed card's rarity the replay rolled since that queue last showed in line
+  (FZZUAJBR: Chaos the Clown, rolled in shops nobody bought from). The page says it's a guess. Confirmed by a player: their avatar is Burglar (found in four of their logs),
   and FD54Z7XN's was Hiker. Only 1.0.5 logs get this (`AVATAR_BUG`).
 - MultiplayerAPI's phantom cards (`api/synced/phantom.lua`): a copy of the opponent's Let's Go
   Gambling, Pizza, Conjoined Joker or Speedrun sits in your game while they hold it. Not
