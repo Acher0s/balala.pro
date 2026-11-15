@@ -1011,7 +1011,9 @@ export function findBlocks(
       set === "Planet" &&
       lastHand !== undefined &&
       PLANET_OF[lastHand] === key &&
-      [...cards.values()].some((c) => c.alive && c.seal === "Blue");
+      ([...cards.values()].some((c) => c.alive && c.seal === "Blue") ||
+        // Certificate adds a card with a random seal each round, often never seen.
+        [...jokers.values()].some((j) => j.key === "j_certificate"));
     if (blueSeal) {
       // A Blue Seal's planet: the last hand's, by key.
     } else if (CONSUMABLE_SETS.has(set)) {
@@ -1281,7 +1283,15 @@ export function findBlocks(
   const run = events.find((e) => e[1] === "run_info")?.[2] as
     | { deck?: string }
     | undefined;
-  const start = DECK_START[deckKey(run?.deck) ?? ""] ?? {};
+  const deck = deckKey(run?.deck);
+  const start = DECK_START[deck ?? ""] ?? {};
+  /** Double Tags held, and packs tags have yet to open (each after the last is done). */
+  let doubles = 0;
+  const tagPacks: { key: string; name: string }[] = [];
+  const openNextTagPack = () => {
+    const next = tagPacks.shift();
+    if (next) openPack(next.key, next.name);
+  };
   dollars += start.dollars ?? 0;
   for (const v of start.vouchers ?? []) {
     vouchers.add(v);
@@ -1391,16 +1401,26 @@ export function findBlocks(
         const tag = nextBlind === "small" ? t?.small : t?.big;
         blind = nextBlind === "small" ? "Small Blind" : "Big Blind";
         nextBlind = nextBlind === "small" ? "big" : "boss";
-        if (tag === "tag_top_up") makeJokers("Top-up Tag", 2, 1);
-        // These tags open their pack at once (tag.lua); the log has no open_pack for it.
-        const tagPack = TAG_PACKS[tag ?? ""];
-        if (tagPack) {
-          packEvent = i;
-          openPack(
-            tagPack,
-            `${packName(tagPack)} (${TAG_NAMES[tag as string]})`,
-          );
+        // A Double Tag copies the next tag taken (each Double once); it doesn't copy itself.
+        if (tag === "tag_double") {
+          doubles++;
+          break;
         }
+        const copies = 1 + doubles;
+        doubles = 0;
+        for (let c = 0; c < copies; c++) {
+          if (tag === "tag_top_up") makeJokers("Top-up Tag", 2, 1);
+          // These tags open their pack at once (tag.lua), one after another; the log has no
+          // open_pack for them, only the picks after the skip_blind.
+          const tagPack = TAG_PACKS[tag ?? ""];
+          if (tagPack)
+            tagPacks.push({
+              key: tagPack,
+              name: `${packName(tagPack)} (${TAG_NAMES[tag as string]})`,
+            });
+        }
+        packEvent = i;
+        openNextTagPack();
         if (tag === "tag_uncommon") forcedRarity = 2;
         if (tag === "tag_rare") forcedRarity = 3;
         break;
@@ -1409,6 +1429,8 @@ export function findBlocks(
         if (blind !== "Small Blind" && blind !== "Big Blind") {
           bossesBeaten++;
           afterBoss = true;
+          // Anaglyph Deck: a Double Tag after each Boss Blind.
+          if (deck === "b_anaglyph") doubles++;
         }
         inShop = true;
         rollShop(forcedRarity);
@@ -1423,6 +1445,9 @@ export function findBlocks(
       case "buy": {
         const got = learn(a[2]);
         const slot = (a[1] as number) - 1;
+        // A card the log already showed bought: the first buy didn't go through (no room) and
+        // this one did. The replay took it at the first; nothing more to do.
+        if (got && !got.fresh) break;
         if (got?.item) {
           const { key, set } = got.item;
           let at = shop[slot] === key ? slot : shop.indexOf(key);
@@ -1472,7 +1497,10 @@ export function findBlocks(
           } else applyUse(key, targets);
         }
         picksLeft--;
-        if (picksLeft <= 0) pack = [];
+        if (picksLeft <= 0) {
+          pack = [];
+          openNextTagPack();
+        }
         break;
       }
       case "pack_skip": {
@@ -1492,6 +1520,7 @@ export function findBlocks(
           if (at >= 0) pack.splice(at, 1);
         }
         pack = [];
+        openNextTagPack();
         break;
       }
       case "use": {

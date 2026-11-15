@@ -223,6 +223,13 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   next blind. The log only shows it gone at the next hand, which was too late for Riff-raff's
   room (4T4U9DGU: Gros Michel went extinct, Riff-raff made two jokers, not one) and for
   Cavendish being in the next shop.
+- Double Tags (from a skip, or the Anaglyph Deck's after each Boss Blind) copy the next tag
+  taken, so a pack tag can open several packs in a row (MDFAJQQM: three Spectral packs from one
+  Ethereal Tag with two Doubles). Each opens after the last one's picks.
+- Certificate adds a card with a random seal each round, often never seen: with it held, a
+  planet that is the last hand's counts as a Blue Seal's (no roll), like with a Blue Seal seen.
+- A buy of a card the log already showed bought is the same card again: the first buy didn't go
+  through (no room), and the player sold something and bought it again.
 - Skip tags that open a pack (Buffoon: Mega Buffoon, Charm: Mega Arcana, Meteor: Mega
   Celestial, Ethereal: Spectral, Standard: Mega Standard) open it when the blind is skipped,
   with no `open_pack` in the log: the picks follow right after the `skip_blind`. The replay
