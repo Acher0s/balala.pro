@@ -284,8 +284,8 @@ describe("late start (seed reader read on from a log step)", () => {
         const vouchers = Object.fromEntries(
           (before.start?.vouchers ?? []).map((v) => [v, 1]),
         );
-        const read = shopQueue(before, rolled.length, { vouchers }).map(
-          (x) => (x.kind === "card" ? x.card : x.key),
+        const read = shopQueue(before, rolled.length, { vouchers }).map((x) =>
+          x.kind === "card" ? x.card : x.key,
         );
         checked++;
         if (JSON.stringify(read) === JSON.stringify(rolled)) same++;
