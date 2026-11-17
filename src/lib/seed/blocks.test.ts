@@ -7,6 +7,7 @@ import {
   matchSettings,
   replaySteps,
 } from "./blocks";
+import n9dgiejur from "./fixtures/9dgiejur-log.json";
 import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import fd54z7xn from "./fixtures/fd54z7xn-log.json";
@@ -306,4 +307,32 @@ describe("late start (seed reader read on from a log step)", () => {
       // The reader lists a shop's slots without skipping one another (a rare repeat).
       expect(same / checked).toBeGreaterThan(0.9);
     });
+});
+
+describe("9DGIEJUR (Zodiac Deck, stake 6)", () => {
+  const ev = n9dgiejur.events as LogEvent[];
+  const read = matchSettings(ev);
+  if (!read.ok) throw new Error(read.error);
+  const report = findBlocksAuto(ev, read.settings);
+
+  it("reads Certificate's Blue Seal planet after Certificate was sold", () => {
+    // Certificate's cards stay in the deck: the Eris after a Flush Five is a Blue Seal's, so the
+    // Planet queue isn't moved on for it (it was 6 rolls, and the next shop missed).
+    expect(report.agreement.made.matched).toBe(report.agreement.made.checked);
+    expect(report.agreement.packs.matched).toBe(report.agreement.packs.checked);
+  });
+
+  it("gives Judgement room for a joker made Negative after it was bought", () => {
+    // The Photograph turned Negative unlogged: six slots, so Judgement made To Do List (sold
+    // before the next hand), with a lobby avatar (Abstract Joker) passed by on the way.
+    expect(report.agreement.jokers.matched).toBe(
+      report.agreement.jokers.checked,
+    );
+    expect(report.avatars.map((a) => a.key)).toEqual(["j_abstract"]);
+  });
+
+  it("follows the shop to Ante 6", () => {
+    expect(report.agreement.shop.matched).toBeGreaterThanOrEqual(49);
+    expect(report.firstMiss ?? "none").toMatch(/^(none|Ante 6)/);
+  });
 });

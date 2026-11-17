@@ -748,7 +748,15 @@ const RARITY = new Map<string, 1 | 2 | 3>();
 for (const r of [1, 2, 3] as const)
   for (const k of (pools.jokers as Record<string, string[]>)[r])
     RARITY.set(k, r);
-const PLANETS = new Set(pools.planets.map((p) => p.key));
+// The rulesets' own cards (the mod's jokers and planets), so their queue is known.
+const RULESETS = PATCHES.flatMap((p) => p.rulesets);
+for (const ruleset of RULESETS)
+  for (const r of [1, 2, 3] as const)
+    for (const k of ruleset.added.jokers?.[r] ?? []) RARITY.set(k, r);
+const PLANETS = new Set([
+  ...pools.planets.map((p) => p.key),
+  ...RULESETS.flatMap((r) => r.added.Planet ?? []),
+]);
 // ---------------------------------------------------------------------------
 
 /** Replays one player's log and lists what they blocked. */
@@ -876,6 +884,8 @@ export function findBlocks(
   const redeemed: { ante: number; key: string }[] = [];
   let synthetic = 1e9;
   let lastTarotPlanet: string | undefined;
+  /** Cards Certificate has added (at each blind's start), seals unseen until drawn. */
+  let certificateCards = 0;
   /** G.GAME.last_hand_played: a Blue Seal makes its planet. */
   let lastHand: string | undefined;
 
@@ -1136,8 +1146,9 @@ export function findBlocks(
       lastHand !== undefined &&
       PLANET_OF[lastHand] === key &&
       ([...cards.values()].some((c) => c.alive && c.seal === "Blue") ||
-        // Certificate adds a card with a random seal each round, often never seen.
-        [...jokers.values()].some((j) => j.key === "j_certificate"));
+        // Certificate adds a card with a random seal each round, often never seen, and it
+        // stays in the deck after Certificate is sold.
+        certificateCards > 0);
     if (blueSeal) {
       // A Blue Seal's planet: the last hand's, by key.
     } else if (CONSUMABLE_SETS.has(set)) {
@@ -1219,6 +1230,8 @@ export function findBlocks(
   const room = () => jokerLimit() - jokers.size;
 
   let expectedNew: string[] = [];
+  /** Where each made joker was rolled: a lobby avatar may have kept another out there. */
+  const madeAt = new Map<string, number>();
   const makeJokers = (
     source: string,
     n: number,
@@ -1230,6 +1243,7 @@ export function findBlocks(
       jokers.set(synthetic++, { key: j.key, edition: j.edition });
       order.push(j.key);
       expectedNew.push(j.key);
+      madeAt.set(j.key, eventAt);
     }
   };
 
@@ -1534,6 +1548,7 @@ export function findBlocks(
           key === "bl_small" ? "big" : key === "bl_big" ? "boss" : "small";
         // setting_blind, joker by joker (copies included).
         for (const k of acting(live(orderAtBlind(i)))) {
+          if (k === "j_certificate") certificateCards++;
           if (k === "j_riff_raff") makeJokers("Riff-raff", 2, 1);
           if (k === "j_cartomancer") makeConsumable("Cartomancer", "Tarot");
         }
@@ -1726,29 +1741,32 @@ export function findBlocks(
           return { key, edition };
         });
         // The jokers made since the last hand should be here.
-        for (const key of expectedNew)
-          check(
-            agreement.jokers,
-            tokens.some((t) => t.key === key),
-            familyOf(key, ""),
-          );
+        for (const key of expectedNew) {
+          const ok = tokens.some((t) => t.key === key);
+          check(agreement.jokers, ok, familyOf(key, ""));
+          // The game made another joker: the one the replay made may have been kept out.
+          if (!ok) missedShop.push({ key, at: madeAt.get(key) ?? i });
+        }
         expectedNew = [];
-        // The snapshot is what the player has: drop what's gone, add what's new.
-        const want = new Map<string, number>();
-        for (const t of tokens) want.set(t.key, (want.get(t.key) ?? 0) + 1);
+        // The snapshot is what the player has: drop what's gone, add what's new, and take each
+        // joker's edition from it (Ectoplasm, Wheel of Fortune or Hex change it unlogged, and a
+        // Negative one is a joker slot: Judgement had room for a joker made Negative later).
+        const want = new Map<string, (string | undefined)[]>();
+        for (const t of tokens)
+          want.set(t.key, [...(want.get(t.key) ?? []), t.edition]);
         for (const [id, j] of [...jokers]) {
-          const n = want.get(j.key) ?? 0;
-          if (n > 0) want.set(j.key, n - 1);
-          else {
+          const left = want.get(j.key) ?? [];
+          if (left.length === 0) {
             // Gone without being sold (Gros Michel's extinction is rolled at the round's end).
             jokers.delete(id);
+            continue;
           }
+          const same = left.indexOf(j.edition);
+          j.edition = left.splice(same >= 0 ? same : 0, 1)[0];
         }
-        for (const [key, n] of want)
-          for (let k = 0; k < n; k++) {
-            const edition = tokens.find((t) => t.key === key)?.edition;
+        for (const [key, editions] of want)
+          for (const edition of editions)
             jokers.set(synthetic++, { key, edition });
-          }
         const keys = tokens.map((t) => t.key);
         order = [...keys];
         const roles = acting(live(keys));

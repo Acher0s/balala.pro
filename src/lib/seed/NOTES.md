@@ -228,6 +228,16 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   All 6s doubles it). That predicted all 81 rounds a held Gros Michel ended in, across 22 logs
   (7 extinctions). So Cavendish opens exactly then, even when the log ends before the next hand,
   and a Gros Michel destroyed some other way (Madness, Ceremonial Dagger, Hex) doesn't open it.
+- Certificate's cards stay in the deck after it's sold, so a Blue Seal's planet (the last hand's,
+  by key) is possible from the first blind Certificate was held at, not only while it's held
+  (9DGIEJUR: an Eris after a Flush Five, Certificate sold rounds before; reading it as a rolled
+  planet moved the Planet queue 6 on and missed the next shop).
+- Each hand's joker list sets the held jokers' editions too: an edition given unlogged (Ectoplasm,
+  Wheel of Fortune, Hex) changes the joker slots. 9DGIEJUR: Photograph turned Negative after it
+  was bought, so Judgement had room and made To Do List (sold before the next hand, so only its
+  sale shows it). A made joker the log contradicts is an avatar suspect, like a missed shop slot
+  (here Abstract Joker, which Judgement's roll passed by).
+- The rulesets' own jokers and planets have their rarity and set (Asteroid is a Planet).
 - Perishable jokers (reader stake 7+): the log has no stickers, so a bought or picked joker takes
   them from the replay's roll of that slot (none when the replay had another card there). Its 5
   rounds count down at each round's end, before the jokers' end-of-round effects; at 0 it's
