@@ -7,12 +7,15 @@ import {
   matchSettings,
   replaySteps,
 } from "./blocks";
+import t4u9dgu1 from "./fixtures/4t4u9dgu-1-log.json";
+import y7fkizzk from "./fixtures/7yfkizzk-log.json";
 import n9dgiejur from "./fixtures/9dgiejur-log.json";
 import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
 import fd54z7xn from "./fixtures/fd54z7xn-log.json";
 import log from "./fixtures/fzzuajbr-log.json";
 import iuy9b53e from "./fixtures/iuy9b53e-log.json";
+import kfwjcie9 from "./fixtures/kfwjcie9-log.json";
 import nkrwq99v from "./fixtures/nkrwq99v-log.json";
 import qgisur8i from "./fixtures/qgisur8i-log.json";
 import viwlatit from "./fixtures/viwlatit-log.json";
@@ -158,6 +161,8 @@ describe("whole matches that replay without a miss", () => {
     ["BGMJZ5AC", bgmjz5ac],
     // Incantation's unseen Steel Card opens Steel Joker before the card is drawn.
     ["IUY9B53E", iuy9b53e],
+    // A Blue Seal's Ceres, kept unseen through the next shop, kept Ceres out of it.
+    ["4T4U9DGU", t4u9dgu1],
   ] as const;
   for (const [seed, fixture] of cases)
     it(seed, () => {
@@ -335,4 +340,26 @@ describe("9DGIEJUR (Zodiac Deck, stake 6)", () => {
     expect(report.agreement.shop.matched).toBeGreaterThanOrEqual(49);
     expect(report.firstMiss ?? "none").toMatch(/^(none|Ante 6)/);
   });
+});
+
+describe("whole matches that replay without a miss, with the lobby avatars", () => {
+  const cases = [
+    // A Blue Seal's Pluto (seen only when used, after the shop) kept Pluto out of the shop; a
+    // Saturn from one was kept through hands before it was sold. Burglar as an avatar.
+    ["7YFKIZZK", y7fkizzk, ["j_burglar"]],
+    // Baron, an avatar, passed by in a shop: the Wraith's Rare came one later (Vagabond).
+    ["KFWJCIE9", kfwjcie9, ["j_baron"]],
+  ] as const;
+  for (const [seed, fixture, avatars] of cases)
+    it(seed, () => {
+      const events = fixture.events as LogEvent[];
+      const read = matchSettings(events);
+      if (!read.ok) throw new Error(read.error);
+      expect(read.settings.seed).toBe(seed);
+      const report = findBlocksAuto(events, read.settings);
+      expect(report.firstMiss).toBeUndefined();
+      for (const a of Object.values(report.agreement))
+        expect(a.matched).toBe(a.checked);
+      expect(report.avatars.map((a) => a.key)).toEqual(avatars);
+    });
 });

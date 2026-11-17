@@ -1126,6 +1126,59 @@ export function findBlocks(
    * replay made (checked), a card made without a roll (The Fool, a Blue Seal), or one made by
    * something the replay doesn't follow (the queue is rolled on until it comes up).
    */
+  /** A Blue Seal can be in the deck: one seen, or Certificate's (often never seen). */
+  const blueSealPossible = () =>
+    [...cards.values()].some((c) => c.alive && c.seal === "Blue") ||
+    // Certificate adds a card with a random seal each round, and it stays in the deck after
+    // Certificate is sold.
+    certificateCards > 0;
+
+  /**
+   * Blue Seals held in hand at the round's end make the last hand's planet, by key. The log
+   * only shows it when it's used, sold or moved, often after the shop, where it already counted
+   * as held (0d60c738: a Pluto kept Pluto out of the next shop). So look through the shop and
+   * the next round, up to its last hand, for that planet showing up unbought, and make it now.
+   * One used before the cashout is already seen; one after a High Priestess or a Fool may be
+   * theirs, so the look stops there.
+   */
+  const blueSealPlanets = (from: number) => {
+    const key = lastHand && PLANET_OF[lastHand];
+    if (!key || !blueSealPossible()) return;
+    // Up to the next round's last hand: after it, a planet can be that round's Blue Seal's.
+    let end = events.length;
+    for (let j = from + 1; j < events.length; j++)
+      if (events[j][1] === "play") end = j;
+      else if (events[j][1] === "cashout") break;
+    let n = 0;
+    // Cards first seen in the look, by id: a High Priestess bought now and used later.
+    const seen = new Map<number, string>();
+    for (let j = from + 1; j < end; j++) {
+      const [, op, args] = events[j];
+      let fresh = 0;
+      const walk = (x: unknown) => {
+        if (!Array.isArray(x)) return;
+        if (typeof x[0] === "number" && typeof x[1] === "string") {
+          if (x[0] < 0 && typeof x[2] === "string") {
+            seen.set(-x[0], x[2]);
+            if (x[1] === "Planet" && x[2] === key) fresh++;
+          }
+          return;
+        }
+        for (const y of x) walk(y);
+      };
+      walk(args);
+      if (op === "use") {
+        const ref = (args as unknown[] | null)?.[2];
+        const id = Array.isArray(ref) ? Math.abs(ref[0] as number) : NaN;
+        const used = seen.get(id) ?? items.get(id)?.key;
+        if (used === "c_high_priestess" || used === "c_fool") break;
+      }
+      if (op !== "buy" && op !== "pack_pick") n += fresh;
+    }
+    for (let k = 0; k < n && consumableRoom() > 0; k++)
+      consumables.set(synthetic++, { set: "Planet", key, unseen: true });
+  };
+
   const sightMade = (
     id: number,
     set: string,
@@ -1145,10 +1198,7 @@ export function findBlocks(
       set === "Planet" &&
       lastHand !== undefined &&
       PLANET_OF[lastHand] === key &&
-      ([...cards.values()].some((c) => c.alive && c.seal === "Blue") ||
-        // Certificate adds a card with a random seal each round, often never seen, and it
-        // stays in the deck after Certificate is sold.
-        certificateCards > 0);
+      blueSealPossible();
     if (blueSeal) {
       // A Blue Seal's planet: the last hand's, by key.
     } else if (CONSUMABLE_SETS.has(set)) {
@@ -1591,6 +1641,7 @@ export function findBlocks(
       }
       case "cashout":
         shopsEntered++;
+        blueSealPlanets(i);
         if (blind !== "Small Blind" && blind !== "Big Blind") {
           bossesBeaten++;
           afterBoss = true;
@@ -1745,7 +1796,12 @@ export function findBlocks(
           const ok = tokens.some((t) => t.key === key);
           check(agreement.jokers, ok, familyOf(key, ""));
           // The game made another joker: the one the replay made may have been kept out.
-          if (!ok) missedShop.push({ key, at: madeAt.get(key) ?? i });
+          // Or a card of that queue rolled in a shop since, passed by in the game and not here
+          // (4ef1445c: Baron, so the Wraith's Rare came one later).
+          if (!ok) {
+            missedShop.push({ key, at: madeAt.get(key) ?? i });
+            suspects(key);
+          }
         }
         expectedNew = [];
         // The snapshot is what the player has: drop what's gone, add what's new, and take each

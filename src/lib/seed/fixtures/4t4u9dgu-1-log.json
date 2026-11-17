@@ -1,0 +1,2110 @@
+{
+  "source": "4T4U9DGU, stake 9 (Planet), Balanced",
+  "events": [
+    [
+      0,
+      "lobby_info",
+      {
+        "gamemode": "gamemode_mp_attrition",
+        "ruleset": "ruleset_mp_balanced",
+        "options": { "the_order_enabled": true, "mod_version": "1.0.5" }
+      }
+    ],
+    [0, "run_info", { "deck": "Black Deck", "seed": "4T4U9DGU", "stake": 11 }],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "discard",
+      [
+        [1, 4, 6, 8],
+        [
+          [-1, "pc", "Clubs", "Ace"],
+          [-2, "pc", "Clubs", "9"],
+          [-3, "pc", "Hearts", "8"],
+          [-4, "pc", "Hearts", "3"]
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [2, 3, 4, 7],
+        [
+          [-5, "pc", "Spades", "King"],
+          [-6, "pc", "Clubs", "King"],
+          [-7, "pc", "Hearts", "Queen"],
+          [-8, "pc", "Hearts", "5"]
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [4, 6, 8],
+        [
+          [-9, "pc", "Clubs", "8"],
+          [-10, "pc", "Clubs", "5"],
+          [-11, "pc", "Clubs", "3"]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 4, 7],
+        [
+          [-12, "pc", "Diamonds", "Ace"],
+          [-13, "pc", "Diamonds", "Jack"],
+          [-14, "pc", "Diamonds", "9"],
+          [-15, "pc", "Diamonds", "8"],
+          [-16, "pc", "Diamonds", "4"]
+        ],
+        []
+      ]
+    ],
+    [0, "cashout", null],
+    [0, "money_delta", [2]],
+    [0, "open_pack", [2, 1, [-17, "Booster", "p_buffoon_normal_2"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [1, [], [-18, "Joker", "j_order"], []]],
+    [0, "leave_shop", null],
+    [0, "skip_blind", [0]],
+    [0, "select_blind", [0, "bl_pillar"]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 4, 5, 6],
+        [
+          [1],
+          [-19, "pc", "Diamonds", "King"],
+          [-20, "pc", "Diamonds", "Queen"],
+          [13],
+          [-21, "pc", "Clubs", "10"]
+        ],
+        ["j_order"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [7]],
+    [0, "buy", [1, 2, [-22, "Joker", "j_cloud_9"], 0, false]],
+    [0, "buy", [1, 1, [-23, "Joker", "j_devious"], 0, false]],
+    [0, "reorder", [4, [3, 1, 2], [[[23], 3, 1], [[18], 1, 2], [[22], 2, 3]]]],
+    [0, "reorder", [4, [1, 3, 2], [[[22], 3, 2], [[18], 2, 3]]]],
+    [0, "open_pack", [2, 1, [-24, "Booster", "p_celestial_jumbo_1"], 0, false]],
+    [0, "pack_pick", [3, [], [-25, "Planet", "c_earth"], []]],
+    [0, "open_pack", [2, 1, [-26, "Booster", "p_standard_jumbo_1"], 0, false]],
+    [0, "pack_pick", [5, [], [-27, "pc", "Hearts", "6", "s:Purple"], []]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "discard",
+      [
+        [4, 5, 6, 7, 8],
+        [
+          [-28, "pc", "Hearts", "6"],
+          [8],
+          [4],
+          [11],
+          [-29, "pc", "Diamonds", "2"]
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [1, 5, 6, 7, 8],
+        [
+          [-30, "pc", "Hearts", "Ace"],
+          [2],
+          [-31, "pc", "Spades", "7"],
+          [-32, "pc", "Spades", "5"],
+          [10]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 5, 6, 7, 8],
+        [
+          [1],
+          [-33, "pc", "Diamonds", "10"],
+          [15],
+          [-34, "pc", "Hearts", "7"],
+          [-35, "pc", "Hearts", "2"]
+        ],
+        ["j_devious", "j_cloud_9", "j_order"]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 8],
+        [[14], [-36, "pc", "Spades", "8"], [3], [-37, "pc", "Clubs", "6"]],
+        ["j_devious", "j_cloud_9", "j_order"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [4, 7, 8],
+        [[7], [-38, "pc", "Diamonds", "6"], [-39, "pc", "Clubs", "4"]]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 5, 6],
+        [
+          [12],
+          [-40, "pc", "Hearts", "King"],
+          [-41, "pc", "Spades", "Queen"],
+          [13],
+          [21]
+        ],
+        ["j_devious", "j_cloud_9", "j_order"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [4]],
+    [0, "open_pack", [2, 1, [-42, "Booster", "p_buffoon_normal_2"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [1, [], [-43, "Joker", "j_reserved_parking"], []]],
+    [0, "buy", [1, 1, [-44, "Joker", "j_juggler"], 1, false]],
+    [0, "money_delta", [-1]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_big"]],
+    [0, "discard", [[5, 6, 7, 8, 9], [[31], [34], [10], [16], [4]]]],
+    [
+      0,
+      "discard",
+      [
+        [5, 6, 7, 8, 9],
+        [
+          [14],
+          [-45, "pc", "Clubs", "7"],
+          [-46, "pc", "Spades", "6"],
+          [-47, "pc", "Diamonds", "5"],
+          [-48, "pc", "Clubs", "2"]
+        ]
+      ]
+    ],
+    [0, "discard", [[8, 9], [[3], [27, "s:Purple"]]]],
+    [
+      0,
+      "play",
+      [
+        [8, 9],
+        [[33], [-49, "pc", "Hearts", "9"]],
+        ["j_devious", "j_cloud_9", "j_order", "j_reserved_parking", "j_juggler"]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [8, 9],
+        [[37], [11]],
+        ["j_devious", "j_cloud_9", "j_order", "j_reserved_parking", "j_juggler"]
+      ]
+    ],
+    [0, "money_delta", [1]],
+    [0, "sell", [4, 5, [44]]],
+    [0, "money_delta", [1]],
+    [0, "sell", [4, 4, [43]]],
+    [0, "money_delta", [1]],
+    [
+      0,
+      "play",
+      [
+        [1, 4, 6, 7, 8],
+        [[30], [6], [20], [-50, "pc", "Hearts", "Jack"], [21]],
+        ["j_devious", "j_cloud_9", "j_order"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [8]],
+    [0, "open_pack", [2, 2, [-51, "Booster", "p_arcana_normal_2"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [1, [], [-52, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [6]],
+    [0, "buy", [1, 1, [-53, "Joker", "j_riff_raff"], 1, false]],
+    [0, "money_delta", [-1]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [4, 1, 2, 3],
+        [[[53], 4, 1], [[23], 1, 2], [[22], 2, 3], [[18], 3, 4]]
+      ]
+    ],
+    [0, "open_pack", [2, 1, [-54, "Booster", "p_standard_jumbo_1"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "pack_pick", [3, [], [-55, "pc", "Hearts", "3", "s:Blue"], []]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_mp_nemesis"]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 5, 6, 7],
+        [
+          [-56, "pc", "Hearts", "10"],
+          [49],
+          [15],
+          [-57, "pc", "Diamonds", "7"],
+          [37]
+        ],
+        [
+          "j_riff_raff",
+          "j_devious",
+          "j_cloud_9",
+          "j_order",
+          "j_egg",
+          "j_drunkard"
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [4, 5, 6, 7, 8],
+        [
+          [8],
+          [10],
+          [-58, "pc", "Hearts", "4"],
+          [16],
+          [-59, "pc", "Spades", "3"]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 8, 3, 4, 5, 6, 7],
+        [
+          [[39], 8, 3],
+          [[20], 3, 4],
+          [[9], 4, 5],
+          [[34], 5, 6],
+          [[45], 6, 7],
+          [[32], 7, 8]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 4, 5, 6, 7, 8, 3],
+        [
+          [[20], 4, 3],
+          [[9], 5, 4],
+          [[34], 6, 5],
+          [[45], 7, 6],
+          [[32], 8, 7],
+          [[39], 3, 8]
+        ]
+      ]
+    ],
+    [0, "discard", [[4, 5, 6, 7, 8], [[9], [34], [45], [32], [39]]]],
+    [
+      0,
+      "discard",
+      [[4, 5, 6, 7, 8], [[14], [3], [46], [11], [-60, "pc", "Diamonds", "3"]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 6, 7],
+        [[12], [5], [7], [13], [21]],
+        [
+          "j_riff_raff",
+          "j_devious",
+          "j_cloud_9",
+          "j_order",
+          "j_egg",
+          "j_drunkard"
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 6, 7, 8], [[1], [-61, "pc", "Clubs", "Jack"], [35], [29]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 4, 5],
+        [[40], [19], [41], [-62, "pc", "Clubs", "Queen"], [20]],
+        [
+          "j_riff_raff",
+          "j_devious",
+          "j_cloud_9",
+          "j_order",
+          "j_egg",
+          "j_drunkard"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [-3]],
+    [0, "use", [1, [], [-63, "Tarot", "c_fool"], []]],
+    [0, "use", [1, [], [-64, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [14]],
+    [0, "cashout", null],
+    [0, "money_delta", [11]],
+    [0, "open_pack", [2, 1, [-65, "Booster", "p_arcana_normal_1"], 4, false]],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_pick",
+      [
+        1,
+        [1, 2],
+        [-66, "Tarot", "c_magician"],
+        [[19], [-67, "pc", "Spades", "Jack"]]
+      ]
+    ],
+    [0, "open_pack", [2, 1, [-68, "Booster", "p_arcana_jumbo_1"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "pack_pick", [5, [], [-69, "Tarot", "c_emperor"], []]],
+    [0, "sell", [4, 2, [23]]],
+    [0, "money_delta", [2]],
+    [0, "sell", [4, 3, [18]]],
+    [0, "money_delta", [1]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "sell", [4, 4, [-70, "Joker", "j_drunkard"]]],
+    [0, "money_delta", [2]],
+    [0, "buy", [1, 2, [-71, "Joker", "j_gros_michel"], 5, false]],
+    [0, "money_delta", [-5]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [1, 2, 3, 4, 6, 5],
+        [
+          [[-72, "Joker", "j_drunkard"], 6, 5],
+          [[-73, "Joker", "j_greedy_joker"], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[4, 5, 6, 7, 8], [[-74, "pc", "Spades", "9"], [28], [58], [16], [11]]]
+    ],
+    [
+      0,
+      "discard",
+      [[4, 5, 6, 7, 8], [[14], [45], [32], [-75, "pc", "Spades", "4"], [35]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [2, 6, 1, 3, 4, 5, 8, 7],
+        [
+          [[41], 2, 1],
+          [[31], 6, 2],
+          [[30], 1, 3],
+          [[7], 3, 4],
+          [[50], 4, 5],
+          [[9], 5, 6],
+          [[48], 8, 7],
+          [[47], 7, 8]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [3, 1, 4, 5, 6, 2, 8, 7],
+        [
+          [[30], 3, 1],
+          [[41], 1, 2],
+          [[7], 4, 3],
+          [[50], 5, 4],
+          [[9], 6, 5],
+          [[31], 2, 6],
+          [[47], 8, 7],
+          [[48], 7, 8]
+        ]
+      ]
+    ],
+    [0, "discard", [[1, 5, 6, 7, 8], [[30], [9], [31], [47], [48]]]],
+    [0, "discard", [[1, 6, 7, 8], [[1], [39], [59], [55, "s:Blue"]]]],
+    [0, "use", [1, [7, 8], [-76, "Tarot", "c_strength"], [[21], [33]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 7, 5, 8, 6],
+        [
+          [[21], 7, 5],
+          [[13], 5, 6],
+          [[33], 8, 7],
+          [[-77, "pc", "Spades", "10"], 6, 8]
+        ]
+      ]
+    ],
+    [0, "use", [1, [2, 3, 5], [-78, "Tarot", "c_star"], [[41], [7], [21]]]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 5, 6, 7],
+        [[41], [7], [21], [13], [33]],
+        [
+          "j_riff_raff",
+          "j_cloud_9",
+          "j_egg",
+          "j_gros_michel",
+          "j_drunkard",
+          "j_greedy_joker"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [7]],
+    [0, "buy", [1, 2, [-79, "Tarot", "c_strength"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "sell", [4, 2, [22]]],
+    [0, "money_delta", [3]],
+    [0, "buy", [1, 1, [-80, "Joker", "j_trio", "ed:holo"], 1, false]],
+    [0, "money_delta", [-1]],
+    [0, "buy", [1, 1, [-81, "Tarot", "c_lovers"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "leave_shop", null],
+    [0, "sell", [4, 4, [73]]],
+    [0, "money_delta", [2]],
+    [0, "select_blind", [0, "bl_big"]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [1, 5, 2, 3, 4, 6],
+        [
+          [[-82, "Joker", "j_smiley"], 5, 2],
+          [[-83, "Joker", "j_egg"], 2, 3],
+          [[72], 3, 4],
+          [[80, "ed:holo"], 4, 5]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [1, 2, 3, 6, 4, 5],
+        [
+          [[-84, "Joker", "j_shoot_the_moon"], 6, 4],
+          [[72], 4, 5],
+          [[80, "ed:holo"], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 4, 5, 7, 8],
+        [[6], [36], [9], [38], [59]],
+        [
+          "j_riff_raff",
+          "j_smiley",
+          "j_egg",
+          "j_shoot_the_moon",
+          "j_drunkard",
+          "j_trio|holo"
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 4, 5, 7, 8],
+        [[30], [49], [45], [10], [60]],
+        [
+          "j_riff_raff",
+          "j_smiley",
+          "j_egg",
+          "j_shoot_the_moon",
+          "j_drunkard",
+          "j_trio|holo"
+        ]
+      ]
+    ],
+    [0, "use", [1, [2, 4], [79], [[62], [77]]]],
+    [0, "discard", [[5, 6, 7, 8], [[34], [27, "s:Purple"], [47], [75]]]],
+    [0, "use", [1, [5], [81], [[77]]]],
+    [
+      0,
+      "reorder",
+      [6, [2, 1, 3, 4, 5, 6, 7, 8], [[[19, "e:m_lucky"], 2, 1], [[62], 1, 2]]]
+    ],
+    [0, "sell", [4, 4, [84]]],
+    [0, "money_delta", [2]],
+    [0, "discard", [[3, 6, 8], [[20], [50], [32]]]],
+    [0, "discard", [[5, 7, 8], [[61], [31], [58]]]],
+    [0, "discard", [[1, 5, 8], [[1], [77, "e:m_wild"], [2]]]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 5, 6],
+        [[62], [19, "e:m_lucky"], [67, "e:m_lucky"], [21], [13]],
+        ["j_riff_raff", "j_smiley", "j_egg", "j_drunkard", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [4]],
+    [0, "sell", [4, 3, [83]]],
+    [0, "money_delta", [11]],
+    [0, "use", [1, [], [-85, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [17]],
+    [0, "open_pack", [2, 2, [-86, "Booster", "p_arcana_mega_1"], 8, false]],
+    [0, "money_delta", [-8]],
+    [0, "pack_pick", [3, [], [-87, "Tarot", "c_fool"], []]],
+    [0, "use", [1, [], [-88, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [20]],
+    [0, "pack_pick", [2, [], [-89, "Tarot", "c_emperor"], []]],
+    [0, "buy", [1, 1, [-90, "Joker", "j_scary_face"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "use", [2, [], [-91, "Tarot", "c_fool"], []]],
+    [0, "use", [2, [], [-92, "Tarot", "c_emperor"], []]],
+    [0, "sell", [5, 2, [-93, "Tarot", "c_tower"]]],
+    [0, "money_delta", [1]],
+    [0, "buy", [1, 1, [-94, "Tarot", "c_death"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "buy", [1, 2, [-95, "Joker", "j_juggler"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "sell", [4, 1, [53]]],
+    [0, "money_delta", [1]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [1, 2, 4, 5, 3],
+        [[[90], 4, 3], [[95], 5, 4], [[80, "ed:holo"], 3, 5]]
+      ]
+    ],
+    [0, "use", [1, [], [-96, "Voucher", "v_blank"], []]],
+    [0, "money_delta", [-10]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_mp_nemesis"]],
+    [
+      0,
+      "discard",
+      [[5, 6, 7, 8, 9], [[14], [34], [57], [75], [-97, "pc", "Spades", "2"]]]
+    ],
+    [0, "discard", [[5, 6, 7, 8, 9], [[2], [15], [46], [28], [35]]]],
+    [0, "discard", [[5, 6, 7, 8, 9], [[7], [36], [3], [45], [10]]]],
+    [0, "use", [1, [5, 6], [-98, "Tarot", "c_magician"], [[61], [21]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 6, 9, 7, 8],
+        [[[8], 9, 7], [[27, "s:Purple"], 7, 8], [[32], 8, 9]]
+      ]
+    ],
+    [0, "use", [1, [7, 8], [94], [[8], [27, "s:Purple"]]]],
+    [
+      0,
+      "discard",
+      [[1, 2, 7, 8, 9], [[30], [1], [8, "s:Purple"], [27, "s:Purple"], [32]]]
+    ],
+    [0, "use", [1, [], [-99, "Tarot", "c_fool"], []]],
+    [
+      0,
+      "use",
+      [
+        1,
+        [2, 5, 6],
+        [-100, "Tarot", "c_sun"],
+        [[5], [61, "e:m_lucky"], [21, "e:m_lucky"]]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 5, 6],
+        [[5], [40], [77, "e:m_wild"], [61, "e:m_lucky"], [21, "e:m_lucky"]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 8, 9],
+        [[31], [37], [38], [59], [4]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [6]],
+    [0, "open_pack", [2, 2, [-101, "Booster", "p_arcana_normal_4"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [3, [], [-102, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [9]],
+    [0, "open_pack", [2, 1, [-103, "Booster", "p_arcana_normal_1"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "sell", [5, 2, [-104, "Planet", "c_uranus"]]],
+    [0, "money_delta", [1]],
+    [0, "pack_pick", [2, [], [-105, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [14]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 7, 8, 9],
+        [[41], [20], [36], [3], [45]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 8, 9],
+        [[37], [38], [32], [10], [59]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 2, 7, 8, 9], [[-106, "pc", "Spades", "Ace"], [1], [49], [57], [97]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 6, 9, 7, 8],
+        [[[48], 9, 7], [[27, "s:Purple"], 7, 8], [[58], 8, 9]]
+      ]
+    ],
+    [
+      0,
+      "use",
+      [1, [7, 8], [-107, "Tarot", "c_death"], [[48], [27, "s:Purple"]]]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 6, 7, 8, 9], [[7], [2], [48, "s:Purple"], [27, "s:Purple"], [58]]]
+    ],
+    [0, "discard", [[1, 4, 8], [[12], [77, "e:m_wild"], [13]]]],
+    [0, "discard", [[7, 9], [[46], [29]]]],
+    [0, "use", [2, [6, 7], [-108, "Tarot", "c_strength"], [[56], [74]]]],
+    [0, "use", [1, [], [-109, "Tarot", "c_high_priestess"], []]],
+    [0, "use", [1, [], [-110, "Planet", "c_earth"], []]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 4, 5, 6],
+        [[5], [40], [61, "e:m_lucky"], [21, "e:m_lucky"], [56]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [1]],
+    [0, "use", [2, [], [-111, "Planet", "c_ceres"], []]],
+    [0, "buy", [1, 1, [-112, "Tarot", "c_temperance"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [9]],
+    [0, "open_pack", [2, 2, [-113, "Booster", "p_arcana_normal_4"], 4, false]],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_pick",
+      [2, [8, 9], [-114, "Tarot", "c_hanged_man"], [[11], [60]]]
+    ],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_big"]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 8, 6, 7, 9],
+        [[[10], 8, 6], [[57], 6, 7], [[28], 7, 8]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 7, 8, 6, 9],
+        [[[57], 7, 6], [[28], 8, 7], [[10], 6, 8]]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [3, 4, 5, 7, 8],
+        [[67, "e:m_lucky"], [77, "e:m_wild"], [13], [28], [10]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 5, 6, 7, 8], [[106], [74], [34], [57], [8, "s:Purple"]]]
+    ],
+    [0, "use", [2, [], [-115, "Tarot", "c_wheel_of_fortune"], []]],
+    [
+      0,
+      "discard",
+      [[1, 4, 5, 7, 8], [[30], [62], [19, "e:m_lucky"], [27, "s:Purple"], [37]]]
+    ],
+    [0, "discard", [[1, 4, 7, 8], [[12], [41], [14], [31]]]],
+    [0, "discard", [[3, 7, 9], [[7], [32], [97]]]],
+    [0, "use", [1, [], [-116, "Planet", "c_pluto"], []]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 4, 5],
+        [[5], [40], [50], [56], [61, "e:m_lucky"]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [6]],
+    [0, "open_pack", [2, 2, [-117, "Booster", "p_arcana_normal_3"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "use", [2, [], [-118, "Planet", "c_ceres"], []]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 7, 3, 4, 5, 6, 8, 9],
+        [
+          [[31], 7, 3],
+          [[67, "e:m_lucky"], 3, 4],
+          [[49], 4, 5],
+          [[2], 5, 6],
+          [[36], 6, 7]
+        ]
+      ]
+    ],
+    [
+      0,
+      "pack_pick",
+      [2, [3, 4], [-119, "Tarot", "c_death"], [[31], [67, "e:m_lucky"]]]
+    ],
+    [
+      0,
+      "open_pack",
+      [2, 1, [-120, "Booster", "p_standard_normal_4"], 4, false]
+    ],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_pick",
+      [1, [], [-121, "pc", "Diamonds", "10", "e:m_wild", "s:Red"], []]
+    ],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_mp_nemesis"]],
+    [
+      0,
+      "play",
+      [
+        [1, 3, 5, 6, 7],
+        [[30], [67, "e:m_lucky"], [13], [33], [45]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 4, 5, 7, 9], [[20], [34], [8, "s:Purple"], [39], [29]]]
+    ],
+    [0, "sell", [5, 2, [-122, "Tarot", "c_world"]]],
+    [0, "money_delta", [1]],
+    [
+      0,
+      "discard",
+      [[4, 5, 6, 7, 8], [[49], [48, "s:Purple"], [16], [59], [4]]]
+    ],
+    [0, "discard", [[2, 6, 7, 8], [[41], [15], [10], [47]]]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 7, 8],
+        [[106], [1], [28], [58]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "use",
+      [
+        1,
+        [6, 7],
+        [-123, "Tarot", "c_strength"],
+        [[121, "e:m_wild", "s:Red"], [2]]
+      ]
+    ],
+    [0, "discard", [[1, 7, 9], [[62], [2], [35]]]],
+    [0, "use", [1, [3], [-124, "Tarot", "c_lovers"], [[50]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 6, 2, 3, 4, 5, 7, 8, 9],
+        [
+          [[121, "e:m_wild", "s:Red"], 6, 2],
+          [[77, "e:m_wild"], 2, 3],
+          [[50, "e:m_wild"], 3, 4],
+          [[56], 4, 5],
+          [[21, "e:m_lucky"], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 5, 6],
+        [
+          [121, "e:m_wild", "s:Red"],
+          [77, "e:m_wild"],
+          [50, "e:m_wild"],
+          [56],
+          [21, "e:m_lucky"]
+        ],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [5]],
+    [0, "use", [1, [], [-125, "Planet", "c_eris"], []]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "play",
+      [
+        [3, 4, 5, 6, 7],
+        [[49], [3], [34], [28], [75]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "discard", [[5, 6, 7, 8, 9], [[36], [45], [37], [39], [59]]]],
+    [0, "discard", [[1, 2, 3, 8, 9], [[12], [6], [7], [10], [16]]]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 7, 8, 9],
+        [[31, "e:m_lucky"], [67, "e:m_lucky"], [9], [15], [58]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[3, 4, 8, 9], [[41], [77, "e:m_wild"], [27, "s:Purple"], [38]]]
+    ],
+    [0, "use", [1, [4], [-126, "Tarot", "c_lovers"], [[62]]]],
+    [0, "discard", [[1, 4, 8, 9], [[30], [62, "e:m_wild"], [4], [97]]]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 6, 7, 8],
+        [[5], [40], [56], [61, "e:m_lucky"], [21, "e:m_lucky"]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [1]],
+    [0, "open_pack", [2, 2, [-127, "Booster", "p_arcana_normal_3"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [2, [], [-128, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [9]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_big"]],
+    [0, "discard", [[5, 6, 7, 8, 9], [[57], [47], [75], [4], [35]]]],
+    [0, "discard", [[3, 6, 7, 8, 9], [[20], [2], [49], [46], [8, "s:Purple"]]]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 4, 6, 7],
+        [[1], [12], [31, "e:m_lucky"], [56], [13]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [1, 3, 7, 8, 9],
+        [[106], [19, "e:m_lucky"], [45], [27, "s:Purple"], [59]]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 6, 7, 8, 9],
+        [[30], [74], [15], [10], [97]],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[2, 6, 7, 8, 9], [[67, "e:m_lucky"], [9], [34], [37], [16]]]
+    ],
+    [0, "use", [1, [7], [-129, "Tarot", "c_devil"], [[36]]]],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 5, 6],
+        [
+          [40],
+          [62, "e:m_wild"],
+          [77, "e:m_wild"],
+          [61, "e:m_lucky"],
+          [21, "e:m_lucky"]
+        ],
+        ["j_smiley", "j_drunkard", "j_scary_face", "j_juggler", "j_trio|holo"]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [3]],
+    [0, "cashout", null],
+    [0, "money_delta", [6]],
+    [0, "use", [1, [], [-130, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [17]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "buy", [1, 1, [-131, "Tarot", "c_hermit"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [20]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [0, "buy", [1, 1, [-132, "Joker", "j_mail"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "reroll", { "cost": 9 }],
+    [0, "money_delta", [-9]],
+    [0, "sell", [4, 3, [90]]],
+    [0, "money_delta", [2]],
+    [0, "buy", [1, 1, [-133, "Joker", "j_brainstorm"], 10, false]],
+    [0, "money_delta", [-10]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [6, 1, 2, 3, 4, 5],
+        [
+          [[133], 6, 1],
+          [[82], 1, 2],
+          [[72], 2, 3],
+          [[95], 3, 4],
+          [[80, "ed:holo"], 4, 5],
+          [[132], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [6, 1, 2, 3, 4, 5],
+        [
+          [[132], 6, 1],
+          [[133], 1, 2],
+          [[82], 2, 3],
+          [[72], 3, 4],
+          [[95], 4, 5],
+          [[80, "ed:holo"], 5, 6]
+        ]
+      ]
+    ],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_mp_nemesis"]],
+    [
+      0,
+      "discard",
+      [[5, 6, 7, 8, 9], [[46], [8, "s:Purple"], [28], [27, "s:Purple"], [10]]]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "discard", [[1, 2, 7, 8, 9], [[30], [6], [74], [3], [35]]]],
+    [0, "use", [1, [1, 2, 7], [-134, "Tarot", "c_sun"], [[41], [7], [33]]]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [6, 1, 2, 3, 4, 5],
+        [
+          [[80, "ed:holo"], 6, 1],
+          [[132], 1, 2],
+          [[133], 2, 3],
+          [[82], 3, 4],
+          [[72], 4, 5],
+          [[95], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [8, 1, 2, 3, 4, 5, 6, 7, 9],
+        [
+          [[121, "e:m_wild", "s:Red"], 8, 1],
+          [[41], 1, 2],
+          [[7], 2, 3],
+          [[31, "e:m_lucky"], 3, 4],
+          [[67, "e:m_lucky"], 4, 5],
+          [[21, "e:m_lucky"], 5, 6],
+          [[13], 6, 7],
+          [[33], 7, 8]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [8, 1, 2, 3, 4, 5, 6, 7, 9],
+        [
+          [[33], 8, 1],
+          [[121, "e:m_wild", "s:Red"], 1, 2],
+          [[41], 2, 3],
+          [[7], 3, 4],
+          [[31, "e:m_lucky"], 4, 5],
+          [[67, "e:m_lucky"], 5, 6],
+          [[21, "e:m_lucky"], 6, 7],
+          [[13], 7, 8]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 4, 7],
+        [[33], [121, "e:m_wild", "s:Red"], [41], [7], [21, "e:m_lucky"]],
+        [
+          "j_trio|holo",
+          "j_mail",
+          "j_brainstorm",
+          "j_smiley",
+          "j_drunkard",
+          "j_juggler"
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 8, 9],
+        [[49], [58], [59], [97], [29]],
+        [
+          "j_trio|holo",
+          "j_mail",
+          "j_brainstorm",
+          "j_smiley",
+          "j_drunkard",
+          "j_juggler"
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [2, 1, 3, 4, 5, 6], [[[132], 2, 1], [[80, "ed:holo"], 1, 2]]]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "discard", [[1, 6, 7, 8, 9], [[1], [13], [2], [57], [55, "s:Blue"]]]],
+    [
+      0,
+      "reorder",
+      [4, [2, 1, 3, 4, 5, 6], [[[80, "ed:holo"], 2, 1], [[132], 1, 2]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [3, 4],
+        [[31, "e:m_lucky"], [67, "e:m_lucky"]],
+        [
+          "j_trio|holo",
+          "j_mail",
+          "j_brainstorm",
+          "j_smiley",
+          "j_drunkard",
+          "j_juggler"
+        ]
+      ]
+    ],
+    [0, "money_delta", [3]],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [11]],
+    [0, "sell", [4, 4, [82]]],
+    [0, "money_delta", [2]],
+    [0, "buy", [1, 2, [-135, "Joker", "j_mystic_summit"], 1, false]],
+    [0, "money_delta", [-1]],
+    [0, "sell", [4, 6, [135]]],
+    [0, "money_delta", [1]],
+    [0, "use", [1, [], [-136, "Voucher", "v_overstock_norm"], []]],
+    [0, "money_delta", [-10]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "buy", [1, 2, [-137, "Joker", "j_ancient"], 8, false]],
+    [0, "money_delta", [-8]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "buy", [1, 3, [-138, "Tarot", "c_temperance"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [16]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "buy", [1, 3, [-139, "Tarot", "c_temperance"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [16]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [
+      0,
+      "open_pack",
+      [2, 2, [-140, "Booster", "p_standard_normal_1"], 4, false]
+    ],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_skip",
+      [
+        [
+          [-141, "pc", "Clubs", "9", "e:m_bonus", "s:Blue"],
+          [-142, "pc", "Spades", "3", "ed:foil"],
+          [-143, "pc", "Hearts", "3", "e:m_glass"]
+        ]
+      ]
+    ],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [
+      0,
+      "reorder",
+      [4, [2, 1, 3, 4, 5, 6], [[[132], 2, 1], [[80, "ed:holo"], 1, 2]]]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [2, 1, 3, 4, 5, 6], [[[80, "ed:holo"], 2, 1], [[132], 1, 2]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [3, 4, 5, 6, 9],
+        [[74], [2], [9], [46], [29]],
+        [
+          "j_trio|holo",
+          "j_mail",
+          "j_brainstorm",
+          "j_drunkard",
+          "j_juggler",
+          "j_ancient"
+        ]
+      ]
+    ],
+    [0, "sell", [5, 1, [-144, "Tarot", "c_moon"]]],
+    [0, "money_delta", [1]],
+    [
+      0,
+      "discard",
+      [[5, 6, 7, 8, 9], [[8, "s:Purple"], [48, "s:Purple"], [47], [75], [58]]]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [2, 1, 3, 4, 5, 6], [[[132], 2, 1], [[80, "ed:holo"], 1, 2]]]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [[3, 4, 7, 8, 9], [[6], [31, "e:m_lucky"], [14], [34], [28]]]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "discard", [[1, 2, 5, 8, 9], [[106], [1], [41], [15], [57]]]],
+    [0, "use", [2, [], [-145, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [20]],
+    [
+      0,
+      "play",
+      [
+        [3, 6, 7, 8, 9],
+        [[7], [49], [36, "e:m_gold"], [4], [55, "s:Blue"]],
+        [
+          "j_mail",
+          "j_trio|holo",
+          "j_brainstorm",
+          "j_drunkard",
+          "j_juggler",
+          "j_ancient"
+        ]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [
+        [3, 4, 6, 8, 9],
+        [[19, "e:m_lucky"], [67, "e:m_lucky"], [13], [37], [97]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [6, 1, 2, 3, 4, 5],
+        [
+          [[137], 6, 1],
+          [[132], 1, 2],
+          [[80, "ed:holo"], 2, 3],
+          [[133], 3, 4],
+          [[72], 4, 5],
+          [[95], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [5, 1, 2, 3, 4, 6, 7, 8, 9],
+        [
+          [[121, "e:m_wild", "s:Red"], 5, 1],
+          [[5], 1, 2],
+          [[62, "e:m_wild"], 2, 3],
+          [[56], 3, 4],
+          [[33], 4, 5]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 5, 2, 3, 4, 6, 7, 8, 9],
+        [[[33], 5, 2], [[5], 2, 3], [[62, "e:m_wild"], 3, 4], [[56], 4, 5]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [1, 2, 4, 3, 5, 6], [[[133], 4, 3], [[80, "ed:holo"], 3, 4]]]
+    ],
+    [0, "use", [1, [9], [-146, "Tarot", "c_chariot"], [[59]]]],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 3, 4, 5],
+        [[121, "e:m_wild", "s:Red"], [33], [5], [62, "e:m_wild"], [56]],
+        [
+          "j_ancient",
+          "j_mail",
+          "j_brainstorm",
+          "j_trio|holo",
+          "j_drunkard",
+          "j_juggler"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [5]],
+    [0, "open_pack", [2, 2, [-147, "Booster", "p_arcana_normal_2"], 4, false]],
+    [0, "money_delta", [-4]],
+    [0, "pack_pick", [3, [], [-148, "Tarot", "c_fool"], []]],
+    [0, "sell", [4, 5, [72]]],
+    [0, "money_delta", [2]],
+    [0, "buy", [1, 2, [-149, "Joker", "j_mp_hanging_chad"], 1, false]],
+    [0, "money_delta", [-1]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "sell", [4, 5, [95]]],
+    [0, "money_delta", [2]],
+    [0, "buy", [1, 2, [-150, "Joker", "j_turtle_bean"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "sell", [4, 4, [80, "ed:holo"]]],
+    [0, "money_delta", [1]],
+    [0, "buy", [1, 1, [-151, "Joker", "j_idol"], 1, false]],
+    [0, "money_delta", [-1]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [0, "buy", [1, 1, [-152, "Tarot", "c_hanged_man"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "open_pack", [2, 1, [-153, "Booster", "p_arcana_mega_1"], 8, false]],
+    [0, "money_delta", [-8]],
+    [0, "use", [2, [12, 13], [152], [[35], [29]]]],
+    [0, "pack_pick", [3, [], [-154, "Tarot", "c_fool"], []]],
+    [0, "pack_pick", [1, [], [-155, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [16]],
+    [0, "reroll", { "cost": 9 }],
+    [0, "money_delta", [-9]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_big"]],
+    [0, "use", [2, [1, 2], [-156, "Tarot", "c_hanged_man"], [[30], [1]]]],
+    [
+      0,
+      "play",
+      [
+        [6, 8, 9, 10, 11],
+        [[49], [28], [37], [10], [75]],
+        [
+          "j_ancient",
+          "j_mail",
+          "j_brainstorm",
+          "j_mp_hanging_chad",
+          "j_turtle_bean",
+          "j_idol"
+        ]
+      ]
+    ],
+    [0, "reorder", [4, [2, 1, 3, 4, 5, 6], [[[132], 2, 1], [[137], 1, 2]]]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [
+        [5, 9, 10, 11, 12],
+        [[67, "e:m_lucky"], [45], [57], [27, "s:Purple"], [4]]
+      ]
+    ],
+    [0, "use", [2, [], [-157, "Tarot", "c_wheel_of_fortune"], []]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+        [[[19, "e:m_lucky"], 3, 1], [[6], 1, 2], [[62, "e:m_wild"], 2, 3]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13],
+        [
+          [[20], 5, 1],
+          [[19, "e:m_lucky"], 1, 2],
+          [[6], 2, 3],
+          [[62, "e:m_wild"], 3, 4],
+          [[41], 4, 5]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [6, 1, 2, 3, 4, 5],
+        [
+          [[151], 6, 1],
+          [[132], 1, 2],
+          [[137], 2, 3],
+          [[133], 3, 4],
+          [[149], 4, 5],
+          [[150], 5, 6]
+        ]
+      ]
+    ],
+    [0, "reorder", [4, [2, 1, 3, 4, 5, 6], [[[132], 2, 1], [[151], 1, 2]]]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [[6, 7, 8, 10, 11], [[56], [61, "e:m_lucky"], [33], [9], [34]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 6, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13],
+        [
+          [[121, "e:m_wild", "s:Red"], 6, 2],
+          [[62, "e:m_wild"], 2, 3],
+          [[19, "e:m_lucky"], 3, 4],
+          [[41], 4, 5],
+          [[20], 5, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 3, 4, 5, 6, 2, 7, 8, 9, 10, 11, 12, 13],
+        [
+          [[62, "e:m_wild"], 3, 2],
+          [[19, "e:m_lucky"], 4, 3],
+          [[41], 5, 4],
+          [[20], 6, 5],
+          [[121, "e:m_wild", "s:Red"], 2, 6]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [3, 1, 2, 4, 5, 6], [[[137], 3, 1], [[132], 1, 2], [[151], 2, 3]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [7, 8, 10, 11, 12],
+        [[14], [36, "e:m_gold"], [58], [39], [16]],
+        [
+          "j_ancient",
+          "j_mail",
+          "j_idol",
+          "j_brainstorm",
+          "j_mp_hanging_chad",
+          "j_turtle_bean"
+        ]
+      ]
+    ],
+    [0, "use", [1, [13], [-158, "Tarot", "c_chariot"], [[55, "s:Blue"]]]],
+    [
+      0,
+      "discard",
+      [[1, 9, 10, 11, 12], [[12], [3], [46], [8, "s:Purple"], [32]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 5, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13],
+        [[[19, "e:m_lucky"], 5, 3], [[6], 3, 4], [[62, "e:m_wild"], 4, 5]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 7, 4, 5, 6, 8, 9, 10, 11, 12, 13],
+        [[[20], 7, 4], [[6], 4, 5], [[62, "e:m_wild"], 5, 6], [[41], 6, 7]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [3, 1, 2, 4, 5, 6], [[[151], 3, 1], [[137], 1, 2], [[132], 2, 3]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 10, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13],
+        [
+          [[121, "e:m_wild", "s:Red"], 10, 3],
+          [[19, "e:m_lucky"], 3, 4],
+          [[20], 4, 5],
+          [[6], 5, 6],
+          [[62, "e:m_wild"], 6, 7],
+          [[41], 7, 8],
+          [[50, "e:m_wild"], 8, 9],
+          [[13], 9, 10]
+        ]
+      ]
+    ],
+    [0, "reorder", [4, [2, 1, 3, 4, 5, 6], [[[137], 2, 1], [[151], 1, 2]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 5, 4, 6, 7, 8, 9, 10, 11, 12, 13],
+        [[[20], 5, 4], [[19, "e:m_lucky"], 4, 5]]
+      ]
+    ],
+    [0, "use", [1, [], [-159, "Tarot", "c_fool"], []]],
+    [0, "use", [1, [6], [-160, "Tarot", "c_chariot"], [[6]]]],
+    [
+      0,
+      "play",
+      [
+        [3, 4, 5, 7, 9],
+        [
+          [121, "e:m_wild", "s:Red"],
+          [20],
+          [19, "e:m_lucky"],
+          [62, "e:m_wild"],
+          [50, "e:m_wild"]
+        ],
+        [
+          "j_ancient",
+          "j_idol",
+          "j_mail",
+          "j_brainstorm",
+          "j_mp_hanging_chad",
+          "j_turtle_bean"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [9]],
+    [0, "sell", [5, 1, [-161, "Planet", "c_jupiter"]]],
+    [0, "money_delta", [1]],
+    [0, "buy", [1, 2, [-162, "Tarot", "c_death"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "buy", [1, 2, [-163, "Tarot", "c_fool"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "open_pack", [2, 1, [-164, "Booster", "p_arcana_mega_1"], 8, false]],
+    [0, "money_delta", [-8]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 10, 6, 7, 8, 9, 11, 12],
+        [
+          [[16], 10, 6],
+          [[121, "e:m_wild", "s:Red"], 6, 7],
+          [[2], 7, 8],
+          [[38], 8, 9],
+          [[75], 9, 10]
+        ]
+      ]
+    ],
+    [0, "use", [1, [6, 7], [162], [[16], [121, "e:m_wild", "s:Red"]]]],
+    [0, "use", [1, [], [163], []]],
+    [0, "pack_pick", [3, [], [-165, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [20]],
+    [0, "pack_pick", [4, [1], [-166, "Tarot", "c_chariot"], [[5]]]],
+    [0, "buy", [1, 1, [-167, "Tarot", "c_world"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [0, "reroll", { "cost": 9 }],
+    [0, "money_delta", [-9]],
+    [0, "buy", [1, 3, [-168, "Planet", "c_ceres"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "buy", [1, 1, [-169, "Tarot", "c_hermit"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [20]],
+    [0, "reroll", { "cost": 10 }],
+    [0, "money_delta", [-10]],
+    [0, "buy", [1, 3, [-170, "Planet", "c_ceres"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "reroll", { "cost": 11 }],
+    [0, "money_delta", [-11]],
+    [0, "open_pack", [2, 1, [-171, "Booster", "p_arcana_jumbo_2"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "pack_pick", [2, [12], [-172, "Tarot", "c_lovers"], [[39]]]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_mp_nemesis"]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [5, 1, 2, 3, 4, 6],
+        [
+          [[149], 5, 1],
+          [[137], 1, 2],
+          [[151], 2, 3],
+          [[132], 3, 4],
+          [[133], 4, 5]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 9, 10],
+        [[20], [67, "e:m_lucky"], [50, "e:m_wild"], [3], [15]],
+        [
+          "j_mp_hanging_chad",
+          "j_ancient",
+          "j_idol",
+          "j_mail",
+          "j_brainstorm",
+          "j_turtle_bean"
+        ]
+      ]
+    ],
+    [0, "use", [2, [2, 10, 11], [167], [[12], [47], [58]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 9, 5, 6, 7, 8, 10, 11, 12],
+        [
+          [[32], 9, 5],
+          [[121, "e:m_wild", "s:Red"], 5, 6],
+          [[8, "s:Purple"], 6, 7],
+          [[28], 7, 8],
+          [[27, "s:Purple"], 8, 9]
+        ]
+      ]
+    ],
+    [
+      0,
+      "use",
+      [
+        1,
+        [5, 6],
+        [-173, "Tarot", "c_death"],
+        [[32], [121, "e:m_wild", "s:Red"]]
+      ]
+    ],
+    [
+      0,
+      "discard",
+      [[1, 4, 7, 8, 9], [[106], [40], [8, "s:Purple"], [28], [27, "s:Purple"]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [3, 4, 7, 8, 9],
+        [[61, "e:m_lucky"], [33], [74], [36, "e:m_gold"], [47]],
+        [
+          "j_mp_hanging_chad",
+          "j_ancient",
+          "j_idol",
+          "j_mail",
+          "j_brainstorm",
+          "j_turtle_bean"
+        ]
+      ]
+    ],
+    [0, "use", [1, [], [-174, "Tarot", "c_temperance"], []]],
+    [0, "money_delta", [16]],
+    [
+      0,
+      "reorder",
+      [
+        4,
+        [4, 1, 2, 3, 5, 6],
+        [[[132], 4, 1], [[149], 1, 2], [[137], 2, 3], [[151], 3, 4]]
+      ]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [[1, 3, 7, 8, 12], [[12], [31, "e:m_lucky"], [49], [45], [97]]]
+    ],
+    [
+      0,
+      "discard",
+      [[3, 7, 8, 9], [[19, "e:m_lucky"], [2], [57], [48, "s:Purple"]]]
+    ],
+    [0, "use", [2, [4, 10], [-175, "Tarot", "c_heirophant"], [[56], [58]]]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 11, 5, 6, 7, 8, 9, 10, 12],
+        [
+          [[39, "e:m_wild"], 11, 5],
+          [[32, "e:m_wild", "s:Red"], 5, 6],
+          [[16, "e:m_wild", "s:Red"], 6, 7],
+          [[13], 7, 8],
+          [[121, "e:m_wild", "s:Red"], 8, 9],
+          [[38], 9, 10],
+          [[58, "e:m_bonus"], 10, 11]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [3, 1, 2, 4, 5, 6], [[[137], 3, 1], [[132], 1, 2], [[149], 2, 3]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 11, 6, 7, 8, 9, 10, 12],
+        [
+          [[58, "e:m_bonus"], 11, 6],
+          [[32, "e:m_wild", "s:Red"], 6, 7],
+          [[16, "e:m_wild", "s:Red"], 7, 8],
+          [[13], 8, 9],
+          [[121, "e:m_wild", "s:Red"], 9, 10],
+          [[38], 10, 11]
+        ]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 3, 4, 5, 7, 8, 9, 10, 6, 11, 12],
+        [
+          [[32, "e:m_wild", "s:Red"], 7, 6],
+          [[16, "e:m_wild", "s:Red"], 8, 7],
+          [[13], 9, 8],
+          [[121, "e:m_wild", "s:Red"], 10, 9],
+          [[58, "e:m_bonus"], 6, 10]
+        ]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [5, 6, 7, 9, 10],
+        [
+          [39, "e:m_wild"],
+          [32, "e:m_wild", "s:Red"],
+          [16, "e:m_wild", "s:Red"],
+          [121, "e:m_wild", "s:Red"],
+          [58, "e:m_bonus"]
+        ],
+        [
+          "j_ancient",
+          "j_mail",
+          "j_mp_hanging_chad",
+          "j_idol",
+          "j_brainstorm",
+          "j_turtle_bean"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [12]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "buy", [1, 2, [-176, "Tarot", "c_hermit"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [20]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [0, "open_pack", [2, 1, [-177, "Booster", "p_arcana_jumbo_1"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "pack_pick", [2, [], [-178, "Tarot", "c_hermit"], []]],
+    [0, "money_delta", [20]],
+    [
+      0,
+      "open_pack",
+      [2, 1, [-179, "Booster", "p_spectral_normal_2"], 4, false]
+    ],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_skip",
+      [[[-180, "Spectral", "c_incantation"], [-181, "Spectral", "c_sigil"]]]
+    ],
+    [0, "sell", [4, 1, [137]]],
+    [0, "money_delta", [4]],
+    [0, "buy", [1, 2, [-182, "Joker", "j_selzer"], 6, false]],
+    [0, "money_delta", [-6]],
+    [0, "reroll", { "cost": 9 }],
+    [0, "money_delta", [-9]],
+    [0, "reroll", { "cost": 10 }],
+    [0, "money_delta", [-10]],
+    [0, "reroll", { "cost": 11 }],
+    [0, "money_delta", [-11]],
+    [0, "leave_shop", null],
+    [0, "select_blind", [0, "bl_small"]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [[5, 6, 7, 8, 9], [[74], [49], [8, "s:Purple"], [38], [75]]]
+    ],
+    [
+      0,
+      "play",
+      [
+        [1, 2, 5, 8, 11],
+        [[106], [12], [31, "e:m_lucky"], [57], [97]],
+        [
+          "j_mail",
+          "j_mp_hanging_chad",
+          "j_idol",
+          "j_brainstorm",
+          "j_turtle_bean",
+          "j_selzer"
+        ]
+      ]
+    ],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [0, "discard", [[2, 3, 8, 9, 10], [[7], [20], [28], [37], [10]]]],
+    [0, "use", [2, [5], [-183, "Tarot", "c_emperor"], [[33]]]],
+    [0, "sell", [5, 2, [-184, "Tarot", "c_judgement"]]],
+    [0, "money_delta", [1]],
+    [0, "money_delta", [5]],
+    [0, "money_delta", [5]],
+    [
+      0,
+      "discard",
+      [[5, 7, 8, 9, 10], [[33], [14], [9], [27, "s:Purple"], [4]]]
+    ],
+    [
+      0,
+      "use",
+      [
+        1,
+        [1, 2, 3],
+        [-185, "Tarot", "c_star"],
+        [[5, "e:m_steel"], [40], [6, "e:m_steel"]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [4, [3, 1, 2, 4, 5, 6], [[[151], 3, 1], [[132], 1, 2], [[149], 2, 3]]]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 2, 4, 3, 5, 6, 7, 8, 9, 10, 11],
+        [[[19, "e:m_lucky"], 4, 3], [[6, "e:m_steel"], 3, 4]]
+      ]
+    ],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11],
+        [[[19, "e:m_lucky"], 3, 2], [[40], 2, 3]]
+      ]
+    ],
+    [
+      0,
+      "play",
+      [
+        [2, 3, 4, 7, 9],
+        [[19, "e:m_lucky"], [40], [6, "e:m_steel"], [50, "e:m_wild"], [13]],
+        [
+          "j_idol",
+          "j_mail",
+          "j_mp_hanging_chad",
+          "j_brainstorm",
+          "j_turtle_bean",
+          "j_selzer"
+        ]
+      ]
+    ],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [-3]],
+    [0, "cashout", null],
+    [0, "money_delta", [6]],
+    [0, "use", [2, [], [-186, "Planet", "c_ceres"], []]],
+    [0, "buy", [1, 3, [-187, "Planet", "c_eris"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "buy", [1, 1, [-188, "Tarot", "c_hermit"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [20]],
+    [0, "reroll", { "cost": 5 }],
+    [0, "money_delta", [-5]],
+    [0, "reroll", { "cost": 6 }],
+    [0, "money_delta", [-6]],
+    [0, "buy", [1, 3, [-189, "Tarot", "c_temperance"], 3, true]],
+    [0, "money_delta", [-3]],
+    [0, "money_delta", [15]],
+    [0, "buy", [1, 1, [-190, "Tarot", "c_fool"], 3, false]],
+    [0, "money_delta", [-3]],
+    [0, "reroll", { "cost": 7 }],
+    [0, "money_delta", [-7]],
+    [0, "reroll", { "cost": 8 }],
+    [0, "money_delta", [-8]],
+    [0, "reroll", { "cost": 9 }],
+    [0, "money_delta", [-9]],
+    [0, "reroll", { "cost": 10 }],
+    [0, "money_delta", [-10]],
+    [0, "reroll", { "cost": 11 }],
+    [0, "money_delta", [-11]],
+    [0, "reroll", { "cost": 12 }],
+    [0, "money_delta", [-12]],
+    [0, "open_pack", [2, 1, [-191, "Booster", "p_arcana_normal_2"], 4, false]],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "reorder",
+      [
+        6,
+        [1, 8, 2, 3, 4, 5, 6, 7, 9, 10],
+        [
+          [[10], 8, 2],
+          [[50, "e:m_wild"], 2, 3],
+          [[21, "e:m_lucky"], 3, 4],
+          [[33], 4, 5],
+          [[49], 5, 6],
+          [[36, "e:m_gold"], 6, 7],
+          [[38], 7, 8]
+        ]
+      ]
+    ],
+    [
+      0,
+      "pack_pick",
+      [3, [2, 3], [-192, "Tarot", "c_death"], [[10], [50, "e:m_wild"]]]
+    ],
+    [0, "sell", [4, 5, [150]]],
+    [0, "money_delta", [3]],
+    [0, "buy", [1, 3, [-193, "Joker", "j_sock_and_buskin"], 6, false]],
+    [0, "money_delta", [-6]],
+    [
+      0,
+      "open_pack",
+      [2, 1, [-194, "Booster", "p_standard_normal_4"], 4, false]
+    ],
+    [0, "money_delta", [-4]],
+    [
+      0,
+      "pack_skip",
+      [
+        [
+          [-195, "pc", "Diamonds", "Jack", "e:m_lucky"],
+          [-196, "pc", "Spades", "9"],
+          [-197, "pc", "Diamonds", "Queen"]
+        ]
+      ]
+    ],
+    [0, "use", [2, [], [190], []]],
+    [0, "leave_shop", null],
+    [0, "skip_blind", [0]]
+  ]
+}

@@ -238,6 +238,16 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   sale shows it). A made joker the log contradicts is an avatar suspect, like a missed shop slot
   (here Abstract Joker, which Judgement's roll passed by).
 - The rulesets' own jokers and planets have their rarity and set (Asteroid is a Planet).
+- A Blue Seal's planet is made at the round's end and often not seen until it's used or sold,
+  after the shop, where it already counted as held. At each cashout the replay looks ahead,
+  through the shop and the next round up to its last hand, for the last hand's planet showing up
+  unbought, and makes it then (0d60c738: a Pluto kept Pluto out of the shop; a Saturn kept
+  through hands before its sale; b15803f7: Ceres). The look stops at a High Priestess or a Fool
+  used (by id too), whose planets would look the same (FZZUAJBR), and doesn't count a planet
+  seen after the next round's last hand: that one is that round's Blue Seal's.
+- A made joker the log contradicts also makes the cards of its queue rolled in shops since the
+  queue was last in line avatar suspects (4ef1445c: Baron, passed by in a shop at stake 3, where
+  shop Rares come from Wraith's stickerless queue, so the Wraith gave the next Rare).
 - Perishable jokers (reader stake 7+): the log has no stickers, so a bought or picked joker takes
   them from the replay's roll of that slot (none when the replay had another card there). Its 5
   rounds count down at each round's end, before the jokers' end-of-round effects; at 0 it's
