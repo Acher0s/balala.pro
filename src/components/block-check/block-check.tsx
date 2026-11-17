@@ -88,6 +88,15 @@ export function BlockCheck({ art }: { art: SeedArt }) {
       if (!Array.isArray(data.logs)) throw new Error("no logs");
       const { logs } = await readReplay(data, browserGunzip);
       setLoaded({ state: "done", logs });
+      // The file's match goes in the address, so the page can be shared: the link loads the
+      // match from balatromp.com, with the sides its players shared.
+      const id = matchId(data.run?.id ?? "");
+      if (id) {
+        setInput(`https://balatromp.com/matches/${id}`);
+        const url = new URL(window.location.href);
+        url.searchParams.set("match", id);
+        window.history.replaceState(null, "", url);
+      }
     } catch {
       setLoaded({
         state: "error",
@@ -173,7 +182,9 @@ export function BlockCheck({ art }: { art: SeedArt }) {
                 <code>.json</code> file.
               </li>
               <li>
-                Open it here. It's read in your browser and isn't uploaded.
+                Open it here. It's read in your browser and isn't uploaded. The
+                address links to the match, so you can share it: a link shows
+                the sides that were shared on balatromp.com.
               </li>
             </ol>
             <label className="w-fit cursor-pointer rounded-md border px-3 py-2 font-semibold text-fd-foreground">

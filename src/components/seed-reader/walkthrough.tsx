@@ -119,7 +119,10 @@ export function LogLoader({
       const data = JSON.parse(await file.text()) as ReplayResponse;
       if (!Array.isArray(data.logs)) throw new Error("no logs");
       const { logs } = await readReplay(data, browserGunzip);
-      done(logs);
+      // The file's match goes in the address, for sharing (the link loads the shared sides).
+      const id = UUID.exec(data.run?.id ?? "")?.[0]?.toLowerCase();
+      if (id) setInput(`https://balatromp.com/matches/${id}`);
+      done(logs, id);
     } catch {
       setState({ error: "That file isn't a match replay." });
     }

@@ -7,7 +7,8 @@
 import type { LogEvent, MatchPlayerLog } from "./blocks";
 
 export interface ReplayResponse {
-  run?: { status?: string };
+  /** The match: its id is the one in the match link. */
+  run?: { id?: string; status?: string };
   logs?: {
     displayName?: string;
     shared?: boolean;
