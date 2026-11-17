@@ -5,6 +5,7 @@ import {
   findBlocksAuto,
   type LogEvent,
   matchSettings,
+  replaySteps,
 } from "./blocks";
 import bgmjz5ac from "./fixtures/bgmjz5ac-log.json";
 import dkh5gtrx from "./fixtures/dkh5gtrx-log.json";
@@ -258,4 +259,39 @@ describe("lobby avatars (Multiplayer 1.0.5 bug)", () => {
     if (!read.ok) throw new Error(read.error);
     expect(findBlocksAuto(events, read.settings).avatars).toEqual([]);
   });
+});
+
+describe("late start (seed reader read on from a log step)", () => {
+  const cases = [
+    ["FZZUAJBR", log],
+    ["FD54Z7XN", fd54z7xn],
+    ["X3UF2AUH", x3uf2auh],
+  ] as const;
+  for (const [seed, fixture] of cases)
+    it(`${seed}: reading on from a step gives the replay's next reroll`, () => {
+      const ev = fixture.events as LogEvent[];
+      const read = matchSettings(ev);
+      if (!read.ok) throw new Error(read.error);
+      const steps = replaySteps(ev, read.settings);
+      let checked = 0;
+      let same = 0;
+      steps.forEach((step, i) => {
+        if (step.op !== "reroll" || i === 0) return;
+        const before = steps[i - 1].settings;
+        const rolled = step.rolls
+          .filter((r) => r.source === "Shop")
+          .map((r) => r.got);
+        const vouchers = Object.fromEntries(
+          (before.start?.vouchers ?? []).map((v) => [v, 1]),
+        );
+        const read = shopQueue(before, rolled.length, { vouchers }).map(
+          (x) => (x.kind === "card" ? x.card : x.key),
+        );
+        checked++;
+        if (JSON.stringify(read) === JSON.stringify(rolled)) same++;
+      });
+      expect(checked).toBeGreaterThan(5);
+      // The reader lists a shop's slots without skipping one another (a rare repeat).
+      expect(same / checked).toBeGreaterThan(0.9);
+    });
 });

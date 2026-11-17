@@ -317,3 +317,24 @@ avatars: Burglar, Hiker, Baron (in both logs of its match), Joker, Fortune Telle
 packs searched too (Buffoon Packs showed avatars as well): Expanded 28 of 43 logs with no miss,
 1,989 of 2,230; pairs found in both logs of a match: Lucky Cat and Showman, Joker and Stone Joker.
 
+## Late start and the log walkthrough (seed reader)
+
+The seed reader can read on from any point of a match log instead of from the first roll.
+"Read on from a match log" (or `/seed-reader?match=<id>`) replays the log with `replaySteps`
+(`findBlocks` with a `steps` collector, the lobby avatars from `findBlocksMatch`) and the
+walkthrough steps through it: each step lists what its rolls gave, the cards they passed by
+and what kept each one out (held, on screen, being used, a lobby avatar, not unlocked), and
+the replay's checks against the log (a miss means the reader may be off from there on).
+
+- A step's `settings.start` (`ReaderStart`, made by `ShopSim.lateStart`) holds every stream's
+  pseudoseed state after the event (`SeedRng.snapshot`), the cards that exist then (held, in
+  use, a pack on screen, avatars; not the shop on screen, since reading on means rerolling,
+  which replaces it), the shop vouchers redeemed, the ante and the shops entered. The locks
+  (enhancements, softlocked planets, Gros Michel, Penny Pincher) are the replay's at that point.
+- `Game` starts its `SeedRng` from those states and its `owned` from `start.owned`; the
+  queues' click-to-block keeps them (`applyBlocks(…, held)`), so every tab reads on.
+- Streams the replay doesn't roll start fresh: the shop's packs (`shop_pack0`, skipped by
+  `start.shops` instead), tags (per ante, shown from `start.ante`) and vouchers (whole run).
+- Checked: reading on from the step before a reroll gives the replay's reroll (41 of 42 in the
+  9DGIEJUR match; the miss is the reader listing a repeat within one shop).
+

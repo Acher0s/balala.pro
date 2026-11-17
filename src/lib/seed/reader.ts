@@ -86,6 +86,26 @@ export interface ReaderSettings {
   grosMichelExtinct?: boolean;
   /** Internal: both pool-flag jokers open (for reporting what a lock passed by). */
   poolFlagsOpen?: boolean;
+  /**
+   * A late start: read on from a point in a run (a replayed match log) instead of from its
+   * first roll. Every queue goes on from these stream states, and skips `owned`.
+   */
+  start?: ReaderStart;
+}
+
+/** Where a late start picks up: the streams as they stood, and the cards that existed. */
+export interface ReaderStart {
+  /** pseudoseed state per stream key, for the streams rolled so far. */
+  states: readonly (readonly [string, number])[];
+  /** Cards that exist at that point (held, on screen, in use): every queue skips them. */
+  owned: readonly string[];
+  /** Shop vouchers redeemed by then (Overstock, Tarot Merchant, Hone, …). */
+  vouchers: readonly ShopVoucher[];
+  ante: number;
+  /** Shops entered by then: the pack queue goes on from the next one. */
+  shops: number;
+  /** Where in the run, e.g. "Ante 3 · Shop after Big Blind". */
+  place: string;
 }
 
 /** Why a roll passed a card by: it exists in the run, or its in_pool condition isn't met. */
@@ -133,8 +153,11 @@ function applyBlocks(
   owned: Set<string>,
   blocks: readonly Block[] | undefined,
   position: number,
+  /** Cards that exist from the start (a late start's held cards). */
+  held: ReadonlySet<string> = new Set(),
 ) {
   owned.clear();
+  for (const key of held) owned.add(key);
   for (const key of blockedAt(blocks, position)) owned.add(key);
 }
 
@@ -495,9 +518,20 @@ class Game {
   readonly owned: Set<string>;
   readonly stake: number;
 
+  /** Cards a late start begins with (settings.start.owned). */
+  readonly held: ReadonlySet<string>;
+
   constructor(settings: ReaderSettings) {
-    this.owned = settings.ruleset.smallWorld ? new NoneSet() : new Set();
-    this.rng = new SeedRng(normalizeSeed(settings.seed));
+    this.held = new Set(
+      settings.ruleset.smallWorld ? [] : (settings.start?.owned ?? []),
+    );
+    this.owned = settings.ruleset.smallWorld
+      ? new NoneSet()
+      : new Set(this.held);
+    this.rng = new SeedRng(
+      normalizeSeed(settings.seed),
+      settings.start && new Map(settings.start.states),
+    );
     this.pools = buildPools(settings);
     this.stake = settings.stake;
   }
@@ -644,7 +678,7 @@ export function jokerQueue(
 ): ShopJoker[] {
   const game = new Game(settings);
   return Array.from({ length: count }, (_, i) => {
-    applyBlocks(game.owned, blocks, i + 1);
+    applyBlocks(game.owned, blocks, i + 1, game.held);
     return rarity === 4
       ? {
           ...game.plainJoker(4, editionRate),
@@ -667,7 +701,7 @@ export function shopConsumableQueue(
   const game = new Game(settings);
   const key = `${set}${set}0`;
   return Array.from({ length: count }, (_, i) => {
-    applyBlocks(game.owned, blocks, i + 1);
+    applyBlocks(game.owned, blocks, i + 1, game.held);
     return drawFrom(game.rng, game.pools[set], key, game.owned);
   });
 }
@@ -691,7 +725,7 @@ export function packConsumableQueue(
   const banned = bannedKeys(settings);
   const out: string[] = [];
   for (let i = 0; i < count; i++) {
-    applyBlocks(game.owned, blocks, i + 1);
+    applyBlocks(game.owned, blocks, i + 1, game.held);
     let forced: string | undefined;
     // A Soul or Black Hole that exists isn't rolled for at all (create_card's used_jokers check).
     if (!banned.has("c_soul")) {
@@ -915,9 +949,12 @@ export function packQueue(settings: ReaderSettings, shops: number): string[][] {
   };
   // get_pack's first-shop Buffoon Pack is skipped when p_buffoon_normal_1 is banned.
   const buffoon = !banned.has("p_buffoon_normal_1");
-  return Array.from({ length: shops }, (_, i) =>
+  // A late start reads on from the next shop (the log doesn't roll this stream, so it's
+  // rolled here from the first shop).
+  const skip = settings.start?.shops ?? 0;
+  return Array.from({ length: shops + skip }, (_, i) =>
     i === 0 && buffoon ? ["p_buffoon_normal_1", roll()] : [roll(), roll()],
-  );
+  ).slice(skip);
 }
 
 export const PACK_SIZES: Record<string, { size: number; choose: number }> =
@@ -937,7 +974,7 @@ export function shopQueue(
 ): ShopItem[] {
   const sim = new ShopSim(settings, mods);
   return Array.from({ length: count }, (_, i) => {
-    applyBlocks(sim.owned, mods.blocks, i + 1);
+    applyBlocks(sim.owned, mods.blocks, i + 1, sim.held);
     return sim.next();
   });
 }
@@ -1077,6 +1114,38 @@ export class ShopSim {
   /** Cards that exist in the run: the shop and packs skip them. */
   get owned(): Set<string> {
     return this.game.owned;
+  }
+
+  /** Cards a late start begins with. */
+  get held(): ReadonlySet<string> {
+    return this.game.held;
+  }
+
+  /**
+   * A late start from here: the streams as they are now, with `owned` existing, and the
+   * locks (enhancements, softlocked planets, pool flags, Penny Pincher) as they are now.
+   */
+  lateStart(
+    owned: readonly string[],
+    ante: number,
+    shops: number,
+    place: string,
+  ): ReaderSettings {
+    const vouchers = SHOP_VOUCHERS.filter(
+      (v) => (this.mods.vouchers?.[v] ?? Infinity) <= this.slotNo + 1,
+    );
+    return {
+      ...this.settings,
+      pincherUnlocked: this.pincherUnlocked,
+      start: {
+        states: this.game.rng.snapshot(),
+        owned,
+        vouchers,
+        ante,
+        shops,
+        place,
+      },
+    };
   }
 
   /** The number of shop slots rolled so far. */

@@ -185,6 +185,7 @@ Cocktail Deck's mixed effects, Gradient Deck.
 |---|---|
 | `src/lib/seed/blocks.ts` | The replay: `matchSettings`, `findBlocks` (its `trace`, `probe` and `avatars` arguments), `findBlocksAuto` / `findBlocksMatch` (lobby avatars), `evaluateHand`, the makers, `DECK_START` |
 | `src/lib/seed/reader.ts` | `ShopSim` (`next`, `consumable`, `packConsumable`, `buffoonCard`, `otherJoker`, `tagJoker`, `fork`, `skip`, `chance`), `Game`, pools |
+| `replaySteps` (blocks.ts), `ShopSim.lateStart`, `ReaderStart`, `src/components/seed-reader/walkthrough.tsx` | The seed reader's late start and log walkthrough: a new stream the replay rolls is carried over automatically; one it doesn't roll (like `shop_pack0`) needs its own offset in `ReaderStart` |
 | `src/lib/seed/replay-file.ts` | Reading balatromp.com's replay JSON (server and browser) |
 | `src/app/api/what-did-i-block/[id]/route.ts` | Fetches a shared match |
 | `src/components/block-check/` | The page, including opening a saved file |

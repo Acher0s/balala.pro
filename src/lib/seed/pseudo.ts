@@ -44,6 +44,11 @@ export class SeedRng {
     return new SeedRng(this.seed, this.states);
   }
 
+  /** Every stream's state so far, to start another SeedRng from (a late start). */
+  snapshot(): [string, number][] {
+    return [...this.states];
+  }
+
   /** pseudoseed(key) */
   pseudoseed(key: string): number {
     const prev = this.states.get(key) ?? pseudohash(key + this.seed);

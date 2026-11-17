@@ -85,6 +85,50 @@ export interface BlockReport {
   avatars: AvatarBlock[];
 }
 
+/** Why a roll passed a card by, in a walkthrough step. */
+export type PassedBy = "held" | "on screen" | "in use" | "avatar" | "locked";
+
+/** One roll the replay made in a step: what it gave, and the cards it passed by on the way. */
+export interface StepRoll {
+  /** What was rolling: "Shop", "Buffoon Pack", "The Emperor", … */
+  source: string;
+  /** The key it landed on ("j_blueprint", "c_moon"), or a playing card's "H_K". */
+  got?: string;
+  passed: { key: string; by: PassedBy; why?: string }[];
+}
+
+/** One event of a log, replayed: for the walkthrough and a late start of the seed reader. */
+export interface ReplayStep {
+  /** The event's index in the log. */
+  at: number;
+  op: string;
+  /** The cards the event names (bought, picked, used, sold), by key. */
+  keys: string[];
+  ante: number;
+  place: string;
+  dollars: number;
+  rolls: StepRoll[];
+  /** Cards the log showed here and whether the replay had them there ("Shop", "Tarot", …). */
+  checks: { family: string; ok: boolean }[];
+  /** The seed reader's settings for reading on from right after this event. */
+  settings: ReaderSettings;
+}
+
+/** Events a walkthrough shows even when nothing rolled. */
+const STEP_OPS = new Set([
+  "select_blind",
+  "skip_blind",
+  "cashout",
+  "reroll",
+  "leave_shop",
+  "buy",
+  "open_pack",
+  "pack_pick",
+  "pack_skip",
+  "use",
+  "sell",
+]);
+
 export type MatchSettings =
   | { ok: true; settings: ReaderSettings }
   | { ok: false; error: string };
@@ -724,6 +768,8 @@ export function findBlocks(
    * run). findBlocksAuto finds them.
    */
   avatars: readonly AvatarBlock[] = [],
+  /** Filled with every step worth showing, for a walkthrough (replaySteps). */
+  steps?: ReplayStep[],
 ): BlockReport {
   const missedShop: { key: string; at: number }[] = [];
   const avatarsOut = avatars.map((a) => ({ ...a }));
@@ -766,6 +812,7 @@ export function findBlocks(
   let blind = "Small Blind";
   let inShop = false;
   let bossesBeaten = 0;
+  let shopsEntered = 0;
   let afterBoss = false;
   let nextBlind: "small" | "big" | "boss" = "small";
   let handsThisRound = 0;
@@ -778,8 +825,11 @@ export function findBlocks(
    * waiting for the next card (a bought Brainstorm pins the Rare queue for that shop).
    */
   const inLine = new Map<string, string>();
+  let stepRolls: StepRoll[] = [];
+  let stepChecks: { family: string; ok: boolean }[] = [];
   const check = (a: Agreement, ok: boolean, family: string) => {
     trace?.(`  check ${family}: ${ok ? "ok" : "MISS"}`);
+    if (steps) stepChecks.push({ family, ok });
     a.checked++;
     if (ok) {
       a.matched++;
@@ -842,15 +892,51 @@ export function findBlocks(
    */
   let using: string | undefined;
 
+  /** What the game skips: what's held, in use and on screen (nothing with Showman). */
+  const ownedKeys = (): string[] => {
+    if ([...jokers.values()].some((j) => j.key === "j_ring_master")) return [];
+    return [
+      ...new Set([
+        ...heldKeys(),
+        ...(using ? [using] : []),
+        ...avatars.filter((a) => eventAt >= a.from).map((a) => a.key),
+        ...shop.filter((k): k is string => !!k),
+        ...pack.filter(Boolean),
+      ]),
+    ];
+  };
   /** Sets what the game skips, from what's held and on screen. */
   const syncOwned = (s: ShopSim) => {
     s.owned.clear();
-    if ([...jokers.values()].some((j) => j.key === "j_ring_master")) return;
-    for (const k of heldKeys()) s.owned.add(k);
-    if (using) s.owned.add(using);
-    for (const a of avatars) if (eventAt >= a.from) s.owned.add(a.key);
-    for (const k of shop) if (k) s.owned.add(k);
-    for (const k of pack) if (k) s.owned.add(k);
+    for (const k of ownedKeys()) s.owned.add(k);
+  };
+
+  /** A roll's passed-by cards, for a walkthrough step, each with what kept it out. */
+  const passedBy = (
+    found: typeof skips,
+    held: Set<string> = heldKeys(),
+  ): StepRoll["passed"] =>
+    found.map((s) =>
+      s.reason === "locked"
+        ? { key: s.key, by: "locked" as const, why: why(s.key) }
+        : {
+            key: s.key,
+            by: held.has(s.key)
+              ? ("held" as const)
+              : s.key === using
+                ? ("in use" as const)
+                : avatarNow(s.key)
+                  ? ("avatar" as const)
+                  : ("on screen" as const),
+          },
+    );
+  const keyOf = (out: unknown): string | undefined => {
+    if (typeof out === "string") return out || undefined;
+    if (out && typeof out === "object") {
+      const o = out as { key?: string; card?: string };
+      return o.key ?? o.card;
+    }
+    return undefined;
   };
 
   const commit = (
@@ -889,6 +975,8 @@ export function findBlocks(
     syncOwned(sim);
     skips = [];
     const out = fn(sim);
+    if (steps)
+      stepRolls.push({ source, got: keyOf(out), passed: passedBy(skips) });
     commit(source, skips);
     skips = [];
     return out;
@@ -922,6 +1010,15 @@ export function findBlocks(
       if (got === key) {
         skips = [];
         sim = fork;
+        if (steps)
+          stepRolls.push({
+            source: `Caught up ${n + 1} roll${n ? "s" : ""} on ${set}`,
+            got: key,
+            passed: passedBy(
+              passed,
+              new Set([...heldKeys(), ...(heldThen ?? [])]),
+            ),
+          });
         trace?.(`  resync ${set}: ${n + 1} rolls on`);
         if (n < 3)
           inLine.set(familyOf(key, set === "Joker" ? "Shop" : ""), place());
@@ -1426,6 +1523,7 @@ export function findBlocks(
         break;
       }
       case "cashout":
+        shopsEntered++;
         if (blind !== "Small Blind" && blind !== "Big Blind") {
           bossesBeaten++;
           afterBoss = true;
@@ -1646,6 +1744,27 @@ export function findBlocks(
         break;
       }
     }
+    if (steps && (STEP_OPS.has(op) || stepRolls.length || stepChecks.length)) {
+      steps.push({
+        at: i,
+        op,
+        keys: stepKeys(op, a, (id) => items.get(id)?.key),
+        ante,
+        place: place(),
+        dollars,
+        rolls: stepRolls,
+        checks: stepChecks,
+        // The shop on screen isn't counted: reading on means rerolling, which replaces it.
+        settings: sim.lateStart(
+          ownedKeys().filter((k) => !shop.includes(k) || heldKeys().has(k)),
+          ante,
+          shopsEntered,
+          place(),
+        ),
+      });
+    }
+    stepRolls = [];
+    stepChecks = [];
   });
 
   // Skips after the last card their queue showed: nothing came after to check them against, so
@@ -1680,6 +1799,46 @@ export function findBlocks(
     missedShop,
     avatars: avatarsOut,
   };
+}
+
+/** The cards an event names: refs it carries ([id, set, key]), or held ids (sell, use). */
+function stepKeys(
+  op: string,
+  a: readonly unknown[],
+  itemKey: (id: number) => string | undefined,
+): string[] {
+  if (op === "sell" || op === "use")
+    return (Array.isArray(a[2]) ? a[2] : []).flatMap((id) => {
+      const k = typeof id === "number" ? itemKey(Math.abs(id)) : undefined;
+      return k ? [k] : [];
+    });
+  const out: string[] = [];
+  const walk = (x: unknown) => {
+    if (!Array.isArray(x)) return;
+    if (typeof x[0] === "number" && typeof x[1] === "string") {
+      if (x[1] === "pc") out.push(`${x[3]} of ${x[2]}`);
+      else if (typeof x[2] === "string") out.push(x[2]);
+      return;
+    }
+    for (const y of x) walk(y);
+  };
+  walk(op === "pack_skip" ? [] : a);
+  return out;
+}
+
+/**
+ * The log replayed step by step, with the lobby avatars findBlocksAuto found: for each event
+ * worth showing, what it rolled, what those rolls passed by and why, and the seed reader's
+ * settings for reading on from there (a late start).
+ */
+export function replaySteps(
+  events: readonly LogEvent[],
+  settings: ReaderSettings,
+  avatars: readonly AvatarBlock[] = [],
+): ReplayStep[] {
+  const steps: ReplayStep[] = [];
+  findBlocks(events, settings, undefined, undefined, avatars, steps);
+  return steps;
 }
 
 const misses = (r: BlockReport) =>

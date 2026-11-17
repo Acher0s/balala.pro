@@ -49,6 +49,7 @@ import {
   useArt,
   VoucherTile,
 } from "./seed-card";
+import { type LateLog, LogLoader, Walkthrough } from "./walkthrough";
 
 const TABS = [
   ["shop", "Shop"],
@@ -464,9 +465,12 @@ function Note({ children }: { children: ReactNode }) {
 function ShopTab({ settings }: { settings: ReaderSettings }) {
   const art = useArt();
   const [count, setCount] = useState(STEP);
+  // A late start begins with the vouchers the run had redeemed by then.
   const [vouchers, setVouchers] = useState<
     Partial<Record<ShopVoucher, number>>
-  >({});
+  >(() =>
+    Object.fromEntries((settings.start?.vouchers ?? []).map((v) => [v, 1])),
+  );
   // An upgrade needs its base: buying it buys the base too, and dropping the base drops both.
   const toggleVoucher = (v: ShopVoucher) =>
     setVouchers((prev) => {
@@ -723,7 +727,9 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
             key={i}
             className="flex flex-col items-center gap-1 rounded-xl border bg-fd-card p-2"
           >
-            <span className="text-xs font-semibold">Shop {i + 1}</span>
+            <span className="text-xs font-semibold">
+              Shop {i + 1 + (settings.start?.shops ?? 0)}
+            </span>
             <div className="flex gap-2">
               {pair.map((p, j) => (
                 <ItemCard
@@ -1005,7 +1011,12 @@ function VouchersTab({ settings }: { settings: ReaderSettings }) {
 
 function TagsTab({ settings }: { settings: ReaderSettings }) {
   const [antes, setAntes] = useState(8);
-  const list = useMemo(() => tagQueue(settings, antes), [settings, antes]);
+  // Tags are rolled per ante: a late start shows them from its ante on.
+  const from = settings.start?.ante ?? 1;
+  const list = useMemo(
+    () => tagQueue(settings, antes + from - 1).filter((t) => t.ante >= from),
+    [settings, antes, from],
+  );
   return (
     <div className="flex flex-col gap-4">
       <Note>
@@ -1204,6 +1215,10 @@ export function SeedReader({ art }: { art: SeedArt }) {
     [blocks, swRuleset],
   );
   const [tab, setTab] = useState<Tab>("shop");
+  /** A match log being walked through: the reader reads on from the chosen step. */
+  const [late, setLate] = useState<LateLog[] | null>(null);
+  const [player, setPlayer] = useState(0);
+  const [stepIndex, setStepIndex] = useState(-1);
 
   // Read the seed from the address once, and keep it there as it changes.
   useEffect(() => {
@@ -1260,12 +1275,40 @@ export function SeedReader({ art }: { art: SeedArt }) {
     [seed, ruleset, patch.gameMode, activeStake, deck, extinct],
   );
 
+  // Walking through a log, the reader reads on from the chosen step (from the run's start
+  // before the first step), with the log's own seed and settings.
+  const lateSteps = late?.[player]?.steps;
+  const read = useMemo<ReaderSettings>(() => {
+    if (!lateSteps?.length) return settings;
+    const step = lateSteps[stepIndex];
+    if (step) return step.settings;
+    const { start: _, ...first } = lateSteps[0].settings;
+    return first;
+  }, [lateSteps, stepIndex, settings]);
+
   // Blocks are for one seed and its settings; changing them starts afresh.
   // biome-ignore lint/correctness/useExhaustiveDependencies: clears when these change
   useEffect(
     () => setBlocks([]),
-    [seed, ruleset.id, activeStake, deck, extinct],
+    [seed, ruleset.id, activeStake, deck, extinct, late, player, stepIndex],
   );
+
+  const loadLog = (logs: LateLog[], match?: string) => {
+    setLate(logs);
+    setPlayer(0);
+    setStepIndex(-1);
+    if (match) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("match", match);
+      window.history.replaceState(null, "", url);
+    }
+  };
+  const exitLog = () => {
+    setLate(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("match");
+    window.history.replaceState(null, "", url);
+  };
 
   // Report each seed read to the site (Studio → Seed reader), once it's been left alone for a
   // moment, and once per seed and settings in this tab.
@@ -1297,101 +1340,118 @@ export function SeedReader({ art }: { art: SeedArt }) {
       <LayoutContext value={[layout, setLayout]}>
         <BlockContext value={blockStore}>
           <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-semibold">Seed</span>
-                <input
-                  value={seed}
-                  onChange={(e) => setSeed(cleanSeed(e.target.value))}
-                  placeholder="e.g. 6EQHIH19"
-                  spellCheck={false}
-                  autoComplete="off"
-                  className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-semibold">Version</span>
-                <select
-                  value={patch.id}
-                  onChange={(e) => setPatchId(e.target.value)}
-                  className="rounded-lg border bg-fd-background px-3 py-2"
-                >
-                  {PATCHES.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-semibold">Ruleset</span>
-                <select
-                  value={ruleset.id}
-                  onChange={(e) => setRulesetId(e.target.value)}
-                  className="rounded-lg border bg-fd-background px-3 py-2"
-                >
-                  {patch.rulesets.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                      {r.rankedOrder ? " (ranked)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label
-                className="flex items-center gap-2 py-2 text-sm"
-                title="Only The Order is supported for now"
-              >
-                <input type="checkbox" checked disabled />
-                The Order
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-semibold">Stake</span>
-                <select
-                  value={activeStake}
-                  onChange={(e) => setStake(Number(e.target.value))}
-                  className="rounded-lg border bg-fd-background px-3 py-2"
-                >
-                  {stakes.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-semibold">Deck</span>
-                <select
-                  value={deck ?? ""}
-                  onChange={(e) => setDeckId(e.target.value as DeckId | "")}
-                  className="rounded-lg border bg-fd-background px-3 py-2"
-                >
-                  <option value="">Any other deck</option>
-                  {decks.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.effect})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label
-                className="flex items-center gap-2 py-2 text-sm"
-                title="Cavendish is only in the pool once Gros Michel has gone extinct, and Gros Michel isn't from then on"
-              >
-                <input
-                  type="checkbox"
-                  checked={extinct}
-                  onChange={(e) => setExtinct(e.target.checked)}
-                />
-                Gros Michel extinct (Cavendish can show up)
-              </label>
-            </div>
+            {late ? (
+              <Walkthrough
+                logs={late}
+                player={player}
+                setPlayer={(i) => {
+                  setPlayer(i);
+                  setStepIndex(-1);
+                }}
+                index={stepIndex}
+                setIndex={setStepIndex}
+                onExit={exitLog}
+              />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-fd-card p-4">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-semibold">Seed</span>
+                    <input
+                      value={seed}
+                      onChange={(e) => setSeed(cleanSeed(e.target.value))}
+                      placeholder="e.g. 6EQHIH19"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="w-40 rounded-lg border bg-fd-background px-3 py-2 font-mono text-lg uppercase tracking-widest"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-semibold">Version</span>
+                    <select
+                      value={patch.id}
+                      onChange={(e) => setPatchId(e.target.value)}
+                      className="rounded-lg border bg-fd-background px-3 py-2"
+                    >
+                      {PATCHES.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-semibold">Ruleset</span>
+                    <select
+                      value={ruleset.id}
+                      onChange={(e) => setRulesetId(e.target.value)}
+                      className="rounded-lg border bg-fd-background px-3 py-2"
+                    >
+                      {patch.rulesets.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                          {r.rankedOrder ? " (ranked)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label
+                    className="flex items-center gap-2 py-2 text-sm"
+                    title="Only The Order is supported for now"
+                  >
+                    <input type="checkbox" checked disabled />
+                    The Order
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-semibold">Stake</span>
+                    <select
+                      value={activeStake}
+                      onChange={(e) => setStake(Number(e.target.value))}
+                      className="rounded-lg border bg-fd-background px-3 py-2"
+                    >
+                      {stakes.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-semibold">Deck</span>
+                    <select
+                      value={deck ?? ""}
+                      onChange={(e) => setDeckId(e.target.value as DeckId | "")}
+                      className="rounded-lg border bg-fd-background px-3 py-2"
+                    >
+                      <option value="">Any other deck</option>
+                      {decks.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.effect})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label
+                    className="flex items-center gap-2 py-2 text-sm"
+                    title="Cavendish is only in the pool once Gros Michel has gone extinct, and Gros Michel isn't from then on"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={extinct}
+                      onChange={(e) => setExtinct(e.target.checked)}
+                    />
+                    Gros Michel extinct (Cavendish can show up)
+                  </label>
+                </div>
+                <LogLoader onLoad={loadLog} />
+              </>
+            )}
 
-            {seed ? (
+            {read.seed ? (
               <>
                 <nav className="flex flex-wrap gap-1 border-b pb-2">
                   {TABS.filter(
-                    ([id]) => id !== "smallworld" || ruleset.smallWorld,
+                    ([id]) => id !== "smallworld" || read.ruleset.smallWorld,
                   ).map(([id, label]) => (
                     <button
                       key={id}
@@ -1408,26 +1468,26 @@ export function SeedReader({ art }: { art: SeedArt }) {
                   ))}
                 </nav>
                 <section
-                  key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}`}
+                  key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}:${late ? `${player}:${stepIndex}` : ""}`}
                 >
-                  {tab === "shop" && <ShopTab settings={settings} />}
-                  {tab === "jokers" && <JokersTab settings={settings} />}
-                  {tab === "cards" && <CardsTab settings={settings} />}
+                  {tab === "shop" && <ShopTab settings={read} />}
+                  {tab === "jokers" && <JokersTab settings={read} />}
+                  {tab === "cards" && <CardsTab settings={read} />}
                   {tab === "tarots" && (
-                    <ConsumableTab settings={settings} set="Tarot" />
+                    <ConsumableTab settings={read} set="Tarot" />
                   )}
                   {tab === "planets" && (
-                    <ConsumableTab settings={settings} set="Planet" />
+                    <ConsumableTab settings={read} set="Planet" />
                   )}
                   {tab === "spectrals" && (
-                    <ConsumableTab settings={settings} set="Spectral" />
+                    <ConsumableTab settings={read} set="Spectral" />
                   )}
-                  {tab === "vouchers" && <VouchersTab settings={settings} />}
-                  {tab === "tags" && <TagsTab settings={settings} />}
-                  {tab === "judgement" && <JudgementTab settings={settings} />}
-                  {tab === "lucky" && <LuckyTab settings={settings} />}
-                  {tab === "smallworld" && ruleset.smallWorld && (
-                    <SmallWorldTab settings={settings} />
+                  {tab === "vouchers" && <VouchersTab settings={read} />}
+                  {tab === "tags" && <TagsTab settings={read} />}
+                  {tab === "judgement" && <JudgementTab settings={read} />}
+                  {tab === "lucky" && <LuckyTab settings={read} />}
+                  {tab === "smallworld" && read.ruleset.smallWorld && (
+                    <SmallWorldTab settings={read} />
                   )}
                 </section>
               </>
