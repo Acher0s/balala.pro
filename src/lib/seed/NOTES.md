@@ -223,6 +223,16 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   next blind. The log only shows it gone at the next hand, which was too late for Riff-raff's
   room (4T4U9DGU: Gros Michel went extinct, Riff-raff made two jokers, not one) and for
   Cavendish being in the next shop.
+- Gros Michel's extinction is rolled, not read off the log: at each round's end, every Gros
+  Michel held rolls `pseudorandom("gros_michel")` (the plain key, no ante) below odds/6 (Oops!
+  All 6s doubles it). That predicted all 81 rounds a held Gros Michel ended in, across 22 logs
+  (7 extinctions). So Cavendish opens exactly then, even when the log ends before the next hand,
+  and a Gros Michel destroyed some other way (Madness, Ceremonial Dagger, Hex) doesn't open it.
+- Perishable jokers (reader stake 7+): the log has no stickers, so a bought or picked joker takes
+  them from the replay's roll of that slot (none when the replay had another card there). Its 5
+  rounds count down at each round's end, before the jokers' end-of-round effects; at 0 it's
+  debuffed and does nothing: no Gros Michel roll, no Oops! All 6s, nothing made (Riff-raff,
+  Cartomancer, Vagabond, …), not copied by Blueprint or Brainstorm, no hand-shape joker.
 - Double Tags (from a skip, or the Anaglyph Deck's after each Boss Blind) copy the next tag
   taken, so a pack tag can open several packs in a row (MDFAJQQM: three Spectral packs from one
   Ethereal Tag with two Doubles). Each opens after the last one's picks.
@@ -316,6 +326,15 @@ logs with no miss (with FD54Z7XN), 1,984 of 2,230 checks; Balanced 180 of 236. G
 avatars: Burglar, Hiker, Baron (in both logs of its match), Joker, Fortune Teller, Chaos. With
 packs searched too (Buffoon Packs showed avatars as well): Expanded 28 of 43 logs with no miss,
 1,989 of 2,230; pairs found in both logs of a match: Lucky Cat and Showman, Joker and Stone Joker.
+
+## Gros Michel's pool flag in the seed reader
+
+There's no "Gros Michel extinct" toggle: the reader reads Gros Michel as not extinct, and where a
+joker roll lands on Cavendish (kept out by the pool flag) it shows Cavendish there, faded and
+dashed, before the card the game gives instead (`ShopJoker.flagged`, from `Pools.flagged`). With
+Gros Michel extinct by then, Cavendish is in that place, and the stickers and editions after it
+come one roll later. A late start from a log uses the replay's extinction, and then marks where
+Gros Michel would have been instead.
 
 ## Late start and the log walkthrough (seed reader)
 

@@ -118,6 +118,18 @@ describe("pool flags and stickers", () => {
     expect(after).not.toContain("j_gros_michel");
   });
 
+  it("shows where Cavendish would be while Gros Michel isn't extinct", () => {
+    const seed = { ...base, seed: "9DGIEJUR" };
+    const before = jokerQueue(seed, 1, 100);
+    // The roll for #79 lands on Cavendish, which the pool flag keeps out: Even Steven instead.
+    expect(before[78]).toMatchObject({
+      key: "j_even_steven",
+      flagged: "j_cavendish",
+    });
+    const after = jokerQueue({ ...seed, grosMichelExtinct: true }, 1, 100);
+    expect(after[78].key).toBe("j_cavendish");
+  });
+
   it("takes a joker that can't be Eternal from the sticker queue when the roll says Eternal", () => {
     // The Order rolls the stickers before the joker; set_eternal then does nothing on a joker
     // with eternal_compat off, so it looks stickerless but came from the sticker queue.

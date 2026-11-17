@@ -847,7 +847,30 @@ export function findBlocks(
   let dollars = 4;
   const items = new Map<number, { set: string; key: string }>();
   const cards = new Map<number, PlayingCard>();
-  const jokers = new Map<number, { key: string; edition?: string }>();
+  /**
+   * `perish`: a Perishable joker's rounds left (5 when made, Orange Stake and up); at 0 it's
+   * debuffed and does nothing. The log has no stickers: they're the replay's roll of the slot.
+   */
+  const jokers = new Map<
+    number,
+    { key: string; edition?: string; perish?: number }
+  >();
+  /** The last roll of each joker: whether it came Perishable (for when it's bought or picked). */
+  const rolledPerishable = new Map<string, boolean>();
+  const perishOf = (key: string) =>
+    rolledPerishable.get(key) ? { perish: 5 } : {};
+  /** Keys in order with debuffed copies blanked, for what acts (and what Blueprint copies). */
+  const live = (keys: readonly string[]): string[] => {
+    const dead = new Map<string, number>();
+    for (const j of jokers.values())
+      if (j.perish === 0) dead.set(j.key, (dead.get(j.key) ?? 0) + 1);
+    return keys.map((k) => {
+      const n = dead.get(k) ?? 0;
+      if (n <= 0) return k;
+      dead.set(k, n - 1);
+      return "";
+    });
+  };
   const consumables = new Map<number, HeldConsumable>();
   const vouchers = new Set<string>();
   const redeemed: { ante: number; key: string }[] = [];
@@ -975,6 +998,10 @@ export function findBlocks(
     syncOwned(sim);
     skips = [];
     const out = fn(sim);
+    if (out && typeof out === "object" && "stickers" in out) {
+      const j = out as unknown as { key: string; stickers: readonly string[] };
+      rolledPerishable.set(j.key, j.stickers.includes("perishable"));
+    }
     if (steps)
       stepRolls.push({ source, got: keyOf(out), passed: passedBy(skips) });
     commit(source, skips);
@@ -1235,7 +1262,9 @@ export function findBlocks(
 
   /** Probability rolls: Oops! All 6s doubles the odds. */
   const odds = () =>
-    2 ** [...jokers.values()].filter((j) => j.key === "j_oops").length;
+    2 **
+    [...jokers.values()].filter((j) => j.key === "j_oops" && j.perish !== 0)
+      .length;
 
   // Shop -------------------------------------------------------------------
 
@@ -1436,7 +1465,7 @@ export function findBlocks(
     if (kind === "standard") pack = [];
     trace?.(`  pack: ${pack.join(" ")}`);
     // open_booster: Hallucination, 1 in 2 (TheOrder.toml: "halu" .. ante_based() = "halu0").
-    for (const k of acting([...jokers.values()].map((j) => j.key)))
+    for (const k of acting(live([...jokers.values()].map((j) => j.key))))
       if (k === "j_hallucination" && consumableRoom() > 0)
         if (sim.chance("halu0") < odds() / 2)
           makeConsumable("Hallucination", "Tarot");
@@ -1454,12 +1483,35 @@ export function findBlocks(
     const a = (args ?? []) as unknown[];
     eventAt = i;
     for (const h of evidence.get(i) ?? []) played.add(h);
+    // Gros Michel's end-of-round roll, one per copy held: pseudorandom("gros_michel") below
+    // 1 in 6 (Oops! All 6s doubles it) and it goes extinct, opening Cavendish from the next
+    // shop. Checked against every round a held Gros Michel ended in the matches seen.
+    // Perishable jokers count their rounds down first (end_round), so one debuffed now doesn't
+    // roll: a debuffed joker does nothing.
+    let extinctNow = 0;
+    if (op === "cashout") {
+      for (const j of jokers.values())
+        if (j.perish !== undefined && j.perish > 0) j.perish--;
+      for (const j of [...jokers.values()])
+        if (
+          j.key === "j_gros_michel" &&
+          j.perish !== 0 &&
+          sim.chance("gros_michel") < odds() / 6
+        )
+          extinctNow++;
+    }
+    if (extinctNow) extinct = true;
     for (const k of vanish.get(i) ?? []) {
       removeJoker(-1, k);
       const o = order.lastIndexOf(k);
       if (o >= 0) order.splice(o, 1);
-      // Gros Michel goes extinct at the end of a round: Cavendish is in the next shop.
-      if (k === "j_gros_michel") extinct = true;
+      if (k === "j_gros_michel") extinctNow--;
+    }
+    // One the log doesn't show leaving yet (no hand played after it): it's gone all the same.
+    for (; extinctNow > 0; extinctNow--) {
+      removeJoker(-1, "j_gros_michel");
+      const o = order.lastIndexOf("j_gros_michel");
+      if (o >= 0) order.splice(o, 1);
     }
     if (op === "cashout" || op === "reroll") shopEvent = i;
     for (const a of avatarsOut) if (a.from === i) a.place = place();
@@ -1481,7 +1533,7 @@ export function findBlocks(
         nextBlind =
           key === "bl_small" ? "big" : key === "bl_big" ? "boss" : "small";
         // setting_blind, joker by joker (copies included).
-        for (const k of acting(orderAtBlind(i))) {
+        for (const k of acting(live(orderAtBlind(i)))) {
           if (k === "j_riff_raff") makeJokers("Riff-raff", 2, 1);
           if (k === "j_cartomancer") makeConsumable("Cartomancer", "Tarot");
         }
@@ -1557,9 +1609,14 @@ export function findBlocks(
             at = slot;
             resync(set, key, heldAtShop);
           }
+          const rolled = shop[at] === key;
           shop.splice(at, 1);
           if (set === "Joker") {
-            jokers.set(got.id, { key, edition: got.edition });
+            jokers.set(got.id, {
+              key,
+              edition: got.edition,
+              ...(rolled ? perishOf(key) : {}),
+            });
             order.push(key);
           } else if (CONSUMABLE_SETS.has(set)) {
             if (a[4] === true) applyUse(key, []);
@@ -1590,7 +1647,11 @@ export function findBlocks(
           }
           if (at >= 0) pack.splice(at, 1);
           if (set === "Joker") {
-            jokers.set(got.id, { key, edition: got.edition });
+            jokers.set(got.id, {
+              key,
+              edition: got.edition,
+              ...(at >= 0 ? perishOf(key) : {}),
+            });
             order.push(key);
           } else applyUse(key, targets);
         }
@@ -1679,8 +1740,7 @@ export function findBlocks(
           const n = want.get(j.key) ?? 0;
           if (n > 0) want.set(j.key, n - 1);
           else {
-            // Gone without being sold: Gros Michel going extinct opens Cavendish.
-            if (j.key === "j_gros_michel") extinct = true;
+            // Gone without being sold (Gros Michel's extinction is rolled at the round's end).
             jokers.delete(id);
           }
         }
@@ -1691,8 +1751,8 @@ export function findBlocks(
           }
         const keys = tokens.map((t) => t.key);
         order = [...keys];
-        const roles = acting(keys);
-        const { name, scoring } = evaluateHand(hand, keys);
+        const roles = acting(live(keys));
+        const { name, scoring } = evaluateHand(hand, live(keys));
         played.add(name);
         lastHand = name;
         trace?.(

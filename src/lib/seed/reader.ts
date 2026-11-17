@@ -40,6 +40,11 @@ export interface ShopJoker extends JokerRoll {
   stickers: StickerId[];
   /** Taken from the rarity's sticker queue rather than its stickerless one. */
   stickerQueue: boolean;
+  /**
+   * The roll landed on Cavendish first (or Gros Michel once it's extinct) and passed it by for
+   * Gros Michel's pool flag: with the flag the other way, that joker would be here.
+   */
+  flagged?: string;
 }
 
 export type ShopItem =
@@ -202,6 +207,11 @@ interface Pools {
   cards: string[];
   noEternal: Set<string>;
   noPerishable: Set<string>;
+  /**
+   * Where a joker pool holds the joker Gros Michel's pool flag keeps out (Cavendish until it's
+   * extinct, Gros Michel after): index → key, to show where it would have been.
+   */
+  flagged: Partial<Record<Rarity, { index: number; key: string }>>;
 }
 
 /**
@@ -393,12 +403,25 @@ function buildPools(settings: ReaderSettings): Pools {
   const banned = unavailableKeys(settings);
   const mark = (key: string) => (banned.has(key) ? UNAVAILABLE : key);
   const jokers = {} as Record<Rarity, string[]>;
-  for (const r of [1, 2, 3, 4] as Rarity[])
-    jokers[r] = [...POOLS.jokers[r], ...(ruleset.added.jokers?.[r] ?? [])].map(
-      mark,
-    );
+  const flagged: Pools["flagged"] = {};
+  const flagKey = settings.poolFlagsOpen
+    ? undefined
+    : settings.grosMichelExtinct
+      ? "j_gros_michel"
+      : "j_cavendish";
+  const otherwise = flagKey
+    ? unavailableKeys({ ...settings, poolFlagsOpen: true })
+    : undefined;
+  for (const r of [1, 2, 3, 4] as Rarity[]) {
+    const all = [...POOLS.jokers[r], ...(ruleset.added.jokers?.[r] ?? [])];
+    jokers[r] = all.map(mark);
+    const index = flagKey ? all.indexOf(flagKey) : -1;
+    if (flagKey && index >= 0 && !otherwise?.has(flagKey))
+      flagged[r] = { index, key: flagKey };
+  }
   return {
     jokers,
+    flagged,
     Tarot: POOLS.tarots.map(mark),
     // Planet X, Ceres and Eris need their hand played first (softlock); like the gated
     // jokers, they're read as in the pool.
@@ -565,6 +588,7 @@ class Game {
   shopJoker(rarity: Rarity, editionRate: number): ShopJoker {
     const pk = `Joker${rarity}0`;
     const pool = this.pools.jokers[rarity];
+    let flagged: string | undefined;
     for (let it = 0; ; it++) {
       const etper = this.rng.random(`_etper${pk}`);
       let eternal = false;
@@ -581,7 +605,11 @@ class Game {
         report(watch, pool, i, this.owned, stream);
         return pool[i];
       };
-      let key = pick(pk + s);
+      const index = this.rng.index(pool.length, pk + s);
+      report(watch, pool, index, this.owned, pk + s);
+      let key = pool[index];
+      const flag = this.pools.flagged[rarity];
+      if (flag?.index === index) flagged ??= flag.key;
       if (it > 1000) key = pick(`${pk}${s}_resample${it}`);
       if (key !== UNAVAILABLE && !this.owned.has(key)) {
         const edition = pollEdition(this.rng, `edi${pk}${s}`, {
@@ -600,6 +628,7 @@ class Game {
           edition,
           stickers,
           stickerQueue: s !== "",
+          ...(flagged ? { flagged } : {}),
         };
       }
       this.rng.random(`edi${pk}${s}`);

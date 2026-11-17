@@ -437,6 +437,44 @@ function Toggle<T extends string | number>({
   );
 }
 
+/**
+ * Where Gros Michel's pool flag kept a joker out: Cavendish until Gros Michel goes extinct (or
+ * Gros Michel after). The game rolled it and rolled again, so it isn't a slot of its own.
+ */
+function Flagged({ itemKey }: { itemKey: string }) {
+  const cav = itemKey === "j_cavendish";
+  return (
+    <ItemCard
+      itemKey={itemKey}
+      dim
+      ring={{ colour: "#009dff", dashed: true }}
+      note={cav ? "if Gros Michel is extinct" : "if not extinct yet"}
+      extra={
+        cav
+          ? "The roll lands on Cavendish here, but it's only in the pool once Gros Michel has gone extinct. Until then the game rolls again and gives the next card. If Gros Michel is extinct by now, Cavendish is here instead (and the stickers and editions after it come one roll later)."
+          : "The roll lands on Gros Michel here, but it's out of the pool once it has gone extinct, so the game rolls again and gives the next card."
+      }
+    />
+  );
+}
+
+/** A queue's card, with the joker Gros Michel's pool flag kept out just before it. */
+function WithFlagged({
+  flagged,
+  children,
+}: {
+  flagged?: string;
+  children: ReactNode;
+}) {
+  if (!flagged) return children;
+  return (
+    <span className="flex gap-3">
+      <Flagged itemKey={flagged} />
+      {children}
+    </span>
+  );
+}
+
 function Grid({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap gap-x-2 gap-y-3">{children}</div>;
 }
@@ -660,30 +698,29 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
         )}
       </div>
       {(() => {
-        const cards = shown.map(({ item, slot }, i) => {
+        const cards = shown.map(({ item, slot }) => {
           const found =
             seekKeys !== undefined &&
             item.kind !== "card" &&
             seekKeys.includes(item.key);
           if (item.kind === "joker")
             return (
-              <ItemCard
-                // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-                key={i}
-                itemKey={item.key}
-                edition={item.edition}
-                stickers={item.stickers}
-                index={slot}
-                highlight={found}
-                note={note(slot)}
-                onBlock={block && (() => block(item.key, slot))}
-              />
+              <WithFlagged key={slot} flagged={item.flagged}>
+                <ItemCard
+                  itemKey={item.key}
+                  edition={item.edition}
+                  stickers={item.stickers}
+                  index={slot}
+                  highlight={found}
+                  note={note(slot)}
+                  onBlock={block && (() => block(item.key, slot))}
+                />
+              </WithFlagged>
             );
           if (item.kind === "consumable")
             return (
               <ItemCard
-                // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-                key={i}
+                key={slot}
                 itemKey={item.key}
                 index={slot}
                 highlight={found}
@@ -693,8 +730,7 @@ function ShopTab({ settings }: { settings: ReaderSettings }) {
             );
           return (
             <PlayingCardCard
-              // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-              key={i}
+              key={slot}
               card={item.card}
               enhancement={item.enhancement}
               edition={item.edition}
@@ -792,15 +828,16 @@ function JokersTab({ settings }: { settings: ReaderSettings }) {
       </div>
       <CardList onMore={() => setCount((c) => c + STEP)} blockable>
         {shown.map(({ j, index }) => (
-          <ItemCard
-            key={index}
-            itemKey={j.key}
-            edition={j.edition}
-            stickers={j.stickers}
-            index={index}
-            note={note(index)}
-            onBlock={block && (() => block(j.key, index))}
-          />
+          <WithFlagged key={index} flagged={j.flagged}>
+            <ItemCard
+              itemKey={j.key}
+              edition={j.edition}
+              stickers={j.stickers}
+              index={index}
+              note={note(index)}
+              onBlock={block && (() => block(j.key, index))}
+            />
+          </WithFlagged>
         ))}
       </CardList>
     </div>
@@ -1197,8 +1234,6 @@ export function SeedReader({ art }: { art: SeedArt }) {
   const [rulesetId, setRulesetId] = useState(PATCHES[0].rulesets[0].id);
   const [stake, setStake] = useState(1);
   const [deckId, setDeckId] = useState<DeckId | "">("");
-  /** Gros Michel has gone extinct: Cavendish is in the pool, Gros Michel isn't. */
-  const [extinct, setExtinct] = useState(false);
   const [layout, setLayout] = useState<Layout>("band");
   const swRuleset =
     findRuleset(findPatch(patchId), rulesetId).smallWorld ?? false;
@@ -1269,10 +1304,10 @@ export function SeedReader({ art }: { art: SeedArt }) {
       // PvP blind) are always read as in the pool.
       enhancements: ALL_GATES,
       pincherUnlocked: true,
-      // Gros Michel and Cavendish can't both be in the pool: one is chosen here.
-      grosMichelExtinct: extinct,
+      // Gros Michel hasn't gone extinct: where Cavendish would be is shown in the queues.
+      grosMichelExtinct: false,
     }),
-    [seed, ruleset, patch.gameMode, activeStake, deck, extinct],
+    [seed, ruleset, patch.gameMode, activeStake, deck],
   );
 
   // Walking through a log, the reader reads on from the chosen step (from the run's start
@@ -1290,7 +1325,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: clears when these change
   useEffect(
     () => setBlocks([]),
-    [seed, ruleset.id, activeStake, deck, extinct, late, player, stepIndex],
+    [seed, ruleset.id, activeStake, deck, late, player, stepIndex],
   );
 
   const loadLog = (logs: LateLog[], match?: string) => {
@@ -1430,17 +1465,6 @@ export function SeedReader({ art }: { art: SeedArt }) {
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label
-                    className="flex items-center gap-2 py-2 text-sm"
-                    title="Cavendish is only in the pool once Gros Michel has gone extinct, and Gros Michel isn't from then on"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={extinct}
-                      onChange={(e) => setExtinct(e.target.checked)}
-                    />
-                    Gros Michel extinct (Cavendish can show up)
                   </label>
                 </div>
                 <LogLoader onLoad={loadLog} />
