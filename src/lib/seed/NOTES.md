@@ -245,6 +245,13 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   through hands before its sale; b15803f7: Ceres). The look stops at a High Priestess or a Fool
   used (by id too), whose planets would look the same (FZZUAJBR), and doesn't count a planet
   seen after the next round's last hand: that one is that round's Blue Seal's.
+- Only a Blue Seal held at the round's end makes a planet: one played in the last hand doesn't
+  (7IQJDV91), so the count is the Blue Seals not in that hand, plus Certificate's cards.
+- A banned planet can't be made by key: `create_card` drops a banned forced key and draws from
+  the Planet pool, which under The Order is the shop's "PlanetPlanet0". Small World culls most
+  planets, so there a Blue Seal often rolls the shop's planet queue instead (RGTANXN2 #174: a
+  culled Mercury, the draw gave the Neptune the log has). The look-ahead then counts any planet
+  showing up unbought, and each one made is a checked roll.
 - A made joker the log contradicts also makes the cards of its queue rolled in shops since the
   queue was last in line avatar suspects (4ef1445c: Baron, passed by in a shop at stake 3, where
   shop Rares come from Wraith's stickerless queue, so the Wraith gave the next Rare).

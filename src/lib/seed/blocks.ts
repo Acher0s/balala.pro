@@ -12,6 +12,7 @@
 
 import pools from "./pools.generated.json";
 import {
+  bannedKeys,
   type ConsumableSet,
   type ReaderSettings,
   SHOP_VOUCHERS,
@@ -888,6 +889,8 @@ export function findBlocks(
   let certificateCards = 0;
   /** G.GAME.last_hand_played: a Blue Seal makes its planet. */
   let lastHand: string | undefined;
+  /** The cards of the last hand played: a Blue Seal there isn't held at the round's end. */
+  let lastPlayed = new Set<number>();
 
   // What's on screen.
   let shop: (string | null)[] = [];
@@ -1081,6 +1084,7 @@ export function findBlocks(
     consumables: start.consumableSlots,
   });
 
+  const banned = bannedKeys(settings);
   const consumableLimit = () =>
     2 +
     (startSlots().consumables ?? 0) +
@@ -1127,11 +1131,15 @@ export function findBlocks(
    * something the replay doesn't follow (the queue is rolled on until it comes up).
    */
   /** A Blue Seal can be in the deck: one seen, or Certificate's (often never seen). */
-  const blueSealPossible = () =>
-    [...cards.values()].some((c) => c.alive && c.seal === "Blue") ||
+  const blueSealPossible = () => blueSealsHeld() > 0;
+  /** How many Blue Seals can be held at the round's end: the ones not in the last hand. */
+  const blueSealsHeld = () =>
+    [...cards].filter(
+      ([id, c]) => c.alive && c.seal === "Blue" && !lastPlayed.has(id),
+    ).length +
     // Certificate adds a card with a random seal each round, and it stays in the deck after
     // Certificate is sold.
-    certificateCards > 0;
+    certificateCards;
 
   /**
    * Blue Seals held in hand at the round's end make the last hand's planet, by key. The log
@@ -1144,6 +1152,10 @@ export function findBlocks(
   const blueSealPlanets = (from: number) => {
     const key = lastHand && PLANET_OF[lastHand];
     if (!key || !blueSealPossible()) return;
+    // A banned planet (Small World culls most of them): create_card's forced key is dropped
+    // and the card is drawn from the pool instead, which under The Order is the shop's
+    // "PlanetPlanet0". Any planet showing up unbought is then one of these.
+    const drawn = banned.has(key);
     // Up to the next round's last hand: after it, a planet can be that round's Blue Seal's.
     let end = events.length;
     for (let j = from + 1; j < events.length; j++)
@@ -1160,7 +1172,7 @@ export function findBlocks(
         if (typeof x[0] === "number" && typeof x[1] === "string") {
           if (x[0] < 0 && typeof x[2] === "string") {
             seen.set(-x[0], x[2]);
-            if (x[1] === "Planet" && x[2] === key) fresh++;
+            if (x[1] === "Planet" && (drawn || x[2] === key)) fresh++;
           }
           return;
         }
@@ -1175,8 +1187,13 @@ export function findBlocks(
       }
       if (op !== "buy" && op !== "pack_pick") n += fresh;
     }
-    for (let k = 0; k < n && consumableRoom() > 0; k++)
-      consumables.set(synthetic++, { set: "Planet", key, unseen: true });
+    for (
+      let k = 0;
+      k < Math.min(n, blueSealsHeld()) && consumableRoom() > 0;
+      k++
+    )
+      if (drawn) makeConsumable(`Blue Seal (${key} banned)`, "Planet");
+      else consumables.set(synthetic++, { set: "Planet", key, unseen: true });
   };
 
   const sightMade = (
@@ -1786,7 +1803,9 @@ export function findBlocks(
             makeConsumable("Purple Seal", "Tarot");
         break;
       case "play": {
-        const hand = learnAll(a[1]).flatMap((t) => (t?.card ? [t.card] : []));
+        const handRefs = learnAll(a[1]);
+        lastPlayed = new Set(handRefs.flatMap((t) => (t?.card ? [t.id] : [])));
+        const hand = handRefs.flatMap((t) => (t?.card ? [t.card] : []));
         const tokens = ((a[2] as string[]) ?? []).map((t) => {
           const [key, edition] = t.split("|");
           return { key, edition };

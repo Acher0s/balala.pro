@@ -138,7 +138,7 @@ their key_append (`Joker<r>0`, rarity on `rarity0`); shop and pack jokers roll s
 | Purple Seal | each discarded card | consumables | `TarotTarot0` |
 | 8 Ball | individual: each scoring 8, again per retrigger (Red Seal, Seltzer, the mod's Hanging Chad on scoring cards 1–2), copies; `8ball` < odds/4 | consumables | `TarotTarot0` |
 | The Emperor / High Priestess | use: min(2, free slots); the used card is out of its slot but still exists, so its key is skipped | consumables | Tarot / Planet |
-| The Fool, Blue Seal (last hand's planet), starting decks | by key, no roll | consumables | — |
+| The Fool, Blue Seal (last hand's planet), starting decks | by key, no roll (a banned key, e.g. culled in Small World, draws from the pool instead) | consumables | — (banned: `PlanetPlanet0`) |
 
 **Known bugs the replay works around** (check each new version and drop the workaround once
 fixed): in Multiplayer 1.0.5, a player who looks at the lobby info (any time) gets both
