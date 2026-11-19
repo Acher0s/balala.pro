@@ -238,8 +238,69 @@ const BALANCED: RulesetDef = {
   rankedOrder: true,
 };
 
+/**
+ * 1.0.6 (BalatroMultiplayerPvP v1.0.5..v1.0.6): the Balanced layer, which every ruleset here
+ * builds on, swaps Reserved Parking for the mod's (objects/jokers/standard/reserved_parking.lua,
+ * a Common: a miss still counts as a trigger; it rolls its own "parking" stream), loaded after
+ * Hanging Chad. And the mod's own content is now a layer of its own (layers/
+ * multiplayer_content.lua) instead of a catch-all gate, which is now always off
+ * (layers/_layers.lua): it lists the same jokers, Asteroid and the Manhunt vouchers, but not
+ * the Ward Tag or the Giga Standard Pack, so those are out of the pools and out of Small
+ * World's cull (its lists skip whatever MPAPI.should_exclude_from_pool drops). The Giga pack
+ * still comes from Orange Deck by key. Small World's Tag:init now keeps a culled blind tag's
+ * replacement, so skipping it gives the tag that was shown.
+ */
+const RESERVED_PARKING = {
+  banned: ["j_reserved_parking"],
+  common: "j_mp_reserved_parking",
+};
+
+const EXPANDED_106: RulesetDef = {
+  ...EXPANDED,
+  banned: [
+    ...EXPANDED.banned.filter((k) => k !== "tag_mp_ward"),
+    ...RESERVED_PARKING.banned,
+  ],
+  closed: ["v_mp_hieroglyph_manhunt", "v_mp_petroglyph_manhunt"],
+  added: {
+    ...EXPANDED.added,
+    jokers: {
+      ...EXPANDED.added.jokers,
+      1: [...(EXPANDED.added.jokers?.[1] ?? []), RESERVED_PARKING.common],
+    },
+    tags: [],
+    boosters: [],
+  },
+};
+
+const SMALL_WORLD_106: RulesetDef = {
+  ...EXPANDED_106,
+  id: "smallworld",
+  name: "Small World",
+  rankedOrder: false,
+  smallWorld: true,
+};
+
+const BALANCED_106: RulesetDef = {
+  ...BALANCED,
+  banned: [...BALANCED.banned, ...RESERVED_PARKING.banned],
+  added: {
+    ...BALANCED.added,
+    jokers: {
+      ...BALANCED.added.jokers,
+      1: [...(BALANCED.added.jokers?.[1] ?? []), RESERVED_PARKING.common],
+    },
+  },
+};
+
 /** Mod versions the reader knows. The first is the current one. */
 export const PATCHES: PatchDef[] = [
+  {
+    id: "pvp-1.0.6",
+    label: "Multiplayer PvP 1.0.6",
+    rulesets: [EXPANDED_106, SMALL_WORLD_106, BALANCED_106],
+    gameMode: ATTRITION,
+  },
   {
     id: "pvp-1.0.5",
     label: "Multiplayer PvP 1.0.5",

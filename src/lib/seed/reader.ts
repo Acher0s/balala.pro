@@ -232,7 +232,8 @@ export function bannedKeys(
   return keys;
 }
 
-const smallWorldCache = new Map<string, Set<string>>();
+/** By ruleset (each patch has its own Small World, with its own pools), then seed. */
+const smallWorldCache = new WeakMap<object, Map<string, Set<string>>>();
 
 /**
  * The cards Small World bans for a seed (layers/smallworld.lua, on apply_bans). Every pool of
@@ -244,8 +245,13 @@ const smallWorldCache = new Map<string, Set<string>>();
  */
 export function smallWorldBans(settings: ReaderSettings): Set<string> {
   const seed = normalizeSeed(settings.seed);
-  const id = `${seed}|${settings.ruleset.id}|${settings.gameMode.id}`;
-  const hit = smallWorldCache.get(id);
+  const id = `${seed}|${settings.gameMode.id}`;
+  let cache = smallWorldCache.get(settings.ruleset);
+  if (!cache) {
+    cache = new Map();
+    smallWorldCache.set(settings.ruleset, cache);
+  }
+  const hit = cache.get(id);
   if (hit) return hit;
 
   const { pre, tables, vouchers } = smallWorldTables(settings);
@@ -269,7 +275,7 @@ export function smallWorldBans(settings: ReaderSettings): Set<string> {
   for (const v of vouchers)
     if (v.requires.length > 0 && out.has(v.requires[0])) out.add(v.key);
   if (out.has("j_gros_michel")) out.add("j_cavendish");
-  smallWorldCache.set(id, out);
+  cache.set(id, out);
   return out;
 }
 

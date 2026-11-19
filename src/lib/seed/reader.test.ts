@@ -24,7 +24,8 @@ import {
 } from "./reader";
 import { PATCHES } from "./rulesets";
 
-const [expanded, smallWorld, balanced] = PATCHES[0].rulesets;
+const v105 = PATCHES.find((p) => p.id === "pvp-1.0.5") ?? PATCHES[0];
+const [expanded, smallWorld, balanced] = v105.rulesets;
 const settings = (
   seed: string,
   stake = 1,
@@ -33,7 +34,7 @@ const settings = (
 ): ReaderSettings => ({
   seed,
   ruleset,
-  gameMode: PATCHES[0].gameMode,
+  gameMode: v105.gameMode,
   stake,
   ...extra,
 });
@@ -638,5 +639,60 @@ describe("Small World", () => {
       }
     }
     expect(banned.size).toBeGreaterThan(150);
+  });
+});
+
+describe("1.0.6", () => {
+  const v106 = PATCHES.find((p) => p.id === "pvp-1.0.6") ?? PATCHES[0];
+  const [exp6, sw6, bal6] = v106.rulesets;
+  const at = (seed: string, ruleset = exp6): ReaderSettings => ({
+    seed,
+    ruleset,
+    gameMode: v106.gameMode,
+    stake: 1,
+  });
+
+  it("is the current patch, with the same rulesets", () => {
+    expect(PATCHES[0].id).toBe("pvp-1.0.6");
+    expect([exp6.id, sw6.id, bal6.id]).toEqual([
+      "expanded",
+      "smallworld",
+      "balanced",
+    ]);
+  });
+
+  it("swaps Reserved Parking for the mod's, after Hanging Chad", () => {
+    for (const r of [exp6, bal6]) {
+      const p = _internal.buildPools(at("X", r));
+      expect(p.jokers[1].slice(-2)).toEqual([
+        "j_mp_hanging_chad",
+        "j_mp_reserved_parking",
+      ]);
+      expect(bannedKeys(at("X", r)).has("j_reserved_parking")).toBe(true);
+    }
+    const e = _internal.buildPools(at("X"));
+    expect(e.jokers[1]).toHaveLength(pools.jokers[1].length + 7);
+    const b = _internal.buildPools(at("X", bal6));
+    expect(b.jokers[1]).toHaveLength(pools.jokers[1].length + 2);
+  });
+
+  it("has no Ward Tag or Giga Standard Pack in the pools or Small World's cull", () => {
+    const tags = new Set<string>();
+    for (const seed of SEEDS)
+      for (const t of tagQueue(at(seed), 40)) tags.add(t.small).add(t.big);
+    expect(tags.has("tag_mp_ward")).toBe(false);
+    const left = smallWorldPools(at("UXYM3NVF", sw6));
+    const bans = smallWorldBans(at("UXYM3NVF", sw6));
+    for (const k of ["tag_mp_ward", "p_mp_standard_giga"]) {
+      expect(left.Tag.concat(left.Booster)).not.toContain(k);
+      expect(bans.has(k)).toBe(false);
+    }
+  });
+
+  it("keeps each patch's Small World bans apart", () => {
+    const old = smallWorldBans(settings("UXYM3NVF", 1, smallWorld));
+    const now = smallWorldBans(at("UXYM3NVF", sw6));
+    expect(old.has("p_mp_standard_giga") || old.has("tag_mp_ward")).toBe(true);
+    expect([...now].sort()).not.toEqual([...old].sort());
   });
 });

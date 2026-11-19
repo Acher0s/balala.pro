@@ -103,11 +103,12 @@ describe("what did I block (FZZUAJBR)", () => {
 });
 
 describe("pool flags and stickers", () => {
-  const [expanded] = PATCHES[0].rulesets;
+  const v105 = PATCHES.find((p) => p.id === "pvp-1.0.5") ?? PATCHES[0];
+  const [expanded] = v105.rulesets;
   const base: ReaderSettings = {
     seed: "FZZUAJBR",
     ruleset: expanded,
-    gameMode: PATCHES[0].gameMode,
+    gameMode: v105.gameMode,
     stake: 1,
   };
 
@@ -362,4 +363,53 @@ describe("whole matches that replay without a miss, with the lobby avatars", () 
         expect(a.matched).toBe(a.checked);
       expect(report.avatars.map((a) => a.key)).toEqual(avatars);
     });
+});
+
+describe("joker_hit (1.0.6)", () => {
+  // BGMJZ5AC's Judgement at #593 made Clever Joker. A 1.0.6 log names it right after.
+  const base = bgmjz5ac.events as LogEvent[];
+  const read = matchSettings(base);
+  if (!read.ok) throw new Error(read.error);
+  const withHit = (created: string[]) => {
+    const ev = [...base];
+    ev.splice(594, 0, [base[593][0], "joker_hit", ["judgement", created, []]]);
+    return findBlocks(ev, read.settings);
+  };
+  const before = findBlocks(base, read.settings).agreement.jokers;
+
+  it("checks the made joker there, once", () => {
+    const { jokers } = withHit(["j_clever"]).agreement;
+    expect(jokers).toEqual(before);
+    expect(jokers.matched).toBe(jokers.checked);
+  });
+
+  it("counts a joker the game made instead as a miss, and takes the game's", () => {
+    const report = withHit(["j_joker"]);
+    expect(report.agreement.jokers.checked).toBe(before.checked);
+    expect(report.agreement.jokers.matched).toBe(before.matched - 1);
+    expect(report.agreement.shop).toEqual(
+      findBlocks(base, read.settings).agreement.shop,
+    );
+  });
+});
+
+describe("matchSettings on 1.0.6", () => {
+  it("reads a 1.0.6 log with the 1.0.6 rulesets", () => {
+    const ev = (bgmjz5ac.events as LogEvent[]).map((e): LogEvent => {
+      if (e[1] !== "lobby_info") return e;
+      const info = e[2] as { options: Record<string, unknown> };
+      return [
+        e[0],
+        e[1],
+        { ...info, options: { ...info.options, mod_version: "1.0.6" } },
+      ];
+    });
+    const read = matchSettings(ev);
+    if (!read.ok) throw new Error(read.error);
+    const v106 = PATCHES.find((p) => p.id === "pvp-1.0.6");
+    expect(v106?.rulesets).toContain(read.settings.ruleset);
+    expect(read.settings.ruleset.added.jokers?.[1]).toContain(
+      "j_mp_reserved_parking",
+    );
+  });
 });

@@ -1264,6 +1264,8 @@ export function SeedReader({ art }: { art: SeedArt }) {
     if (STAKES.some((x) => x.id === st)) setStake(st);
     const r = params.get("ruleset");
     if (r) setRulesetId(r);
+    const p = params.get("patch");
+    if (p && PATCHES.some((x) => x.id === p)) setPatchId(p);
     const d = params.get("deck");
     if (DECKS.some((x) => x.id === d)) setDeckId(d as DeckId);
   }, []);
@@ -1278,8 +1280,10 @@ export function SeedReader({ art }: { art: SeedArt }) {
     else url.searchParams.delete("ruleset");
     if (deckId) url.searchParams.set("deck", deckId);
     else url.searchParams.delete("deck");
+    if (patchId !== PATCHES[0].id) url.searchParams.set("patch", patchId);
+    else url.searchParams.delete("patch");
     window.history.replaceState(null, "", url);
-  }, [seed, stake, rulesetId, deckId]);
+  }, [seed, stake, rulesetId, deckId, patchId]);
 
   const patch = findPatch(patchId);
   const ruleset = findRuleset(patch, rulesetId);
@@ -1325,7 +1329,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: clears when these change
   useEffect(
     () => setBlocks([]),
-    [seed, ruleset.id, activeStake, deck, late, player, stepIndex],
+    [seed, patch.id, ruleset.id, activeStake, deck, late, player, stepIndex],
   );
 
   const loadLog = (logs: LateLog[], match?: string) => {
@@ -1492,7 +1496,7 @@ export function SeedReader({ art }: { art: SeedArt }) {
                   ))}
                 </nav>
                 <section
-                  key={`${tab}:${seed}:${activeStake}:${ruleset.id}:${deck}:${late ? `${player}:${stepIndex}` : ""}`}
+                  key={`${tab}:${seed}:${activeStake}:${patch.id}:${ruleset.id}:${deck}:${late ? `${player}:${stepIndex}` : ""}`}
                 >
                   {tab === "shop" && <ShopTab settings={read} />}
                   {tab === "jokers" && <JokersTab settings={read} />}

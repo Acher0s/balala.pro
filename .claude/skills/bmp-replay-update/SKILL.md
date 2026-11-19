@@ -104,6 +104,7 @@ Recorded by MultiplayerAPI `api/replay/` (`opcodes.lua`, `generic_codes.lua`, `c
 | `reorder` | area, …, moves | first sightings of made cards |
 | `discard`, `play` | positions, card refs (+ joker tokens `key\|edition` on `play`) | Purple Seals, hand shapes, joker snapshot |
 | `money_delta` | the amount (every `ease_dollars`) | money, for Vagabond |
+| `joker_hit` (1.0.6) | source (`wraith`, `judgement`, `soul`, `riffraff`, `ankh`, `invisible`), created joker tokens, destroyed | checks the jokers made for it right away |
 
 Logs before 1.0.5 differ (no blind key, no joker tokens on `play`, packs opened via `use`) and
 are refused by `matchSettings`; a new version gets its own `PatchDef` and is only read once
@@ -143,7 +144,7 @@ their key_append (`Joker<r>0`, rarity on `rarity0`); shop and pack jokers roll s
 **Known bugs the replay works around** (check each new version and drop the workaround once
 fixed): in Multiplayer 1.0.5, a player who looks at the lobby info (any time) gets both
 players' avatar jokers stuck in `G.GAME.used_jokers`, so their own shop and packs skip both
-from then on. Nothing in the log says so; `findBlocksAuto` guesses it from misses nothing else
+from then on (fixed in 1.0.6, MPAPI 34ceb7e). Nothing in the log says so; `findBlocksAuto` guesses it from misses nothing else
 explains, trying only the jokers the avatar picker offers (`AVATARS` in `blocks.ts`: update it
 when the site's avatar list changes), and `findBlocksMatch` shares the pair between the two logs of a match (`AVATAR_BUG`
 lists the versions). When a new kind of inexplicable miss shows up, ask the user: they may know a bug.
@@ -176,6 +177,9 @@ Cocktail Deck's mixed effects, Gradient Deck.
 4. **Change behind a patch.** Data changes go in a new `PatchDef`. Logic that changes between
    versions becomes a field the code branches on; old matches must keep replaying the same.
    `matchSettings` picks the patch whose id is `pvp-<mod_version>` and refuses any other.
+   Tests built on a real match take that match's patch by id (`PATCHES.find(...)`), never
+   `PATCHES[0]`, which moves to the new version. Anything cached per ruleset is keyed by the
+   ruleset object: the ids (`expanded`, `smallworld`) repeat across patches.
 5. **Measure** every fixture and a few new matches on the new version; nothing that was
    `ok` should turn into a `MISS`.
 

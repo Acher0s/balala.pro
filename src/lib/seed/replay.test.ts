@@ -15,11 +15,13 @@ import { PATCHES } from "./rulesets";
  * slot by slot as the player rerolled, Buffoon Packs and Riff-raff take their jokers from the
  * same queues in between, and every joker the player bought or picked has to be there.
  */
-const [expanded] = PATCHES[0].rulesets;
+// The match was played on 1.0.5.
+const v105 = PATCHES.find((p) => p.id === "pvp-1.0.5") ?? PATCHES[0];
+const [expanded] = v105.rulesets;
 const settings: ReaderSettings = {
   seed: match.seed,
   ruleset: expanded,
-  gameMode: PATCHES[0].gameMode,
+  gameMode: v105.gameMode,
   stake: match.stake,
   deck: "violet",
 };

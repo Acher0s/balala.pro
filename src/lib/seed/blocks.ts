@@ -1297,6 +1297,17 @@ export function findBlocks(
   const room = () => jokerLimit() - jokers.size;
 
   let expectedNew: string[] = [];
+  /**
+   * Made jokers a 1.0.6 log's joker_hit will name, by its source: the log says what Wraith,
+   * Judgement, The Soul and Riff-raff made right after each one, not only at the next hand.
+   */
+  let pendingHits: { source: string; key: string }[] = [];
+  const HIT_SOURCE: Record<string, string> = {
+    Judgement: "judgement",
+    Wraith: "wraith",
+    "The Soul": "soul",
+    "Riff-raff": "riffraff",
+  };
   /** Where each made joker was rolled: a lobby avatar may have kept another out there. */
   const madeAt = new Map<string, number>();
   const makeJokers = (
@@ -1311,6 +1322,8 @@ export function findBlocks(
       order.push(j.key);
       expectedNew.push(j.key);
       madeAt.set(j.key, eventAt);
+      if (HIT_SOURCE[source])
+        pendingHits.push({ source: HIT_SOURCE[source], key: j.key });
     }
   };
 
@@ -1656,6 +1669,40 @@ export function findBlocks(
         if (tag === "tag_rare") forcedRarity = 3;
         break;
       }
+      case "joker_hit": {
+        // 1.0.6: [source, created, destroyed], logged just after the effect. Check the jokers
+        // the replay made for it now, and take the game's in their place.
+        const [source, created] = a as [string, string[] | undefined];
+        const got = (created ?? []).map((t) => t.split("|")[0]);
+        const mine = pendingHits.filter((h) => h.source === source);
+        for (const h of mine.slice(0, got.length)) {
+          pendingHits.splice(pendingHits.indexOf(h), 1);
+          const at = expectedNew.indexOf(h.key);
+          if (at < 0) continue;
+          expectedNew.splice(at, 1);
+          const hit = got.indexOf(h.key);
+          check(agreement.jokers, hit >= 0, familyOf(h.key, ""));
+          if (hit >= 0) {
+            got.splice(hit, 1);
+            continue;
+          }
+          missedShop.push({ key: h.key, at: madeAt.get(h.key) ?? i });
+          suspects(h.key);
+          const real = got.shift();
+          const o = order.indexOf(h.key);
+          if (o >= 0) {
+            if (real) order[o] = real;
+            else order.splice(o, 1);
+          }
+          for (const [id, j] of jokers)
+            if (id >= 1e9 && j.key === h.key) {
+              if (real) j.key = real;
+              else jokers.delete(id);
+              break;
+            }
+        }
+        break;
+      }
       case "cashout":
         shopsEntered++;
         blueSealPlanets(i);
@@ -1823,6 +1870,7 @@ export function findBlocks(
           }
         }
         expectedNew = [];
+        pendingHits = [];
         // The snapshot is what the player has: drop what's gone, add what's new, and take each
         // joker's edition from it (Ectoplasm, Wheel of Fortune or Hex change it unlogged, and a
         // Negative one is a joker slot: Judgement had room for a joker made Negative later).

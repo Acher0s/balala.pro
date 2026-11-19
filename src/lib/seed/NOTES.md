@@ -4,7 +4,36 @@ The reader ports Balatro's RNG (`functions/misc_functions.lua`: pseudohash, pseu
 pseudorandom, pseudorandom_element) and LuaJIT's `math.random` (TW223) to TypeScript, then
 applies what Steamodded 26.1002.0, MultiplayerAPI (The Order: `api/the_order/`,
 `lovely/TheOrder.toml`, `lovely/pool_gating.toml`) and MultiplayerPvP 1.0.5 (the Balanced
-ruleset) change.
+ruleset) change. 1.0.6 is a patch of its own; see "1.0.6" below.
+
+## 1.0.6
+
+Read from the diff of BalatroMultiplayerPvP and BalatroMultiplayerAPI v1.0.5..v1.0.6 (both
+tagged 2026-11-19; Steamodded is still 26.1002.0). Not checked against a 1.0.6 match yet.
+
+- Unchanged: MPAPI `api/the_order/`, `api/layers/`, `api/ruleset/`, every `lovely/` patch, the
+  Attrition bans and the log's `schema_version` (1).
+- Balanced (and so Expanded and Small World) bans Reserved Parking for the mod's
+  (`objects/jokers/standard/reserved_parking.lua`): a Common, loaded after Hanging Chad, so the
+  Common pool gains a card at its end and every Common draw moves. It rolls "parking", which no
+  queue shows.
+- The mod's own content is now the `multiplayer_content` layer (Expanded and Small World list
+  it, Balanced doesn't) and the catch-all gate in `layers/_layers.lua` is always off. The
+  layer lists the same jokers, Asteroid and the Manhunt vouchers as before, but not the Ward
+  Tag or the Giga Standard Pack, so both are out of the pools (the tag pool is one shorter)
+  and out of Small World's cull (it skips what `MPAPI.should_exclude_from_pool` drops), which
+  changes the Tag and Booster shuffles. Orange Deck still makes the Giga pack by key.
+- Small World's `Tag:init` now writes a culled blind tag's replacement back into
+  `round_resets.blind_tags`, so a skip gives the tag that was shown (in 1.0.5 it rolled
+  `Tagreplace10` again). The reader's one swap per tag is now what the game does.
+- The lobby avatar bug is fixed (MPAPI 34ceb7e, "keep Lobby Info from hiding avatar jokers
+  from the shop"): Lobby Info fills its cards once its overlay is up, and a grid leaves its
+  cards alone once its UIBox is gone. `AVATAR_BUG` stays 1.0.5 only.
+- New opcode `joker_hit` (`api/replay/generic_codes.lua`): `[source, created, destroyed]`, with
+  source `wraith`, `judgement`, `soul`, `riffraff`, `ankh` or `invisible` and joker tokens,
+  logged just after the effect. The replay checks the jokers it made for Wraith, Judgement, The
+  Soul and Riff-raff there, and takes the game's in place of a wrong one (Ankh and Invisible
+  aren't modelled). Without it they're checked at the next hand, as before.
 
 ## Confirmed against the game
 
@@ -96,8 +125,9 @@ pools, bans and stakes start as Expanded's. On `apply_bans` (`MPAPI.ApplyBans`, 
   (`lovely/ban_timing.toml` applies only the declared bans there), so they can be cards that
   are culled. A culled tag is swapped when `Tag:init` makes it (the blind screen makes the
   Small Blind's, then the Big Blind's) for `get_next_tag_key("replace")` with the ante set to 10
-  under The Order: stream `Tagreplace10`. If the same tag is made again (when you skip, for
-  one), it rolls again, which the reader doesn't follow. A culled ante-1 voucher is shown
+  under The Order: stream `Tagreplace10`. In 1.0.5, if the same tag is made again (when you
+  skip, for one), it rolls again, which the reader doesn't follow; 1.0.6 keeps the first
+  swap. A culled ante-1 voucher is shown
   as is.
 - A culled `p_buffoon_normal_1` turns off the first shop's guaranteed Buffoon Pack.
 - Decks with starting vouchers (Nebula, Zodiac, Magic, …) swap a culled one through
@@ -296,11 +326,11 @@ but aren't reported. Vouchers: a roll that lands on a pair the player owns.
   enhanced (not picked, bought, skipped in a pack, or used on) counts from the last such card's
   use, or from the start, for the enhancement-gated jokers. Seen in IUY9B53E: an Incantation's
   Steel Card put Steel Joker in the pool long before the card was drawn.
-- Only logs from Multiplayer PvP 1.0.5 are read. Older logs (1.0.3, 1.0.4) have no blind key
+- Only logs from Multiplayer PvP 1.0.5 and 1.0.6 are read. Older logs (1.0.3, 1.0.4) have no blind key
   on `select_blind`, no joker list on `play`, and open packs through `use`.
 - The log numbers the mod's stakes after Gold (Planet 9, Spectral 10, Spectral+ 11). For the
   stickers, Planet is the reader's Orange (7), Spectral its Gold (8), Spectral+ its 9.
-- Lobby avatars (a bug in Multiplayer 1.0.5, fixed in the next update): a player who looks at
+- Lobby avatars (a bug in Multiplayer 1.0.5, fixed in 1.0.6): a player who looks at
   the lobby info, at any time in the run, leaves both players' avatar jokers in
   `G.GAME.used_jokers`, so their own shop and packs skip both from then on. The other player
   isn't affected unless they look too. The log records neither the avatars nor the look, so
